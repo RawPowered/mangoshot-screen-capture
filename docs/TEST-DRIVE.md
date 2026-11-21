@@ -111,3 +111,12 @@ These changes are not a desktop-wide remote-control system. Supported captured-t
 5. Click Analyze waveform on this MP4: it contains **no audio stream**, so a useful unavailable-audio message should appear, not a fake waveform. Test a different file with genuine audio.
 6. Record a browser tab: native captured-tab scroll may prompt for permission when Enable captured-tab wheel control is clicked. Entire-screen/window recording does not have that permission flow; use the actual source window or consented linked-tab fallback.
 7. Confirm screenshot PNG/PDF, Wacom tools, recorder Stop, clip export and project JSON still work.
+
+## v0.5.3 graphical layer timeline gestures
+
+- Load a source video and add a Text layer. Drag its blue G2 clip to 00:15, then grab the left/right light-colored trim handles to extend or shorten the visible interval. Inspector In/Out and Duration must update after release.
+- Drag it vertically to G3: the target lane is highlighted, and the text moves to the new track. Add another overlapping layer and confirm G3 draws above G2.
+- Drag the ⠿ handle in the Graphics / Layers panel to place a layer above another; alternatively use Bring Forward/Send Back. Both changes must be undoable and preserved in a saved JSON project.
+- Drag text over the Program Monitor with mouse or Wacom pen. Drag its lower-right square to resize width and font size. The selection outline must be absent in the exported video.
+- Enable Snap and move near another layer edge or playhead; hold Alt during drag to bypass. Test Arrow Left/Right nudging with a focused clip.
+- Confirm recorded MP4/WebM source is not overwritten; when video is unchanged except graphics, use a normal encode rather than claiming an instant original save.
