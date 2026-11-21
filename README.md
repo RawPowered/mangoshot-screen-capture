@@ -1,12 +1,12 @@
-# 🥭 MangoShot — Studio v0.4.0 Preview
+# 🥭 MangoShot — Studio v0.5.0 Layered Clip Studio Preview
 
 Local-first, ad-free screen capture, Wacom annotation and video-editing browser extension for **Firefox, Chrome and Edge**. No account, analytics, video uploads or remote API calls.
 
-**Status:** Engineering test-drive build on `feat/mangoshot-v0.4-studio`. Keep v0.3.2 available as a tested fallback. This is **not** a published browser-store release.
+**Status:** Engineering test-drive build on `feat/mangoshot-v0.5-layered-editing`. Keep v0.3.2 available as a tested fallback. This is **not** a published browser-store release.
 
 ## Load for testing
 
-1. Download the v0.4.0 ZIP and extract it. Do not load the ZIP directly.
+1. Download the v0.5.0 ZIP and extract it. Do not load the ZIP directly.
 2. Open `chrome://extensions` or `edge://extensions`, enable Developer mode, and **Load unpacked** from the extracted folder containing `manifest.json`. In Firefox use `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on** → `manifest.json`.
 3. Disable/remove the older unpacked MangoShot version to avoid confusing two toolbar icons. **Do not clear old extension storage before recovering any recordings you need.**
 4. Open a regular HTTP(S) webpage. Click the MangoShot extension icon and choose visible screenshot, full page, or Record screen/audio.
@@ -59,3 +59,21 @@ done
 ```
 
 Copyright © 2026 RawPowered. All rights reserved until a license is selected.
+
+## v0.5 · Layered editing (Razor / Ripple / Graphics)
+
+MangoShot Clip Studio now supports a **Razor (C)** timeline tool: select it, then click the V1 video track where you want to split. **Select (V)** exits the Razor tool. **Ctrl+K** splits at the playhead. Edits are made in *sequence time*, so after trimming or deleting, the playhead, graphic clips and source media remain aligned.
+
+Set **In / Out** values in sequence time, then choose **Ripple delete** or **Alt+Backspace** to remove that interval and close the gap, shifting downstream graphic clips and markers. You cannot delete the entire video by accident.
+
+Use **+ Text** or **+ Callout** to create time-bound graphic layers on tracks **G2** and **G3** above source video **V1**; **A1** remains the existing audio. Presets: None/Custom, Bold Title, Lower Third, Callout Bubble, Spotlight. Text callouts can be customized without a preset. Select a layer to edit time, track, text, font, weight, position, width, color, background, outline, opacity, shadow, fade, and callout pointer; lock/hide/duplicate, or bring forward/send backward. Drag a selected graphic in the monitor to reposition it.
+
+**Layered export:** Visible graphics are rendered directly onto the output video frames. With no edits and no visible graphics, a matching-container export remains an instant byte-for-byte copy. Any visible graphics require real-time re-encoding with browser-native codecs; MP4 may not be available in Firefox. Text/graphics are shown in the editor at preview time and burned into the exported video.
+
+**Projects:** Save project JSON to preserve non-destructive cut segments, graphic layers and sequence markers. First re-open the original local video, then import its project JSON. The project checks source format, byte size and duration. The JSON contains editing text and timing but **not** the original video bytes. Keep both files.
+
+**Not yet implemented:** arbitrary additional imported video tracks, nested compositions, keyframe-based motion, GPU compositing and universal MP4 transcoding. Razor split and real-time export are timestamp-accurate within the browser playback/encoder limits, not guaranteed frame-accurate lossless cuts.
+
+Development branch: `feat/mangoshot-v0.5-layered-editing` (separate from the v0.4 Studio baseline). Browser device/codec and Wacom hardware certification remain pending even though Chromium WebM overlay export and audio were tested locally.
+
+See `docs/V0.5-LAYERED-EDITING.md`.
