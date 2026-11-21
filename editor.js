@@ -1,4 +1,4 @@
-const api=globalThis.browser??globalThis.chrome;
+const api=globalThis.chrome??globalThis.browser;
 const status=document.querySelector("#status"), base=document.querySelector("#base"),ink=document.querySelector("#ink");
 const ctx=base.getContext("2d"),pen=ink.getContext("2d");
 const params=new URLSearchParams(location.search),source=Number(params.get("source")),mode=params.get("mode")==="full"?"full":"visible";
@@ -42,7 +42,7 @@ api.runtime.onMessage.addListener((m,sender,reply)=>{
 async function start(){
   try{
     if(!Number.isInteger(source)||source<1)throw new Error("Missing source tab");
-    await call(api.runtime.sendMessage.bind(api.runtime),{type:"MANGO_INIT",captureId,source,mode});
+    const initiated=await call(api.runtime.sendMessage.bind(api.runtime),{type:"MANGO_INIT",captureId,source,mode});\n    if(!initiated?.ok)throw new Error(initiated?.error||"Capture initialization failed");
     await call(api.scripting.executeScript.bind(api.scripting),{target:{tabId:source},files:["content.js"]});
   }catch(e){label("Cannot start: "+e.message);}
 }
