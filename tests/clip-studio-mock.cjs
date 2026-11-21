@@ -21,7 +21,7 @@ const ctx={document:doc,window:{addEventListener(){}},Blob,URL:{createObjectURL:
   MediaRecorder:class {static isTypeSupported(type){return type.includes('webm')||(mimeMp4&&type.includes('mp4'));}},
   URLSearchParams,location:{search:''},setTimeout:(fn,ms)=>setTimeout(fn,Math.min(ms||0,30)),clearTimeout,requestAnimationFrame:cb=>setTimeout(cb,1)};
 ctx.globalThis=ctx;const run=filename=>vm.runInNewContext(fs.readFileSync(path.join(root,filename),'utf8'),ctx);
-run('clip-timeline.js');run('clip-edit-ops.js');run('clip-graphics.js');run('sequence-operations.js');run('layer-timeline-ops.js');run('media-format.js');ctx.MangoClips={load:async()=>null,clear:async()=>null};
+run('clip-timeline.js');run('clip-edit-ops.js');run('clip-graphics.js');run('sequence-operations.js');run('auto-cut.js');run('layer-timeline-ops.js');run('media-format.js');ctx.MangoClips={load:async()=>null,clear:async()=>null};
 let markerCache=[];ctx.MangoClipTimeline={markers:()=>markerCache.map(x=>({...x})),loadMarkers:next=>{markerCache=next.map(x=>({...x}));},render(){},reset(){markerCache=[];}};
 run('clip-studio.js');
 (async()=>{
@@ -89,5 +89,14 @@ run('clip-studio.js');
  assert.equal(st.range().active,true,'Explicit range selection is active');
  assert.equal(st.deleteSelection(),true);assert.equal(st.outputDuration(),14);
  get('undo').onclick();assert.equal(st.outputDuration(),16);
- console.log('PASS: no-edit export, Razor/ripple, undoable graphic timing, tracks and stacking');
+ // AutoCut batch is a single undoable transaction, even when multiple gaps close.
+ get('reset').onclick();markerCache=[{time:4,label:'before'},{time:12,label:'after'}];
+ const before=st.outputDuration();
+ assert.equal(st.commitAutoCut([{start:2,end:3},{start:7,end:8}]),true);
+ assert.equal(st.outputDuration(),before-2,'Two AutoCut intervals remove two seconds with no gaps');
+ assert.equal(markerCache[1].time,10,'Markers ripple across both AutoCut removals');
+ get('undo').onclick();assert.equal(st.outputDuration(),before,'One Undo restores both cuts');
+ assert.equal(markerCache[1].time,12);
+ get('redo').onclick();assert.equal(st.outputDuration(),before-2,'Redo restores both cuts');
+ console.log('PASS: no-edit export, Razor/ripple, graphics, one-step AutoCut batch and undo/redo');
 })().catch(e=>{console.error(e);process.exitCode=1;});

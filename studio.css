@@ -153,3 +153,34 @@ body.studio{color-scheme:dark;background:var(--studio-bg);color:var(--studio-tex
 .studio-clip .clip-timeline-panel .timeline-selection-note{font-size:11px;color:#d5eaba;padding:5px 10px}
 
 .studio-clip .timeline-selection-note{background:#27312d;color:#d3e7ca;border-block:1px solid #3b5142;line-height:1.45;min-height:26px}
+
+/* MangoShot AutoCut: compact professional inspector embedded above the timeline. */
+.autocut-launch{background:#355339!important;border-color:#8dc37e!important;color:#f4ffe9!important;font-weight:700}
+.autocut-panel{margin:8px 12px 10px;padding:0 12px 10px;background:#202a2b;border:1px solid #40524b;border-radius:8px;color:#e1eee8}
+.autocut-panel summary{list-style:none;display:flex;align-items:center;gap:12px;cursor:pointer;padding:12px 2px;font-size:12px}
+.autocut-panel summary::-webkit-details-marker{display:none}
+.autocut-panel summary strong{color:#b6df84;font-size:13px}
+.autocut-panel summary span{color:#aabbb4}
+.autocut-panel summary:before{content:'▸';color:#b6df84;font-size:14px}
+.autocut-panel[open] summary:before{content:'▾'}
+.autocut-controls{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:10px 0;border-top:1px solid #344541}
+.autocut-controls label{display:flex;align-items:center;gap:6px;color:#c2d2cb;font-size:12px}
+.autocut-controls input[type=number]{width:66px;padding:6px;background:#10191a;color:#e6f3ec;border:1px solid #475d53;border-radius:5px}
+.autocut-controls select{padding:7px;background:#10191a;color:#e6f3ec;border:1px solid #475d53;border-radius:5px}
+.autocut-controls .autocut-check input{accent-color:#9dd879}
+.autocut-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.autocut-actions strong{margin-left:auto;font-size:12px;font-weight:500;color:#d4e7db}
+.autocut-actions button{font-size:12px;padding:7px 11px}
+.autocut-actions button.primary{background:#a5d66b!important;color:#132015!important}
+.autocut-note{color:#e3c78f;font-size:11px;margin:3px 0 12px}
+.autocut-panel #autocut-status{font-size:12px;color:#bdcfc8;margin:5px 0}
+.autocut-panel #autocut-progress{display:block;width:100%;height:7px;accent-color:#a5d66b;margin-bottom:8px}
+.autocut-panel #autocut-progress[hidden]{display:none}
+.autocut-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:6px;max-height:180px;overflow-y:auto}
+.autocut-candidate{display:flex;align-items:center;gap:9px;border:1px solid #415451;border-radius:6px;padding:5px 8px;font-size:11px;background:#152021}
+.autocut-candidate input{accent-color:#eda06d}
+.autocut-candidate span{flex:1}
+.autocut-candidate button{font-size:11px;padding:4px 7px}
+.autocut-overlay{position:absolute;left:0;top:33px;bottom:0;right:0;pointer-events:none;z-index:4;overflow:hidden}
+.autocut-cut-mark{position:absolute;top:0;bottom:0;background:rgba(231,103,69,.22);border-left:1px dashed #ea916c;border-right:1px dashed #ea916c;box-sizing:border-box}
+@media(max-width:750px){.autocut-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.autocut-panel summary{display:block}.autocut-list{grid-template-columns:1fr}}
