@@ -3,7 +3,7 @@ const root=path.join(__dirname,'..');
 const read=n=>fs.readFileSync(path.join(root,n),'utf8');
 const manifest=JSON.parse(read('manifest.json'));
 assert.equal(manifest.manifest_version,3);
-assert.equal(manifest.version,'0.5.1');
+assert.equal(manifest.version,'0.5.2');
 assert.deepEqual(manifest.permissions,['activeTab','scripting']);
 assert.equal(manifest.background.service_worker,'background.js');
 assert.deepEqual(manifest.background.scripts,['background.js']);

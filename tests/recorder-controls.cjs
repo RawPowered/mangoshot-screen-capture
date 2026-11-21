@@ -1,7 +1,7 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),path=require('node:path');
 const read=n=>fs.readFileSync(path.join(__dirname,'..',n),'utf8');
 const elements=new Map(),windowEvents={},downloads=[],sent=[],appendCalls=[];
-let displayCalls=0,micCalls=0,scrollForwarded=false,stoppedTracks=0,clearCalls=0,latestRecorder,forwardElement=null,sourceActivated=0;
+let displayCalls=0,micCalls=0,scrollForwarded=false,stoppedTracks=0,clearCalls=0,latestRecorder,forwardElement=null,sourceActivated=0,editorUrl=null,savedRecordingId=null;
 function track(){return {stop(){stoppedTracks++;},getSettings(){return {width:800,height:450,displaySurface:'browser'};},addEventListener(){}};}
 const cameraTrack=track(),canvasTrack=track();
 function screenStream(){return {getTracks(){return [cameraTrack];},getVideoTracks(){return [cameraTrack];},getAudioTracks(){return [];},addTrack(){}};}
@@ -27,8 +27,8 @@ const window={addEventListener(k,fn){windowEvents[k]=fn;},MediaRecorder:MockReco
 const navigator={mediaDevices:{getDisplayMedia:async()=>{displayCalls++;return screenStream();},getUserMedia:async()=>{micCalls++;throw Object.assign(new Error('denied'),{name:'NotAllowedError'});}}};
 const URL=function(){this.host='example.test';};URL.createObjectURL=()=> 'blob:test';URL.revokeObjectURL=()=>{};
 const MangoRecovery={async begin(mime){return {id:'session-1',mime,created:Date.now()};},async append(s,i,blob){appendCalls.push({s,i,blob});},async mark(){},async latest(){return null;},async restore(){return new Blob([]);},async discard(){},async clearAll(){clearCalls++;}};
-const MangoClips={save:async()=>{},load:async()=>{}};
-const chrome={runtime:{lastError:null,id:'mock',getURL:p=>'chrome-extension://mock/'+p},scripting:{executeScript(o,cb){cb([]);}},tabs:{get(id,cb){cb({id,url:'https://example.test/'});},sendMessage(id,message,cb){sent.push(message);cb({ok:true});},update(id,info,cb){sourceActivated++;cb({id,...info});},create(o,cb){cb({id:50});}}};
+const MangoClips={save:async(_blob,id)=>{savedRecordingId=id;return id;},load:async()=>{}};
+const chrome={runtime:{lastError:null,id:'mock',getURL:p=>'chrome-extension://mock/'+p},scripting:{executeScript(o,cb){cb([]);}},tabs:{get(id,cb){cb({id,url:'https://example.test/'});},sendMessage(id,message,cb){sent.push(message);cb({ok:true});},update(id,info,cb){sourceActivated++;cb({id,...info});},create(o,cb){editorUrl=o.url;cb({id:50});}}};
 class CaptureController{forwardWheel(el){forwardElement=el;scrollForwarded=!!el;return Promise.resolve();}setFocusBehavior(){}}
 const ctx={document,window,navigator,CaptureController,MediaRecorder:MockRecorder,URL,URLSearchParams,location:{search:'?source=23'},Blob,MangoRecovery,MangoClips,chrome,
  Date,Math,Number,Promise,requestAnimationFrame:()=>1,cancelAnimationFrame(){},setInterval:()=>1,clearInterval(){},setTimeout:(fn,ms)=>{const t=setTimeout(fn,Math.min(30,ms||0));t.unref();return t;},clearTimeout};
@@ -97,6 +97,9 @@ const keyboard=(key,ctrl=false,alt=false)=>({key,code:'Key'+key.toUpperCase(),ct
  latestRecorder.finish();
  assert.equal(el('result').hidden,false);assert.match(el('result-meta').textContent,/WebM/);
  assert.equal(downloads.length,1,'Original video must automatically save once the encoder completes');
+ await el('edit').listeners.click();
+ assert.ok(savedRecordingId,'Edit handoff stores current recording by ID');
+ assert.equal(new URLSearchParams(editorUrl.split('?')[1]).get('recording'),savedRecordingId,'Editor URL must carry exact finalized recording ID');
  await new Promise(resolve=>setTimeout(resolve,15));
  assert.equal(appendCalls.length,1,'Encoded chunks are incrementally persisted for recovery');
  await el('dismiss-recovery').listeners.click();
