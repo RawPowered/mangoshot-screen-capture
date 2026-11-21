@@ -1,7 +1,8 @@
 const vm=require('node:vm'),fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const root=path.join(__dirname,'..'),els=new Map();let mimeMp4=false,downloads=[];
 class FakeElement{
- constructor(id){this.id=id;this.disabled=false;this.hidden=false;this.value='0';this.textContent='';this.style={};this.children=[];this.listeners={};this.videoWidth=640;this.videoHeight=360;this.duration=24;this.currentTime=0;this.seekable={length:0};this.readyState=4;}
+ constructor(id){this.id=id;this.disabled=false;this.hidden=false;this.value='0';this.textContent='';this.style={};this.dataset={};this.classList={toggle(){},contains(){return false;}};this.children=[];this.listeners={};this.videoWidth=640;this.videoHeight=360;this.duration=24;this.currentTime=0;this.seekable={length:0};this.readyState=4;}
+ setAttribute(){}
  addEventListener(type,fn){(this.listeners[type]??=[]).push(fn);}
  removeEventListener(type,fn){this.listeners[type]=(this.listeners[type]||[]).filter(x=>x!==fn);}
  replaceChildren(...children){this.children=children;}
@@ -20,7 +21,9 @@ const ctx={document:doc,window:{addEventListener(){}},Blob,URL:{createObjectURL:
   MediaRecorder:class {static isTypeSupported(type){return type.includes('webm')||(mimeMp4&&type.includes('mp4'));}},
   URLSearchParams,location:{search:''},setTimeout:(fn,ms)=>setTimeout(fn,Math.min(ms||0,30)),clearTimeout,requestAnimationFrame:cb=>setTimeout(cb,1)};
 ctx.globalThis=ctx;const run=filename=>vm.runInNewContext(fs.readFileSync(path.join(root,filename),'utf8'),ctx);
-run('clip-timeline.js');run('clip-edit-ops.js');run('clip-graphics.js');run('layer-timeline-ops.js');run('media-format.js');ctx.MangoClips={load:async()=>null,clear:async()=>null};run('clip-studio.js');
+run('clip-timeline.js');run('clip-edit-ops.js');run('clip-graphics.js');run('sequence-operations.js');run('layer-timeline-ops.js');run('media-format.js');ctx.MangoClips={load:async()=>null,clear:async()=>null};
+let markerCache=[];ctx.MangoClipTimeline={markers:()=>markerCache.map(x=>({...x})),loadMarkers:next=>{markerCache=next.map(x=>({...x}));},render(){},reset(){markerCache=[];}};
+run('clip-studio.js');
 (async()=>{
  await get('file').listeners.change[0]({target:{files:[new Blob([Uint8Array.from([0x1a,0x45,0xdf,0xa3,0,0,0,0])],{type:'video/webm'})]}});
  await new Promise(resolve=>setTimeout(resolve,15));
@@ -59,5 +62,32 @@ run('clip-timeline.js');run('clip-edit-ops.js');run('clip-graphics.js');run('lay
  assert.equal(st.layers()[0].start,old.start,'Undo restores original In point');
  assert.equal(st.placeLayerAbove(a,b),true,'Layer-list drag action places layer above another');
  assert.equal(st.layers()[1].id,a);
+ // Cut V1 into three clips, choose a middle clip, ripple delete and undo/redo.
+ get('reset').onclick();
+ st.commit(ctx.MangoEditOps.split(st.segments(),8),'Razor #1');
+ st.commit(ctx.MangoEditOps.split(st.segments(),16),'Razor #2');
+ assert.equal(st.segments().length,3);
+ st.addLayer('text','none');
+ const layerId=st.layers()[0].id;
+ st.updateLayer(layerId,{start:18,end:22});
+ markerCache=[{time:4,label:'before'},{time:12,label:'deleted'},{time:20,label:'after'}];
+ st.selectClip(1);
+ assert.equal(st.selectedClip(),1,'Selected V1 clip index must be retained');
+ assert.equal(st.deleteSelection(),true,'Ripple Delete on selected clip must work without numeric In/Out');
+ assert.equal(st.outputDuration(),16);
+ assert.equal(st.segments().length,2);
+ assert.equal(st.layers()[0].start,10,'Graphic layer must shift left with deleted time');
+ assert.equal(markerCache.length,2);assert.equal(markerCache[1].time,12);
+ assert.equal(st.range().active,false,'Ripple should clear consumed selection');
+ get('undo').onclick();
+ assert.equal(st.outputDuration(),24);assert.equal(st.segments().length,3);
+ assert.equal(st.layers()[0].start,18,'Undo restores layer timing');
+ assert.equal(markerCache.length,3,'Undo restores deleted marker');
+ get('redo').onclick();
+ assert.equal(st.outputDuration(),16);assert.equal(markerCache.length,2,'Redo repeats same marker deletion');
+ st.setRange(3,5);
+ assert.equal(st.range().active,true,'Explicit range selection is active');
+ assert.equal(st.deleteSelection(),true);assert.equal(st.outputDuration(),14);
+ get('undo').onclick();assert.equal(st.outputDuration(),16);
  console.log('PASS: no-edit export, Razor/ripple, undoable graphic timing, tracks and stacking');
 })().catch(e=>{console.error(e);process.exitCode=1;});

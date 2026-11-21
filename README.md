@@ -96,3 +96,9 @@ This is a new test-drive branch, not a store-ready cross-browser release. Earlie
 ## v0.5.3 — Drag-based graphic layers
 
 Clip Studio now has direct G2/G3 manipulation: drag the center of a graphic for time positioning, drag edges to adjust start/end, drag vertically between tracks, and use the layer-list grip to change draw order. Snap is on by default; hold Alt to disable it during a drag. Focused clips support Left/Right frame nudging and Alt+Up/Down stacking. Titles and callouts can be moved and resized directly over the Program Monitor. All edits remain non-destructive and undoable, and the existing export compositor uses the resulting layer order and timing. See [v0.5.3 usage and release gates](docs/V0.5.3-LAYER-GESTURES.md).
+
+## v0.5.4 — Ripple Delete and tool completion candidate
+
+Clip Studio now has **actionable V1 selection**: click an individual green clip, then Ripple Delete to close that gap. Use Shift+drag on the timeline ruler (or **Select range · R**) for a directly visible time selection. The editing transaction consistently updates source clip decisions, overlapping graphic clips, markers and playhead. Ctrl+Z / Ctrl+Shift+Z perform full undo/redo, including marker changes. Trim handles use the same downstream ripple rules.
+
+The current target is a **development test drive**, not a certified release. See `docs/V0.5.4-RIPPLE-RELEASE-GATES.md` for repeatable test cases and browser/codec limitations.

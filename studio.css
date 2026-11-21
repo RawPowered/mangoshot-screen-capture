@@ -143,3 +143,13 @@ body.studio{color-scheme:dark;background:var(--studio-bg);color:var(--studio-tex
 /* G2/G3 expanded rows for precise Wacom pen and mouse edge grips. */
 .graphic-track{height:38px}
 .graphic-timeline-clip{top:4px;bottom:4px}
+/* v0.5.4: selection is a first-class timeline object; not merely numerical inputs. */
+.studio-clip .clip-segment.is-selected{background:#a8c988!important;box-shadow:inset 0 0 0 2px #e9ffbb;outline:2px solid #d4efad;z-index:2}
+.studio-clip .clip-segment{min-width:2px;cursor:pointer}
+.studio-clip .timeline-range{position:absolute;left:0;top:0;bottom:0;z-index:3;pointer-events:none;border-inline:2px solid #c5df7b;background:rgba(175,226,106,.18);display:none;box-shadow:0 0 0 1px #29382a inset}
+.studio-clip .timeline-range.is-active{display:block}
+.studio-clip #range-tool[aria-pressed="true"]{border-color:#d9f39c;background:#41553e;color:white}
+.studio-clip #clear-range:disabled{opacity:.42}
+.studio-clip .clip-timeline-panel .timeline-selection-note{font-size:11px;color:#d5eaba;padding:5px 10px}
+
+.studio-clip .timeline-selection-note{background:#27312d;color:#d3e7ca;border-block:1px solid #3b5142;line-height:1.45;min-height:26px}
