@@ -25,3 +25,9 @@ Local capture/recording only; no external network endpoints, analytics, or telem
 ## Test gates
 
 Static syntax, extension manifest, original screenshot regression, camera geometry, timeline algebra, recorder-hotkey simulation, and clip editor decision-list simulation run in Node without remote dependencies. Mandatory manual gates: Chrome/Edge and Firefox screen-picker/scroll behavior, Wacom pressure and shortcuts, audio capture, real video WebM and MP4 playback, IndexedDB quota, and long-clip performance. Draft status until gates pass.
+
+## v0.3.1 recorder/display invariant and export optimization
+
+The recorder composes the camera crop and Wacom ink into the live-composite canvas. The **same canvas** is displayed in the preview and used as the recorded captureStream source; the source preview remains underneath as the captured-tab wheel-forwarding target. The transparent pen-input overlay retains pointer events but no longer visually duplicates ink.
+
+The media-format module identifies MP4 by ftyp and WebM by EBML header. An unchanged single full-length segment requested in the same recognized container takes a direct original-Blob download path with no decode, encode, or pixel/audio transformations. Edits or target-container changes still use the existing real-time MediaRecorder export. MIME values are never blindly relabeled to claim conversion.

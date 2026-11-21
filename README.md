@@ -2,11 +2,11 @@
 
 Ad-free, local-first screenshot, Wacom annotation, and screen-recording extension for **Chrome, Microsoft Edge and Firefox**.
 
-**v0.3.0 · recording-interaction and Clip Studio test-drive candidate.** No analytics, accounts, or video uploads. Keep using the previous v0.2.1 ZIP as your known-working fallback until you finish v0.3 validation.
+**v0.3.1 · recording-interaction and Clip Studio test-drive candidate.** No analytics, accounts, or video uploads. Keep using the previous v0.2.1 ZIP as your known-working fallback until you finish v0.3 validation.
 
 ## Installation
 
-Extract `MangoShot-v0.3.0-test-drive.zip` before loading it. In Chrome/Edge, open extensions, enable Developer mode, choose **Load unpacked** and select the folder containing `manifest.json`. In Firefox, open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on**, and select `manifest.json`. For clean tests, remove or disable the older unpacked MangoShot first.
+Extract `MangoShot-v0.3.1-test-drive.zip` before loading it. In Chrome/Edge, open extensions, enable Developer mode, choose **Load unpacked** and select the folder containing `manifest.json`. In Firefox, open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on**, and select `manifest.json`. For clean tests, remove or disable the older unpacked MangoShot first.
 
 ## Recording interactions
 
@@ -57,3 +57,10 @@ See `docs/TEST-DRIVE.md` and `docs/ARCHITECTURE.md` for risk notes and stepwise 
 ## License
 
 Copyright © 2026 RawPowered. All rights reserved pending a separate license decision.
+
+## v0.3.1 — Visible zoom and lossless fast export
+
+- The recorder now uses one visible/recorded composite canvas, so zoom changes appear **during** recording rather than only in the exported video. Available controls: Ctrl+wheel, Ctrl+drag, Zoom +, Zoom −, Zoom region (Wacom-friendly), Reset zoom.
+- Clip Studio identifies MP4/WebM from the file signature and displays the source container. With no edits, same-format exports download the **unchanged bytes instantly** without encoding; Save original (instant) works even after edits. Cross-format and edited exports still need real-time re-encoding and clearly say **Convert & export**.
+- The earlier source-tab interaction/scrolling and Wacom annotation workflows remain unchanged. MP4 encoding support is browser-specific.
+- JavaScript, screenshot protocol, timeline, recorder mock, file-header, no-edit copy, and ZIP integrity tests passed. Real Windows browser zoom/recording remains the installation acceptance gate.

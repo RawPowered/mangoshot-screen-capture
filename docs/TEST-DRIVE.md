@@ -1,6 +1,6 @@
-# MangoShot v0.3.0 test drive — Windows / Wacom
+# MangoShot v0.3.1 test drive — Windows / Wacom
 
-Install v0.3.0 into Chrome, Edge and Firefox as a new unpacked/temporary extension. Retain v0.2.1 ZIP as rollback. Test only on a regular HTTP(S) tab where you control the content; Chrome/Firefox internal pages are protected.
+Install v0.3.1 into Chrome, Edge and Firefox as a new unpacked/temporary extension. Retain v0.2.1 ZIP as rollback. Test only on a regular HTTP(S) tab where you control the content; Chrome/Firefox internal pages are protected.
 
 ## 1. Regression baseline
 
@@ -43,3 +43,11 @@ Install v0.3.0 into Chrome, Edge and Firefox as a new unpacked/temporary extensi
 - No global desktop-wide remote interaction; no OS-wide Wacom overlay.
 
 If a feature fails, capture the browser and version, source type (tab/window/screen), exact action, MangoShot status text, and browser console error. Do not report an interaction as certified from static tests alone.
+
+## v0.3.1 targeted validation
+
+1. Record a browser tab. Test Ctrl+wheel, Ctrl+drag, Zoom +/−, Zoom region with a Wacom pen, and Reset zoom. **Live preview must visibly zoom** with the same framing later found in the saved video.
+2. Confirm Interaction ON still scrolls the linked/selected tab, with pen annotations working when switched off.
+3. Open an untouched MP4, verify **Source container: MP4**, and choose **Save MP4 (instant)**. There must be no progress bar and the file should retain its original bytes/audio/video. Save original (instant) is independent of edit decisions.
+4. Choose **Convert & export WebM** for that MP4. This must be labeled conversion and is expected to run approximately real-time. Cuts/trims also require encoding.
+5. Recheck visible/full screenshots, Wacom annotation, PNG/PDF exports, and short recorded clip audio before wider release.
