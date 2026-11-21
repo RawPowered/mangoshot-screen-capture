@@ -1,4 +1,4 @@
-# MangoShot v0.2.0 — guided first test drive
+# MangoShot v0.2.1 — guided first test drive
 
 Use test/demo pages, not customer systems or sensitive data, until capture, audio and export behavior has been checked.
 
@@ -34,13 +34,20 @@ Use test/demo pages, not customer systems or sensitive data, until capture, audi
 
 ## 5. Video recording
 
-- Open **Record screen / audio**. Leave mic unchecked for first video.
+- Open **Record screen / audio**. Confirm an idle instruction appears instead of an unexplained blank screen. Leave mic unchecked for first video.
 - Click Start and select a browser tab or window from the browser-owned sharing picker.
 - Draw on the *preview* during recording; the ink should be embedded in the resulting video.
 - Pause, resume, then Stop & save; check file extension, actual playback and duration.
-- Repeat with microphone enabled; verify it is audible in the file.
+- Repeat with microphone enabled; verify it is audible in the file. If mic permission is denied, video should continue and status should explain audio is unavailable.
 - Repeat with shared audio; some Firefox / OS combinations will not provide a track, even when requested.
 - Stop sharing using the browser UI and confirm the recording finalizes.
+
+## When a capture fails
+
+- The editor should display an explicit failure, not `Frame 2 / 1` or a blank white capture.
+- If capture is unsuccessful, reopen the source page and click the extension icon again so the `activeTab` grant renews. Reopening the editor URL itself is not a valid way to initiate a capture.
+- If recording is blocked, **click Start recording**, check whether the native browser share picker opens, and note the precise status text if it does not.
+- Do not expect a live preview before clicking Start and choosing the browser's capture source.
 
 ## What to report
 

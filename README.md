@@ -2,11 +2,11 @@
 
 An ad-free, local-first screenshot, annotation and screen-recording extension for **Chrome, Microsoft Edge and Firefox**.
 
-**Version:** 0.2.0 test-drive candidate. Not yet browser-store-certified. No account, analytics or cloud upload.
+**Version:** 0.2.1 hotfix test-drive candidate. Not yet browser-store-certified. No account, analytics or cloud upload.
 
 ## Try it
 
-Download the `MangoShot-v0.2.0-test-drive.zip` provided with this build (or the `feat/mangoshot-mvp` branch source), extract it, then:
+Download the `MangoShot-v0.2.1-hotfix.zip` provided with this build (or the `feat/mangoshot-mvp` branch source), extract it, then:
 
 | Browser | Development installation |
 | --- | --- |
@@ -17,6 +17,12 @@ Download the `MangoShot-v0.2.0-test-drive.zip` provided with this build (or the 
 Pin **MangoShot** to your browser toolbar. Open a regular HTTP(S) webpage and try **Capture visible area** or **Capture entire page**. After capture, use ink, highlighter, eraser, arrows, rectangles, solid redaction and text. Export PNG or a locally generated multipage A4 PDF. Click **Record screen / audio** for the separate video studio.
 
 See [the guided test drive](docs/TEST-DRIVE.md) for suggested checks and expected limitations.
+
+## Important screenshot and recording fix (v0.2.1)
+
+The original v0.2 delivered **two `MANGO_FRAME` notifications** to the editor: one from the page without screenshot bytes and one forwarded from the background with the real PNG. This created `Frame 2 / 1`, a blank canvas, and `Missing screenshot frames`. The source and editor now use **separate message types**. The background enforces exactly-once indexed frame delivery; the editor validates PNG payloads and refuses duplicates. Regression tests cover both the background and actual editor listener.
+
+The recorder now displays a clear idle placeholder and step-by-step status, records video even when optional microphone permission is denied, reports screen-picker permission errors, and labels MP4/WebM output based on the actual supported MIME type. **The full screen-picker flow still requires browser/Windows testing**. On Firefox, screen-sharing audio is often unavailable; requesting it does not create an audio track automatically.
 
 ## Capabilities
 
@@ -39,9 +45,9 @@ See [the guided test drive](docs/TEST-DRIVE.md) for suggested checks and expecte
 
 ## Engineering checks
 
-Run `node tests/static.cjs` for JS syntax, manifest, asset references and mocked session routing. Run `node tests/pdf.cjs` for the PDF binary writer using included JPEG fixtures, then open the generated `tests/sample.pdf` with a PDF reader.
+Run `node tests/static.cjs`, `node tests/routing.cjs`, `node tests/editor-protocol.cjs`, and `node tests/recorder-mock.cjs` for syntax, capture routing, actual editor frame handling and recorder failure handling. Run `node tests/pdf.cjs` for the PDF binary writer using included JPEG fixtures, then open the generated `tests/sample.pdf` with a PDF reader.
 
-**Evidence:** syntax checks, mocked capture protocol test and 3-page PDF parse/render test passed in development. Automated end-to-end extension execution in the available headless Chromium environment was blocked by its extension-launch configuration. This build remains a test candidate until Chrome/Edge/Firefox and Wacom/recording checks are completed on a supported desktop.
+**Evidence:** syntax checks, capture routing and actual editor protocol tests, recording logic mock and 3-page PDF parse/render test passed in development. Automated end-to-end extension execution in the available headless Chromium environment was blocked by its extension-launch configuration. This build remains a test candidate until Chrome/Edge/Firefox and Wacom/recording checks are completed on a supported desktop.
 
 ## Licensing
 
