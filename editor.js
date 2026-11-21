@@ -19,7 +19,6 @@ async function finish(){
   initCanvas(w,h);
   for(const frame of frames.sort((a,b)=>a.index-b.index)){
     const bitmap=await image(frame.dataUrl);
-    const srcY=meta.full?Math.max(0,Math.round((meta.pageHeight-meta.height-frame.scrollY)*scale)):0;
     const viewportH=Math.round(meta.height*scale);
     const actualH=Math.min(bitmap.height,viewportH);
     // Destination is exact captured scroll position; overlap replaces previous pixels.
@@ -27,10 +26,8 @@ async function finish(){
   }
   ready=true;document.querySelector("#png").disabled=false;document.querySelector("#pdf").disabled=false;
   label("Ready · "+w+" × "+h+" pixels");
-  await call(api.tabs.update.bind(api.tabs),undefined,{active:true}).catch(async()=>{
-    const [self]=await call(api.tabs.query.bind(api.tabs),{url:location.href});
-    if(self)await call(api.tabs.update.bind(api.tabs),self.id,{active:true});
-  });
+  const editorTab=await call(api.tabs.getCurrent.bind(api.tabs));
+  if(editorTab?.id)await call(api.tabs.update.bind(api.tabs),editorTab.id,{active:true});
 }
 api.runtime.onMessage.addListener((m,sender,reply)=>{
   if(m?.captureId!==captureId)return;
