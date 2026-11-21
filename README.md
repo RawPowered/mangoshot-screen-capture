@@ -77,3 +77,7 @@ Use **+ Text** or **+ Callout** to create time-bound graphic layers on tracks **
 Development branch: `feat/mangoshot-v0.5-layered-editing` (separate from the v0.4 Studio baseline). Browser device/codec and Wacom hardware certification remain pending even though Chromium WebM overlay export and audio were tested locally.
 
 See `docs/V0.5-LAYERED-EDITING.md`.
+
+## v0.5.1 — recorder interaction and Clip Studio workspaces
+
+The recorder displays the selected capture surface type and explains when captured-tab wheel forwarding is supported. **Go to linked source tab** returns to the page where MangoShot was opened; real clicks/typing are performed there. Entire-screen capture of MangoShot itself produces a recursive preview; this does not mean the video is broken. Clip Studio adds Edit / Graphics / Timeline workspaces and quick title/callout actions. See [UX release notes](docs/UX-ITERATION-V0.5.1.md).
