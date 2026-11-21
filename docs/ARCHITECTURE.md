@@ -43,3 +43,15 @@ Ink operations are stored as pressure-bearing point strokes. Each completed stro
 Interaction mode is **hold Ctrl+Alt**, not a persistent toggle. While held, the ink pointer surface passes wheel events to the captured browser tab through explicit browser permission or to an explicitly linked source tab through the existing script fallback. The extension never claims arbitrary remote pointer/keyboard interaction.
 
 **Recovery privacy:** The **Delete ALL local recovery data** control clears the local recovery session metadata and chunks. Browser storage is finite; if it fails, immediately download the original from the recorder.
+
+## v0.4 Studio architecture
+
+The new workspaces share `studio.css` while retaining the working `style.css` base. This separates visual layout from capture protocol and removes the formerly crowded, flat control rows. `recorder.html` now provides a left tool rail, program monitor with Reset Camera, right properties, and a recovery session selector. `clip-studio.html` has a project bin, monitor, export inspector and timeline; `editor.html` has a tool rail, canvas and annotation inspector.
+
+**Recorder isolation:** `activeSession` is an object containing a unique token, MediaRecorder instance, MIME type, chunks array, recovery queue, storage ID and stop watchdog. The encoder callbacks capture *that instance* and continue accepting late data from it. A late stop from session N never resets session N+1. The `recording-safety.js` recovery store exposes `list()` so the user can select older sessions, and still supports explicit clear-all. `stopCapture()` halts tracks immediately, while encoded chunks may arrive later. A partial result is always labeled incomplete.
+
+**Camera:** `Zoom Region` is a persistent tool selection until toggled or exited via Esc, and Reset Camera remains visible at 100%. Ctrl+drag vertical dolly and Wacom Pointer Events are unchanged in semantics.
+
+**Video editor:** `clip-timeline-ui.js` supplies ruler, playhead, seeking, markers, keyboard commands, thumbnails and optional waveform; the existing `clip-studio.js` still owns source media, edit decisions, export and codec validation. Timeline time is source-media time and edits are reversible. Trim handles currently constrain inward editing; no false claim of outwards context restoration. The native browser decoder determines thumbnail/waveform availability. No remote services.
+
+**Screenshot editor:** A separate object/undo inspector manages vector annotation histories with up to 80 decisions. Base captured pixels are never altered until PNG/PDF flattening. Accessibility and real-browser Wacom tests remain required.

@@ -9,7 +9,7 @@ function supported(types){if(typeof MediaRecorder==='undefined')return null;retu
 function setControls(){const loaded=!!original;
  byId('file').disabled=exporting;byId('open-last').disabled=exporting;byId('forget-last').disabled=exporting;
  byId('save-original').disabled=!loaded||exporting;
- for(const id of ['in','out','mark-in','mark-out','trim','cut','reset','play-edited','export-webm','export-mp4'])byId(id).disabled=!loaded||exporting;
+ for(const id of ['in','out','mark-in','mark-out','trim','cut','split','add-marker','make-thumbnails','analyze-audio','timeline-zoom','reset','play-edited','export-webm','export-mp4'])byId(id).disabled=!loaded||exporting;
  byId('undo').disabled=!loaded||!history.length||exporting;
  byId('export-webm').disabled=!loaded||exporting||!supported(webmTypes)||!segments.length;
  byId('export-mp4').disabled=!loaded||exporting||(!supported(mp4Types)&&!MangoFormat.fastCopy(originalFormat,'mp4',segments,duration))||!segments.length;
@@ -31,14 +31,26 @@ function render(){const durationOut=MangoTimeline.outputDuration(segments);
  for(const [i,s] of segments.entries()){
   const node=document.createElement('button');node.className='clip-segment';node.type='button';
   node.style.width=100*(s.end-s.start)/duration+'%';node.title=`Clip ${i+1}: ${time(s.start)} – ${time(s.end)}`;
-  node.textContent=String(i+1);node.onclick=()=>{video.currentTime=s.start;};byId('timeline').appendChild(node);
+  node.textContent=String(i+1);node.onclick=()=>{video.currentTime=s.start;};
+  for(const edge of ['start','end']){const handle=document.createElement('span');handle.className='trim-grip trim-'+edge;handle.title='Drag inward to trim '+edge+' edge (undoable)';
+   handle.addEventListener('pointerdown',event=>{if(exporting)return;event.preventDefault();event.stopPropagation();
+    const originX=event.clientX,width=Math.max(1,byId('timeline').getBoundingClientRect().width),original={...segments[i]};
+    const delta=ev=>((ev.clientX-originX)/width)*duration;
+    const moving=ev=>{handle.title='Trim '+edge+' to '+time(Math.max(original.start,Math.min(original.end,edge==='start'?original.start+delta(ev):original.end+delta(ev))));};
+    const finished=ev=>{window.removeEventListener('pointermove',moving);window.removeEventListener('pointerup',finished);
+     try{const updated=MangoTimeline.resize(segments,i,edge,edge==='start'?original.start+delta(ev):original.end+delta(ev),duration);
+      if(updated[i].start!==original.start||updated[i].end!==original.end){history.push(segments);segments=updated;render();label('Trim handle applied. Ctrl+Z to undo.');}
+     }catch(error){label('Trim not applied: '+error.message);}};
+    window.addEventListener('pointermove',moving);window.addEventListener('pointerup',finished,{once:true});
+   });node.appendChild(handle);}
+  byId('timeline').appendChild(node);
  }
  const list=byId('segments');list.replaceChildren();
  for(const [i,s] of segments.entries()){
   const row=document.createElement('button');row.className='segment-row';row.textContent=`Clip ${i+1}: ${time(s.start)} → ${time(s.end)} (${time(s.end-s.start)})`;
   row.onclick=()=>{video.currentTime=s.start;};list.appendChild(row);
  }
- setControls();
+ setControls();globalThis.MangoClipTimeline?.render?.();
 }
 function waitVideoEvent(type,timeout=8000){return new Promise((resolve,reject)=>{
  const timer=setTimeout(()=>{clear();reject(new Error('Video '+type+' timed out.'));},timeout);
@@ -65,7 +77,7 @@ async function load(blob){if(exporting)throw new Error('Finish the current expor
  if(!Number.isFinite(duration)||duration<=0||duration>86400)throw new Error('The browser could not determine video duration. Try importing a finalized MP4/WebM file.');
  segments=[{start:0,end:duration}];history=[];byId('in').value='0';byId('out').value=duration.toFixed(2);
  byId('in').max=byId('out').max=duration.toFixed(2);
- render();label('Loaded '+time(duration)+' video · original is unchanged.');
+ render();globalThis.MangoClipTimeline?.reset?.();label('Loaded '+time(duration)+' video · original is unchanged.');
 }
 function readRange(){return MangoTimeline.range(Number(byId('in').value),Number(byId('out').value),duration);}
 function edit(kind){if(!original||exporting)return;
@@ -154,3 +166,14 @@ byId('export-webm').onclick=()=>exportClip('webm');byId('export-mp4').onclick=()
 byId('cancel-export').onclick=()=>{cancelExport=true;label('Stopping export…');};
 window.addEventListener('beforeunload',event=>{if(exporting){event.preventDefault();event.returnValue='';}});
 setControls();MangoClips.load().then(record=>record?.blob&&load(record.blob)).catch(()=>{});
+
+/* Read-only view model for the professional timeline. Mutations flow through
+ * this editor's existing non-destructive edit decision list. */
+globalThis.MangoClipView={
+ duration:()=>duration,video:()=>video,segments:()=>segments,url:()=>originalUrl,original:()=>original,
+ exporting:()=>exporting,message:label,
+ commit(next,message){if(!original||exporting||!next.length)return;
+   history.push(segments);segments=next;render();label(message);
+ }
+};
+video.addEventListener('timeupdate',()=>globalThis.MangoClipTimeline?.playhead?.());

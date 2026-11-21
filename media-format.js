@@ -12,9 +12,10 @@
    return typeFromHeader(header);
  }
  function unchanged(segments,duration){
-   if(!Array.isArray(segments)||segments.length!==1||!Number.isFinite(duration)||duration<=0)return false;
-   const s=segments[0];
-   return Math.abs(s.start)<.01&&Math.abs(s.end-duration)<.01;
+   if(!Array.isArray(segments)||!segments.length||!Number.isFinite(duration)||duration<=0)return false;
+   let cursor=0;
+   for(const s of segments){if(!Number.isFinite(s.start)||!Number.isFinite(s.end)||s.end<=s.start||Math.abs(s.start-cursor)>.01)return false;cursor=s.end;}
+   return Math.abs(cursor-duration)<.01;
  }
  function fastCopy(sourceFormat,targetFormat,segments,duration){
    return !!sourceFormat&&sourceFormat===targetFormat&&unchanged(segments,duration);

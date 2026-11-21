@@ -67,3 +67,14 @@ If a feature fails, capture the browser and version, source type (tab/window/scr
 7. Re-run an ordinary visible/full-page screenshot with PNG/PDF and one Clip Studio unedited MP4 export, checking for regressions.
 
 **Known constraints:** MediaRecorder shutdown can still be delayed by browser/platform encoders, although capture resources stop immediately and recovery is exposed. Captured Surface Control supports wheel scrolling rather than remote clicks or typing. Firefox's fallback requires the user to confirm the linked source tab; sharing an entire monitor does not permit remote interaction with arbitrary windows.
+
+## v0.4 Studio acceptance run
+
+1. Make three 15-second recordings in sequence, verify the browser stops sharing immediately after Stop and that each downloaded file independently plays. Repeat one with MP4 if native encoder available and one with microphone denied. If a session is incomplete, use Recovery Library to select it instead of replacing the latest recording.
+2. Test Zoom Region repeatedly without reselecting it: it should stay active and the visible marquee should appear. Press Esc to cancel selection, use Reset Camera to return to 100%, and test Wacom Ctrl+drag upward/downward.
+3. Hold Ctrl+Alt over a consented linked browser tab and scroll. Confirm releasing the modifier returns to pen/annotation. Actual mouse clicking and typing remain on the source tab.
+4. In Clip Studio, generate thumbnails, click on ruler, add a marker, split at the playhead, drag trim handles inward, undo, and export. Check source audio and actual container format. Try optional waveform analysis; failure must be explained rather than silently fabricated.
+5. Capture visible and long full pages; annotate in Image Studio. Undo/Redo multiple strokes and a Clear operation. Export PNG and multipage PDF. Inspect the files.
+6. Check UI at desktop 1366×768, 1440×900, 1920×1080 and a narrow browser window. No overlapping tools or concealed Stop/Reset Camera buttons are acceptable.
+
+The automated tests can be run with Node 22 using the loop in the v0.4 release-gate document. A browser policy blocks headless local extension navigation in the authoring environment, so the live OS-level acceptance remains manual.
