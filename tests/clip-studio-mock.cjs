@@ -18,9 +18,9 @@ const ctx={document:doc,window:{addEventListener(){}},Blob,URL:{createObjectURL:
   MediaRecorder:class {static isTypeSupported(type){return type.includes('webm')||(mimeMp4&&type.includes('mp4'));}},
   setTimeout,clearTimeout,requestAnimationFrame:cb=>setTimeout(cb,1)};
 ctx.globalThis=ctx;const run=filename=>vm.runInNewContext(fs.readFileSync(path.join(root,filename),'utf8'),ctx);
-run('clip-timeline.js');ctx.MangoClips={load:async()=>null,clear:async()=>null};run('clip-studio.js');
+run('clip-timeline.js');run('media-format.js');ctx.MangoClips={load:async()=>null,clear:async()=>null};run('clip-studio.js');
 (async()=>{
- await get('file').listeners.change[0]({target:{files:[new Blob(['binary'],{type:'video/webm'})]}});
+ await get('file').listeners.change[0]({target:{files:[new Blob([Uint8Array.from([0x1a,0x45,0xdf,0xa3,0,0,0,0])],{type:'video/webm'})]}});
  await new Promise(resolve=>setTimeout(resolve,15));
  assert.match(get('duration').textContent,/0:24/);
  assert.equal(get('export-mp4').disabled,true,'MP4 must not be presented when encoder absent');
