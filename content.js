@@ -27,7 +27,7 @@
     const ys=full?[...new Set(Array.from({length:Math.ceil(maxScroll/height)+1},(_,i)=>Math.min(maxScroll,i*height)))]:[scrollY];
     if(ys.length>40) throw new Error('Page is too long (40 captured frames maximum).');
     const meta={width,height,pageHeight,dpr,frames:ys.length,full};
-    let answer=await send({type:'MANGO_START',captureId,meta});
+    let answer=await send({type:'MANGO_SOURCE_START',captureId,meta});
     if(!answer?.ok) throw new Error(answer?.error || 'Cannot prepare editor.');
     if(full){
       root.style.scrollBehavior='auto';
@@ -49,12 +49,13 @@
           }
         }
       }
-      answer=await send({type:'MANGO_FRAME',captureId,index:i,scrollY:full?scrollY:0});
+      answer=await send({type:'MANGO_SOURCE_FRAME',captureId,index:i,scrollY:full?scrollY:0});
       if(!answer?.ok)throw new Error(answer?.error || 'Screenshot frame failed.');
     }
-    await send({type:'MANGO_DONE',captureId});
+    const completed=await send({type:'MANGO_SOURCE_DONE',captureId});
+    if(!completed?.ok)throw new Error(completed?.error||'Editor could not finish capture.');
   }catch(error){
-    if(captureId) await send({type:'MANGO_ERROR',captureId,error:error.message}).catch(()=>{});
+    if(captureId) await send({type:'MANGO_SOURCE_ERROR',captureId,error:error.message}).catch(()=>{});
   }finally{
     for(const [element,value] of modified)element.style.visibility=value;
     style?.remove();root.style.scrollBehavior=old.behavior;window.scrollTo(old.x,old.y);

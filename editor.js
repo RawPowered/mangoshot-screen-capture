@@ -22,7 +22,7 @@ function zoom(){if(!base.width)return;const selected=document.querySelector('#zo
 document.querySelector('#zoom').addEventListener('change',zoom);
 window.addEventListener('resize',()=>{if(document.querySelector('#zoom').value==='fit')zoom();});
 async function assemble(){
-  if(!meta || frames.length!==meta.frames)throw new Error('Missing screenshot frames.');
+  if(!meta || frames.length!==meta.frames || frames.some(f=>!f?.dataUrl))throw new Error('Missing screenshot frames.');
   const first=await image(frames[0].dataUrl),scale=first.naturalWidth/meta.width;
   const width=first.naturalWidth,height=Math.round(meta.pageHeight*scale);
   if(width>16384||height>30000||width*height>48000000)throw new Error('Screenshot is too large to edit safely.');
@@ -36,10 +36,23 @@ async function assemble(){
 }
 api.runtime.onMessage.addListener((message,sender,reply)=>{
   if(message?.captureId!==captureId)return;
-  if(message.type==='MANGO_START'){meta=message.meta;label('Capturing '+meta.frames+' frame(s)…');reply({ok:true});return;}
-  if(message.type==='MANGO_FRAME'){frames.push({index:message.index,scrollY:message.scrollY,dataUrl:message.dataUrl});label('Frame '+frames.length+' / '+meta.frames);reply({ok:true});return;}
-  if(message.type==='MANGO_DONE'){reply({ok:true});assemble().catch(e=>{label('Capture failed: '+e.message);activate();});return;}
-  if(message.type==='MANGO_ERROR'){reply({ok:true});label('Capture failed: '+message.error);activate();}
+  if(message.type==='MANGO_EDITOR_START'){meta=message.meta;frames=[];label('Capturing '+meta.frames+' frame(s)…');reply({ok:true});return;}
+  if(message.type==='MANGO_EDITOR_FRAME'){
+    if(!meta || !Number.isInteger(message.index) || message.index<0 || message.index>=meta.frames ||
+      frames[message.index] || typeof message.dataUrl!=='string' || !message.dataUrl.startsWith('data:image/png;base64,')){
+      reply({ok:false,error:'Invalid or duplicate frame delivery.'});return;
+    }
+    frames[message.index]={index:message.index,scrollY:message.scrollY,dataUrl:message.dataUrl};
+    label('Frame '+frames.filter(Boolean).length+' / '+meta.frames);reply({ok:true});return;
+  }
+  if(message.type==='MANGO_EDITOR_DONE'){
+    if(!meta || frames.length!==meta.frames || frames.some(f=>!f?.dataUrl)){
+      reply({ok:false,error:'Capture finished with missing image frames.'});
+      label('Capture failed: frame delivery was incomplete. Try again.');activate();return;
+    }
+    reply({ok:true});assemble().catch(e=>{label('Capture failed: '+e.message);activate();});return;
+  }
+  if(message.type==='MANGO_EDITOR_ERROR'){reply({ok:true});label('Capture failed: '+message.error);activate();}
 });
 async function begin(){
   try{
