@@ -74,6 +74,13 @@ const keyboard=(key,ctrl=false,alt=false)=>({key,code:'Key'+key.toUpperCase(),ct
  // Held Ctrl+Alt instead of a sticky interaction toggle.
  windowEvents.keydown(keyboard('Alt',true,true));assert.equal(el('ink').style.pointerEvents,'none');
  assert.match(el('mode').textContent,/HELD/);
+ let prevented=false;
+ el('screen-wrap').listeners.wheel({target:el('preview'),deltaY:260,clientX:300,clientY:180,
+   preventDefault(){prevented=true;}});
+ await Promise.resolve();await Promise.resolve();
+ assert.equal(prevented,true,'Explicitly linked tab should intercept Ctrl+Alt wheel');
+ assert.ok(sent.some(message=>message.type==='MANGO_LINKED_SCROLL'&&message.dy===260),
+   'Ctrl+Alt wheel forwards scrolling to consented linked tab');
  windowEvents.keyup(keyboard('Alt',false,false));assert.equal(el('ink').style.pointerEvents,'auto');
  // Stop must release capture tracks and timer immediately, BEFORE the encoder finally emits onstop.
  const previousStops=stoppedTracks;

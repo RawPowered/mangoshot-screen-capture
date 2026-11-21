@@ -200,7 +200,15 @@ get('enable-scroll').addEventListener('click',()=>{
 wrap.addEventListener('wheel',event=>{
  if(!active())return;
  if(ctrlHeld&&altHeld){
-   if(!forwardingActive||event.target!==preview){event.preventDefault();scrollLinked(event.deltaY,normalized(event));}
+   // An explicitly linked tab is preferred: native forwardWheel may preserve
+   // Ctrl modifiers, which some pages interpret as page zoom rather than scroll.
+   if(linkedAvailable&&get('linked-consent').checked){
+     event.preventDefault();scrollLinked(event.deltaY,normalized(event));return;
+   }
+   if(!forwardingActive||event.target!==preview){
+     event.preventDefault();
+     label('Hold Ctrl+Alt and enable browser-tab scroll, or authorize the linked-tab fallback.');
+   }
    return;
  }
  if(ctrlHeld&&!altHeld){event.preventDefault();event.stopImmediatePropagation?.();
