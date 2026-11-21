@@ -1,6 +1,6 @@
 /* Executed only after the user initiates a capture. */
 (async () => {
-  const api = globalThis.browser ?? globalThis.chrome;
+  const api = globalThis.chrome ?? globalThis.browser;
   if (globalThis.__mangoCaptureBusy) return;
   globalThis.__mangoCaptureBusy = true;
   const pause = ms => new Promise(r=>setTimeout(r,ms));
