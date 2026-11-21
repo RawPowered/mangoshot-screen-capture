@@ -1,4 +1,4 @@
-const api = globalThis.browser ?? globalThis.chrome;
+const api = globalThis.chrome ?? globalThis.browser;
 const status = document.querySelector("#status");
 const call = (fn,...args) => new Promise((resolve,reject) => { try { fn(...args,result=>{const err=globalThis.chrome?.runtime?.lastError;if(err)reject(new Error(err.message));else resolve(result);}); } catch(e){reject(e);} });
 async function capture(mode) {
