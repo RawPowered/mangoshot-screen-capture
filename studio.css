@@ -17,3 +17,14 @@ body.studio{color-scheme:dark;background:var(--studio-bg);color:var(--studio-tex
 .studio .recovery-banner[hidden],.studio .recording-result[hidden]{display:none}
 
 .clip-timeline .clip-segment{position:relative}.trim-grip{position:absolute;top:0;bottom:0;width:8px;background:#d5ecc2;z-index:4;cursor:ew-resize;opacity:.85}.trim-start{left:0}.trim-end{right:0}.clip-segment:hover .trim-grip{background:#f0bf75}.waveform-strip{height:48px;margin-top:5px;display:flex;align-items:center;background:#263633;border:1px solid #425a51}.waveform-strip .track-name{font-size:11px;font-weight:700;color:#c2d6ca;padding:0 11px}.waveform-strip canvas{flex:1;width:calc(100% - 50px);height:46px;display:block}
+/* Visual QA: keep the editing timeline visible above the fold on a desktop viewport. */
+@media(min-width:1201px){
+ .clip-layout{grid-template-rows:minmax(340px,calc(100vh - 435px)) auto}
+ .clip-bin,.clip-properties{min-height:0;max-height:calc(100vh - 435px);overflow-y:auto}
+ .clip-program{min-height:0;max-height:calc(100vh - 435px)}
+ .clip-program .clip-preview{min-height:0;max-height:calc(100vh - 518px);padding:10px}
+ .clip-program .clip-preview video{max-height:calc(100vh - 545px);object-fit:contain}
+}
+.studio-image .studio-toolrail button{background:#293638;color:#e5f2ee;border:1px solid #394d4d}
+.studio-image .studio-toolrail button small{color:#c7d7d2}
+.studio-image .studio-toolrail button.is-active,.studio-image .studio-toolrail button[aria-pressed="true"]{background:#455c3e;color:#e6f7d6;border-color:var(--studio-accent)}
