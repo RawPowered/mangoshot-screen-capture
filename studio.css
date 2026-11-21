@@ -104,3 +104,9 @@ body.studio{color-scheme:dark;background:var(--studio-bg);color:var(--studio-tex
 @media(max-width:1320px){.studio-clip .studio-transport{flex-wrap:wrap}.studio-clip .workspace-switch{margin-left:0}.studio-clip .studio-live-status{margin-left:0;max-width:100%}}
 @media(max-width:1200px){.studio-clip[data-workspace=graphics] .clip-layout,.studio-clip[data-workspace=timeline] .clip-layout{grid-template-columns:190px minmax(0,1fr);grid-template-rows:auto auto}.studio-clip[data-workspace=graphics] .clip-properties,.studio-clip[data-workspace=timeline] .clip-properties{grid-column:1/-1;min-height:0;max-height:none}.studio-clip[data-workspace=timeline] .clip-program{max-height:none}.studio-clip[data-workspace=timeline] .clip-timeline-panel{grid-column:1/-1}}
 @media(max-width:760px){.studio-clip .workspace-switch{width:100%}.studio-clip .workspace-switch button{flex:1}.studio-clip[data-workspace=graphics] .clip-layout,.studio-clip[data-workspace=timeline] .clip-layout{display:flex;flex-direction:column}.capture-context-top button{margin-left:0;width:100%}.studio .capture-context{padding:10px}}
+
+/* v0.5.2: the full-height playhead can be grabbed for scrubbing. */
+.timeline-playhead{pointer-events:auto;cursor:ew-resize;touch-action:none}
+.timeline-ruler{touch-action:none;cursor:ew-resize}
+.timeline-playhead:focus-visible{outline:2px solid var(--studio-accent)}
+.timeline-tools #ripple-delete:not(:disabled){border-color:#9fb79f;color:#e1efe1}

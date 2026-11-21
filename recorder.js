@@ -9,7 +9,7 @@ const source=Number(new URLSearchParams(location.search).get('source'));
 const mimeCandidates=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4',
  'video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
 let screen=null,mic=null,recorder=null,audio=null,controller=null,captureSource='';
-let animation=0,timer=0,tracks=[],chunks=[],lastBlob=null;
+let animation=0,timer=0,tracks=[],chunks=[],lastBlob=null,lastSessionId=null;
 let recording=false,stopping=false,finalized=false,partialShown=false,stopTimeout=0,recordingMime='',recordingToken=0;
 let zoomState=MangoCamera.camera(),zoomRegion=false,gesture=null;
 let ctrlHeld=false,altHeld=false,scrollPermission=false,forwardingActive=false,linkedAvailable=false;
@@ -33,8 +33,8 @@ function explainCaptureSurface(kind){
  tag.textContent='SOURCE · '+(types[kind]||'DISPLAY');
  tag.dataset.kind=kind||'unknown';
  if(kind==='browser')info.textContent='Captured-tab scrolling can be enabled in Chromium. Hold Ctrl+Alt for a consented linked-tab fallback. Clicks and typing happen in the actual tab.';
- else if(kind==='monitor')info.textContent='Entire-screen recording: the preview cannot remote-control this monitor. If MangoShot is visible on that monitor it creates a mirror effect. Switch to the real app or source tab to interact while capture continues.';
- else if(kind==='window')info.textContent='Window recording: work in that actual application window. The preview is for camera framing, ink and review; it does not forward mouse clicks.';
+ else if(kind==='monitor')info.textContent='Entire-screen recording: no separate tab-interaction permission prompt is available. The preview cannot remote-click or type. Use the actual source application; for linked website scrolling, explicitly enable the consent checkbox and hold Ctrl+Alt+wheel.';
+ else if(kind==='window')info.textContent='Window recording: there is no tab-interaction permission prompt for application windows. Use that window directly. The preview supports framing and annotation only.';
  else info.textContent='Recording source selected. Preview interaction depends on the selected browser surface.';
 }
 
@@ -156,15 +156,15 @@ function saveBlob(blob,labelType){if(!blob?.size){label('No encoded video availa
 function supportedRecorder(output){for(const mimeType of mimeCandidates){if(!MediaRecorder.isTypeSupported(mimeType))continue;
  try{return new MediaRecorder(output,{mimeType,videoBitsPerSecond:4500000});}catch{}}
  throw new Error('No supported video encoder for this browser.');}
-function showResult(blob,partial=false){if(!blob?.size){label('No encoded data received. Check Recover recording before closing.');return;}
- lastBlob=blob;get('result').hidden=false;
+function showResult(blob,partial=false,sessionId=null){if(!blob?.size){label('No encoded data received. Check Recover recording before closing.');return;}
+ lastBlob=blob;lastSessionId=sessionId;get('result').hidden=false;
  get('result-meta').textContent=(blob.size/1048576).toFixed(1)+' MiB · '+(blob.type.includes('mp4')?'MP4':'WebM')+
  (partial?' · INCOMPLETE, attempt recovery':' · source capture stopped');
  if(!partial)saveBlob(blob,'Video finalized. Original download requested; confirm it in your Downloads folder.');
  else label('Encoder delayed: the flushed chunks are available for emergency saving; file may be incomplete.');
 }
 function createSession(token,mime,encoder){
- return {token,mime,encoder,chunks:[],chunkIndex:0,storage:null,queue:Promise.resolve(),storageError:false,
+ return {id:(globalThis.crypto?.randomUUID?.()||Date.now()+'-'+token),token,mime,encoder,chunks:[],chunkIndex:0,storage:null,queue:Promise.resolve(),storageError:false,
   stopped:false,partial:false,complete:false,watchdog:0};
 }
 function queueChunkFor(session,blob){
@@ -189,7 +189,7 @@ function finishSession(session,partial=false){
  const isCurrent=activeSession===session;
  if(isCurrent){
   finalized=true;partialShown=partial;cleanup();recordState(partial?'recovery':'complete');
-  showResult(blob,partial);
+  showResult(blob,partial,session.id);
  }else if(!partial&&blob.size){
   // This belongs to a former session. Do not replace the current recording's UI.
   // Recovery storage also retains this result even if the automatic download is blocked.
@@ -237,6 +237,10 @@ get('source-focus').addEventListener('click',async()=>{
    if(tab.windowId!=null&&api.windows?.update)await call(api.windows.update.bind(api.windows),tab.windowId,{focused:true}).catch(()=>{});
    label('Switched to linked source tab. Interact there; MangoShot keeps recording.');
  }catch(error){label('Cannot focus linked tab: '+error.message+' · Open the source manually.');}
+});
+get('linked-consent').addEventListener('change',()=>{
+ const checked=get('linked-consent').checked;
+ label(checked?'Linked-tab scroll enabled for the page that launched MangoShot (not necessarily the screen picker source). Hold Ctrl+Alt+wheel to scroll it.':'Linked-tab scroll consent turned off.');
 });
 get('enable-scroll').addEventListener('click',()=>{
  if(forwardingActive){
@@ -316,7 +320,7 @@ get('recover').addEventListener('click',async()=>{
  try{const sessions=typeof MangoRecovery.list==='function'?await MangoRecovery.list():[await MangoRecovery.latest()].filter(Boolean);
   const target=sessions.find(item=>item.id===get('recovery-select')?.value)||sessions[0];
   if(!target)throw new Error('No recording selected.');
-  const blob=await MangoRecovery.restore(target);lastBlob=blob;get('result').hidden=false;
+  const blob=await MangoRecovery.restore(target);lastBlob=blob;lastSessionId=target.id;get('result').hidden=false;
   get('result-meta').textContent=(blob.size/1048576).toFixed(1)+' MiB · '+(target.status==='finished'?'finalized':'INCOMPLETE')+' · '+(blob.type.includes('mp4')?'MP4':'WebM');
   label('Recovered local fragments. Save original to download; interrupted MP4 may lack final playback metadata.');
  }catch(error){label('Cannot recover: '+error.message);}finally{button.disabled=false;}
@@ -327,7 +331,7 @@ get('dismiss-recovery').addEventListener('click',async()=>{
  label('All locally stored recovery fragments deleted.');}catch(error){label('Could not clear recovery: '+error.message);}finally{button.disabled=false;}
 });
 start.addEventListener('click',async()=>{
- if(start.disabled)return;start.disabled=true;
+ if(start.disabled)return;start.disabled=true;lastBlob=null;lastSessionId=null;
  recording=false;stopping=false;finalized=false;partialShown=false;recordingToken++;const token=recordingToken;
  // Never overwrite a previous encoder's chunks or callbacks.
  activeSession=null;recordState('ready');
@@ -388,9 +392,10 @@ start.addEventListener('click',async()=>{
   stop.disabled=false;pause.disabled=false;
   for(const id of ['resetZoom','zoomIn','zoomOut','zoomRegion'])get(id).disabled=false;
   get('enable-scroll').disabled=!(controller?.forwardWheel&&captureSource==='browser');
+  get('enable-scroll').title=captureSource==='browser'?'Enable scroll forwarding for the tab you selected in the browser capture picker. Browser permission may be requested.':'Native captured-tab scrolling is unavailable for a shared '+(captureSource||'display')+'. Enable linked-tab fallback or interact in the actual source.';
   startedAt=Date.now();pausedAt=0;pausedTotal=0;light.className='record-dot active';
   timer=setInterval(()=>{const now=pausedAt||Date.now();elapsed.textContent=clock(now-startedAt-pausedTotal);},200);
-  label('Recording '+w+'×'+h+' · '+(captureSource||'display')+' · '+(audio?'audio':'no audio')+
+  label('Recording '+w+'×'+h+' · '+(captureSource||'display')+' · '+(audio?'audio':'NO AUDIO TRACK — waveform unavailable')+
     (warnings.length?' · '+warnings.join(' '):''));
   if(controller?.setFocusBehavior)try{controller.setFocusBehavior('focus-capturing-application');}catch{}
  }catch(error){cleanup();recordState('error');label('Could not record: '+(error.name==='NotAllowedError'?'Permission denied or picker closed.':error.message));}
@@ -403,10 +408,11 @@ pause.addEventListener('click',()=>{
    pause.textContent='Pause';light.className='record-dot active';label('Recording resumed');}
 });
 get('save-raw').addEventListener('click',()=>saveBlob(lastBlob,'Saved original recording.'));
-get('discard').addEventListener('click',()=>{lastBlob=null;get('result').hidden=true;label('Recording removed from memory; local recovery remains until cleared.');});
+get('discard').addEventListener('click',()=>{lastBlob=null;lastSessionId=null;get('result').hidden=true;label('Recording removed from memory; local recovery remains until cleared.');});
 get('edit').addEventListener('click',async()=>{
  if(!lastBlob)return;get('edit').disabled=true;label('Opening Clip Studio…');
- try{await MangoClips.save(lastBlob);await call(api.tabs.create.bind(api.tabs),{url:api.runtime.getURL('clip-studio.html')});
+ try{const recordingId=await MangoClips.save(lastBlob,lastSessionId||undefined);
+  await call(api.tabs.create.bind(api.tabs),{url:api.runtime.getURL('clip-studio.html')+'?recording='+encodeURIComponent(recordingId)});
  label('Clip Studio opened. Original recording remains available.');}
  catch(error){label('Could not open Clip Studio: '+error.message+'. Save original instead.');}
  finally{get('edit').disabled=false;}

@@ -81,3 +81,14 @@ See `docs/V0.5-LAYERED-EDITING.md`.
 ## v0.5.1 — recorder interaction and Clip Studio workspaces
 
 The recorder displays the selected capture surface type and explains when captured-tab wheel forwarding is supported. **Go to linked source tab** returns to the page where MangoShot was opened; real clicks/typing are performed there. Entire-screen capture of MangoShot itself produces a recursive preview; this does not mean the video is broken. Clip Studio adds Edit / Graphics / Timeline workspaces and quick title/callout actions. See [UX release notes](docs/UX-ITERATION-V0.5.1.md).
+
+## v0.5.2 — Editor handoff and timeline control hotfix
+
+- Opening Clip Studio from a completed capture saves an immutable, ID-addressed recording and opens the editor using `?recording=<id>`. A failed lookup shows a visible error; it **does not** open an unrelated older recording. Manual video import is not overwritten by delayed latest-clip lookup.
+- Ripple Delete is enabled after media loads. Set In/Out to a **subrange** (the full recording cannot be ripple-deleted) and choose Ripple Delete, or use Alt+Backspace. Source clips remain unchanged.
+- Drag the playhead triangle or the timeline ruler to scrub continuously, including automatic panning near edges in zoomed timelines. Wheel over ruler/playhead seeks; arrow keys on the focused playhead step one frame (Shift+arrows step one second).
+- Thumbnail generation yields between frames and uses asynchronous JPEG encoding where available, so it should not lock edit controls.
+- Recording source labels distinguish browser-tab control from monitor/window capture, which cannot request arbitrary remote interaction privileges. A linked-tab scroll fallback needs explicit consent.
+- **Audio note:** the reported 4:04.43 MP4 test file contains an H.264 video stream but no audio stream (`ffprobe`), hence no waveform can be derived from it. For future narration, enable microphone and confirm the chosen sharing surface supplies audio.
+
+This is a new test-drive branch, not a store-ready cross-browser release. Earlier v0.5.1 remains unchanged.

@@ -1,7 +1,7 @@
 /* MangoShot Clip Studio: non-destructive cut list, local real-time export. */
 const byId=id=>document.getElementById(id),video=byId('video'),status=byId('status');
 let original=null,originalUrl=null,segments=[],layers=[],selectedLayerId=null,history=[],duration=0,sequencePlaying=false,exporting=false,cancelExport=false,originalFormat=null;
-let previewSequenceTime=null;
+let previewSequenceTime=null,loadVersion=0;
 const clone=o=>JSON.parse(JSON.stringify(o));
 const hasGraphics=()=>layers.some(l=>l.visible&&l.end>l.start);
 const snapshot=()=>({segments:clone(segments),layers:clone(layers)});
@@ -16,7 +16,7 @@ function supported(types){if(typeof MediaRecorder==='undefined')return null;retu
 function setControls(){const loaded=!!original;
  byId('file').disabled=exporting;byId('open-last').disabled=exporting;byId('forget-last').disabled=exporting;
  byId('save-original').disabled=!loaded||exporting;byId('save-project').disabled=!loaded||exporting;byId('open-project').disabled=!loaded||exporting;
- for(const id of ['in','out','mark-in','mark-out','trim','cut','split','add-marker','make-thumbnails','analyze-audio','timeline-zoom','reset','play-edited','export-webm','export-mp4'])byId(id).disabled=!loaded||exporting;
+ for(const id of ['in','out','mark-in','mark-out','trim','cut','split','ripple-delete','add-marker','make-thumbnails','analyze-audio','timeline-zoom','reset','play-edited','export-webm','export-mp4'])byId(id).disabled=!loaded||exporting;
  byId('undo').disabled=!loaded||!history.length||exporting;
  byId('export-webm').disabled=!loaded||exporting||!supported(webmTypes)||!segments.length;
  byId('export-mp4').disabled=!loaded||exporting|| (!supported(mp4Types)&&!(MangoFormat.fastCopy(originalFormat,'mp4',segments,duration)&&!hasGraphics()))||!segments.length;
@@ -38,7 +38,7 @@ function render(){const durationOut=MangoTimeline.outputDuration(segments);
  for(const [i,s] of segments.entries()){
   const node=document.createElement('button');node.className='clip-segment';node.type='button';
   node.style.width=100*(s.end-s.start)/Math.max(.01,durationOut)+'%';node.title=`Clip ${i+1}: ${time(s.start)} – ${time(s.end)}`;
-  node.textContent=String(i+1);node.onclick=()=>{video.currentTime=s.start;};
+  node.textContent=String(i+1);node.onclick=()=>{if(byId('timeline').dataset.tool==='razor')return;video.currentTime=s.start;globalThis.MangoClipTimeline?.playhead?.();};
   for(const edge of ['start','end']){const handle=document.createElement('span');handle.className='trim-grip trim-'+edge;handle.title='Drag inward to trim '+edge+' edge (undoable)';
    handle.addEventListener('pointerdown',event=>{if(exporting)return;event.preventDefault();event.stopPropagation();
     const originX=event.clientX,width=Math.max(1,byId('timeline').getBoundingClientRect().width),original={...segments[i]};
@@ -72,11 +72,12 @@ function waitVideoEvent(type,timeout=8000){return new Promise((resolve,reject)=>
  video.addEventListener(type,done,{once:true});video.addEventListener('error',failed,{once:true});
  });}
 async function load(blob){if(exporting)throw new Error('Finish the current export first.');
+ const request=++loadVersion;
  if(!(blob instanceof Blob)||!blob.size)throw new Error('Select a nonempty video.');
  sequencePlaying=false;video.pause();if(originalUrl)URL.revokeObjectURL(originalUrl);
  original=blob;originalFormat=await MangoFormat.detect(blob);originalUrl=URL.createObjectURL(blob);video.src=originalUrl;
  byId('source-format').textContent='Source container: '+(originalFormat?.toUpperCase()||'UNKNOWN')+' · '+(blob.size/1048576).toFixed(1)+' MiB';
- await waitVideoEvent('loadedmetadata');duration=video.duration;
+ await waitVideoEvent('loadedmetadata');if(request!==loadVersion)return;duration=video.duration;
  if(!Number.isFinite(duration)||duration<=0){
    // WebM files from MediaRecorder sometimes omit explicit duration metadata.
    if(video.seekable.length){const t=video.seekable.end(video.seekable.length-1);if(Number.isFinite(t)&&t>0)duration=t;}
@@ -211,7 +212,20 @@ byId('save-original').onclick=()=>{if(!original||exporting)return;
 byId('export-webm').onclick=()=>exportClip('webm');byId('export-mp4').onclick=()=>exportClip('mp4');
 byId('cancel-export').onclick=()=>{cancelExport=true;label('Stopping export…');};
 window.addEventListener('beforeunload',event=>{if(exporting){event.preventDefault();event.returnValue='';}});
-setControls();MangoClips.load().then(record=>record?.blob&&load(record.blob)).catch(()=>{});
+setControls();
+// An editor opened by the recorder must load precisely that recording, never
+// silently fall back to another session's stale `latest` entry.
+const requestedRecording=new URLSearchParams(location.search).get('recording');
+if(requestedRecording){
+ MangoClips.load(requestedRecording).then(record=>{
+  if(loadVersion>0)return; // user already imported a different file
+  if(!record?.blob)throw new Error('This recording is no longer in the local clip library. Use Import video to open its downloaded file.');
+  return load(record.blob);
+ }).catch(error=>label('Recording handoff failed: '+error.message));
+}else{
+ MangoClips.load().then(record=>{if(record?.blob&&loadVersion===0)return load(record.blob);})
+   .catch(error=>label('Could not auto-open latest video: '+error.message));
+}
 
 /* Read-only view model for the professional timeline. Mutations flow through
  * this editor's existing non-destructive edit decision list. */

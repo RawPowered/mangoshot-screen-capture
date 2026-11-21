@@ -101,3 +101,13 @@ Known limitations: G2/G3 are *graphics* layers, not separate video imports; fram
 6. Check recorder stop, recovery, Wacom zoom and undo, screenshot PNG/PDF, Razor/ripple, overlays, native MP4/WebM export, and 3 consecutive recordings.
 
 These changes are not a desktop-wide remote-control system. Supported captured-tab wheel forwarding is experimental and not universal across browser versions.
+
+## v0.5.2 targeted regression steps
+
+1. Record session A and session B. Stop B, choose **Edit in Clip Studio**. Confirm the opened duration/frames match B, not A. Keep a prior Clip Studio tab open to test concurrent sessions.
+2. Import the supplied 4:04 MP4. Move the playhead by dragging the ruler and the gold playhead handle, then wheel over the ruler to seek. Zoom to 3x and drag near either viewport edge to auto-pan.
+3. Set In=00:00:40 and Out=00:00:50, click Ripple Delete. Expected: duration shortens 10 seconds; V1 fragments shift; undo restores it. Repeat after generating thumbnails.
+4. Add Razor cuts, generate thumbnails, then split/ripple again. All edit buttons remain responsive; thumbnail generation must not block them.
+5. Click Analyze waveform on this MP4: it contains **no audio stream**, so a useful unavailable-audio message should appear, not a fake waveform. Test a different file with genuine audio.
+6. Record a browser tab: native captured-tab scroll may prompt for permission when Enable captured-tab wheel control is clicked. Entire-screen/window recording does not have that permission flow; use the actual source window or consented linked-tab fallback.
+7. Confirm screenshot PNG/PDF, Wacom tools, recorder Stop, clip export and project JSON still work.

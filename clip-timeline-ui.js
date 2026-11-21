@@ -3,7 +3,8 @@
  const ui=id=>document.getElementById(id);
  const format=seconds=>{const sec=Math.max(0,seconds||0),mins=Math.floor(sec/60);
    return String(Math.floor(mins/60)).padStart(2,'0')+':'+String(mins%60).padStart(2,'0')+':'+String(Math.floor(sec%60)).padStart(2,'0');};
- let markers=[],generation=0,tool='select';
+ let markers=[],generation=0,tool='select',draggingPlayhead=false;
+ let thumbnailUrls=[];
  const drawWaveform=async()=>{const st=state(),blob=st?.original?.();if(!blob)return;
   if(blob.size>130*1024*1024){st.message('Audio analysis is limited to files under 130 MB.');return;}
   const button=ui('analyze-audio');button.disabled=true;st.message('Decoding audio locally for waveform…');
@@ -15,7 +16,7 @@
    for(let x=0;x<width;x++){let max=0;for(let k=x*group;k<Math.min(channel.length,(x+1)*group);k+=Math.max(1,Math.floor(group/28)))max=Math.max(max,Math.abs(channel[k]));
     const bar=Math.max(1,max*height*.9);ctx.fillRect(x,(height-bar)/2,1,bar);}
    st.message('Audio waveform generated locally.');
-  }catch(error){st.message('Waveform unavailable for this source/browser: '+error.message);}
+  }catch(error){st.message('No usable audio waveform for this file (it may have no audio track, or the browser cannot decode its audio): '+error.message);}
   finally{if(context)void context.close().catch(()=>{});button.disabled=false;}
  };
 
@@ -24,7 +25,11 @@
    const d=st.outputDuration();const video=st.video();
    const point=st.outputAt(video.currentTime);
    ui('timeline-playhead').style.left=(d>0&&point!==null?Math.min(100,Math.max(0,point/d*100)):0)+'%';
-   ui('current-time').textContent=format(video.currentTime);
+   ui('current-time').textContent=format(point===null?video.currentTime:point);
+   const slider=ui('timeline-playhead');slider.setAttribute?.('aria-valuemin','0');
+   slider.setAttribute?.('aria-valuemax',String(Math.max(0,d)));
+   slider.setAttribute?.('aria-valuenow',String(Math.max(0,point??0)));
+   slider.setAttribute?.('aria-valuetext',format(point??0));
  }
  function render(){const st=state();if(!st)return;
   const duration=st.outputDuration(),zoom=Number(ui('timeline-zoom').value)||1;
@@ -56,13 +61,49 @@
   if(next.length===segments.length){st.message('Move the playhead inside a clip to split it.');return;}
   st.commit(next,'Razor cut at '+format(at)+' (non-destructive).');
  }
- function seekFromRuler(event){const st=state();if(!st?.duration())return;
-  const rect=ui('timeline-ruler').getBoundingClientRect();const x=Math.max(0,Math.min(1,(event.clientX-rect.left)/Math.max(1,rect.width)));
-  st.seekOutput(x*st.outputDuration());playhead();
+ // Sequence-time seeking remains accurate through Razor and ripple edits.
+ function seekAt(clientX){const st=state();if(!st?.outputDuration()||st.exporting())return;
+  const rect=ui('timeline-inner').getBoundingClientRect();
+  const fraction=Math.max(0,Math.min(1,(clientX-rect.left)/Math.max(1,rect.width)));
+  st.video().pause?.();st.seekOutput(fraction*st.outputDuration());playhead();
  }
+ function keepPlayheadVisible(){const scroll=ui('timeline-scroll'),inner=ui('timeline-inner'),st=state();
+  if(!scroll||!inner||!st?.outputDuration())return;
+  const mapped=st.outputAt(st.video().currentTime);if(mapped===null)return;
+  const width=inner.getBoundingClientRect().width,point=width*mapped/st.outputDuration();
+  const visible=scroll.clientWidth||scroll.getBoundingClientRect().width;
+  if(point<scroll.scrollLeft+22)scroll.scrollLeft=Math.max(0,point-visible*.2);
+  else if(point>scroll.scrollLeft+visible-22)scroll.scrollLeft=Math.max(0,point-visible*.8);
+ }
+ function startScrub(event){const st=state();if(!st?.outputDuration()||st.exporting())return;
+  if(event.button!==undefined&&event.button!==0)return;
+  event.preventDefault?.();draggingPlayhead=true;
+  try{event.currentTarget?.setPointerCapture?.(event.pointerId);}catch{}
+  seekAt(event.clientX);keepPlayheadVisible();
+ }
+ function moveScrub(event){if(!draggingPlayhead)return;
+  event.preventDefault?.();const scroll=ui('timeline-scroll');
+  const box=scroll.getBoundingClientRect();
+  // Near either edge, pan an enlarged timeline while dragging the playhead.
+  if(event.clientX>box.right-28)scroll.scrollLeft+=Math.min(35,(event.clientX-box.right+28)*1.8);
+  else if(event.clientX<box.left+28)scroll.scrollLeft-=Math.min(35,(box.left+28-event.clientX)*1.8);
+  seekAt(event.clientX);keepPlayheadVisible();
+ }
+ function endScrub(event){if(!draggingPlayhead)return;draggingPlayhead=false;
+  try{event.currentTarget?.releasePointerCapture?.(event.pointerId);}catch{}
+ }
+ function wheelScrub(event){const st=state();if(!st?.outputDuration()||st.exporting())return;
+  event.preventDefault?.();
+  const delta=(event.deltaY||event.deltaX||0)*(event.deltaMode===1?16:event.deltaMode===2?250:1);
+  const current=st.outputAt(st.video().currentTime)??0;
+  const step=st.outputDuration()/180; // one ordinary wheel notch ≈ 1/180 of the sequence
+  const next=Math.max(0,Math.min(st.outputDuration()-.005,current+Math.sign(delta)*Math.min(3,Math.abs(delta)/100)*step));
+  st.video().pause?.();st.seekOutput(next);playhead();keepPlayheadVisible();
+ }
+
  async function generateFrames(){const st=state(),source=st?.url();if(!source||!st.duration())return;
    const generationId=++generation;const button=ui('make-thumbnails');button.disabled=true;st.message('Generating local preview frames…');
-   const frames=ui('thumbnail-strip');frames.replaceChildren();let thumbVideo;
+   const frames=ui('thumbnail-strip');frames.replaceChildren();for(const url of thumbnailUrls)try{URL.revokeObjectURL(url);}catch{}thumbnailUrls=[];let thumbVideo;
    try{
     thumbVideo=document.createElement('video');thumbVideo.preload='auto';thumbVideo.muted=true;thumbVideo.playsInline=true;
     thumbVideo.src=source;
@@ -82,9 +123,16 @@
       const target=Math.min(Math.max(0,st.duration()-.08),((i+.35)/n)*st.duration());
       if(Math.abs(thumbVideo.currentTime-target)>.02){const seeked=waitEvent('seeked');thumbVideo.currentTime=target;await seeked;}
       ctx.drawImage(thumbVideo,0,0,canvas.width,canvas.height);
-      const node=document.createElement('span');node.className='frame-thumb';node.style.backgroundImage='url('+canvas.toDataURL('image/jpeg',.64)+')';
+      // Prefer async encoding: large screenshots should not lock up edit tools.
+      let url;
+      if(canvas.toBlob&&globalThis.URL?.createObjectURL){
+       const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.64));
+       if(blob){url=URL.createObjectURL(blob);thumbnailUrls.push(url);}
+      }
+      if(!url)url=canvas.toDataURL('image/jpeg',.64);
+      const node=document.createElement('span');node.className='frame-thumb';node.style.backgroundImage='url('+url+')';
       node.title=format(target);frames.appendChild(node);
-      if(i%2===1)await new Promise(resolve=>setTimeout(resolve,0));
+      await new Promise(resolve=>setTimeout(resolve,0)); // yield even if tab is backgrounded
     }
     st.message('Generated '+n+' local thumbnails.');
    }catch(error){st.message('Thumbnails unavailable: '+error.message);}
@@ -113,7 +161,26 @@
  ui('tool-select').addEventListener('click',()=>setTool('select'));
  ui('tool-razor').addEventListener('click',()=>setTool('razor'));
  ui('ripple-delete').addEventListener('click',rippleSelection);
- ui('timeline-ruler').addEventListener('pointerdown',seekFromRuler);
+ for(const id of ['timeline-ruler','timeline-playhead']){
+  const target=ui(id);target.addEventListener('pointerdown',startScrub);
+  target.addEventListener('pointermove',moveScrub);
+  target.addEventListener('pointerup',endScrub);
+  target.addEventListener('pointercancel',endScrub);
+  target.addEventListener('lostpointercapture',endScrub);
+ }
+ ui('timeline-ruler').addEventListener('wheel',wheelScrub,{passive:false});
+ ui('timeline-playhead').addEventListener('wheel',wheelScrub,{passive:false});
+ ui('timeline-playhead').addEventListener('keydown',event=>{
+  const st=state();if(!st?.outputDuration())return;
+  const t=st.outputAt(st.video().currentTime)??0;
+  let next=null;
+  if(event.key==='ArrowRight')next=t+(event.shiftKey?1:1/30);
+  else if(event.key==='ArrowLeft')next=t-(event.shiftKey?1:1/30);
+  else if(event.key==='Home')next=0;
+  else if(event.key==='End')next=st.outputDuration()-.005;
+  if(next===null)return;event.preventDefault();st.video().pause?.();
+  st.seekOutput(Math.max(0,Math.min(st.outputDuration()-.005,next)));playhead();keepPlayheadVisible();
+ });
  ui('timeline-zoom').addEventListener('input',render);
  ui('add-marker').addEventListener('click',addMarker);
  ui('split').addEventListener('click',split);
@@ -136,5 +203,6 @@
   else if(key==='j'){st.video().pause();st.seekOutput(Math.max(0,(st.outputAt(st.video().currentTime)||0)-2));event.preventDefault();}
   else if(event.altKey&&key==='backspace'){rippleSelection();event.preventDefault();}
  });
- globalThis.MangoClipTimeline={render,markers:()=>markers.map(m=>({...m})),loadMarkers(items){markers=items.map(m=>({...m}));render();},reset(){tool='select';setTool('select');generation++;markers=[];ui('thumbnail-strip').replaceChildren();const hint=document.createElement('span');hint.className='frame-thumb-label';hint.textContent='Generate thumbnails to inspect source frames';ui('thumbnail-strip').appendChild(hint);const wave=ui('audio-waveform');wave?.getContext?.('2d')?.clearRect(0,0,wave.width,wave.height);render();},playhead};
+ globalThis.MangoClipTimeline={render,markers:()=>markers.map(m=>({...m})),loadMarkers(items){markers=items.map(m=>({...m}));render();},reset(){tool='select';setTool('select');generation++;markers=[];draggingPlayhead=false;
+  for(const url of thumbnailUrls)try{URL.revokeObjectURL(url);}catch{}thumbnailUrls=[];ui('thumbnail-strip').replaceChildren();const hint=document.createElement('span');hint.className='frame-thumb-label';hint.textContent='Generate thumbnails to inspect source frames';ui('thumbnail-strip').appendChild(hint);const wave=ui('audio-waveform');wave?.getContext?.('2d')?.clearRect(0,0,wave.width,wave.height);render();},playhead};
 })();
