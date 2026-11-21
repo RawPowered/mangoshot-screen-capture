@@ -92,3 +92,7 @@ The recorder displays the selected capture surface type and explains when captur
 - **Audio note:** the reported 4:04.43 MP4 test file contains an H.264 video stream but no audio stream (`ffprobe`), hence no waveform can be derived from it. For future narration, enable microphone and confirm the chosen sharing surface supplies audio.
 
 This is a new test-drive branch, not a store-ready cross-browser release. Earlier v0.5.1 remains unchanged.
+
+## v0.5.3 — Drag-based graphic layers
+
+Clip Studio now has direct G2/G3 manipulation: drag the center of a graphic for time positioning, drag edges to adjust start/end, drag vertically between tracks, and use the layer-list grip to change draw order. Snap is on by default; hold Alt to disable it during a drag. Focused clips support Left/Right frame nudging and Alt+Up/Down stacking. Titles and callouts can be moved and resized directly over the Program Monitor. All edits remain non-destructive and undoable, and the existing export compositor uses the resulting layer order and timing. See [v0.5.3 usage and release gates](docs/V0.5.3-LAYER-GESTURES.md).

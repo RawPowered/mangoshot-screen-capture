@@ -20,7 +20,7 @@ const ctx={document:doc,window:{addEventListener(){}},Blob,URL:{createObjectURL:
   MediaRecorder:class {static isTypeSupported(type){return type.includes('webm')||(mimeMp4&&type.includes('mp4'));}},
   URLSearchParams,location:{search:''},setTimeout:(fn,ms)=>setTimeout(fn,Math.min(ms||0,30)),clearTimeout,requestAnimationFrame:cb=>setTimeout(cb,1)};
 ctx.globalThis=ctx;const run=filename=>vm.runInNewContext(fs.readFileSync(path.join(root,filename),'utf8'),ctx);
-run('clip-timeline.js');run('clip-edit-ops.js');run('clip-graphics.js');run('media-format.js');ctx.MangoClips={load:async()=>null,clear:async()=>null};run('clip-studio.js');
+run('clip-timeline.js');run('clip-edit-ops.js');run('clip-graphics.js');run('layer-timeline-ops.js');run('media-format.js');ctx.MangoClips={load:async()=>null,clear:async()=>null};run('clip-studio.js');
 (async()=>{
  await get('file').listeners.change[0]({target:{files:[new Blob([Uint8Array.from([0x1a,0x45,0xdf,0xa3,0,0,0,0])],{type:'video/webm'})]}});
  await new Promise(resolve=>setTimeout(resolve,15));
@@ -42,5 +42,22 @@ run('clip-timeline.js');run('clip-edit-ops.js');run('clip-graphics.js');run('med
  get('export-mp4').onclick();assert.equal(downloads.length,2,'Unedited MP4 should immediately copy bytes');
  assert.match(downloads.at(-1),/\.mp4$/);
  assert.match(get('export-webm').textContent,/Convert/,'MP4 to WebM must be labeled as a conversion');
- console.log('PASS: no-edit WebM/MP4 instant copy, edit list, codec gate, honest WebM conversion label');
+ // Timeline gestures must persist through the actual Clip Studio state/history, not just pure math.
+ ctx.MangoGraphics.render=()=>{};
+ const st=ctx.MangoClipView;
+ st.addLayer('text','none');st.addLayer('text','none');
+ assert.equal(st.layers().length,2);
+ const a=st.layers()[0].id,b=st.layers()[1].id;
+ assert.equal(st.reorderLayer(a,1),true,'Bring forward must be an implemented action');
+ assert.equal(st.layers()[1].id,a,'Bring forward changes actual compositor ordering');
+ get('undo').onclick();assert.equal(st.layers()[0].id,a,'Undo restores layer stack');
+ const old=st.layers()[0];
+ const draft=ctx.MangoLayerOps.transform(old,'move',2,st.outputDuration(),3);
+ assert.equal(st.commitLayerTimeline(a,draft),true);
+ assert.equal(st.layers()[0].track,3);assert.equal(st.layers()[0].start,old.start+2);
+ get('undo').onclick();assert.equal(st.layers()[0].track,2,'Undo restores original G2/G3 track');
+ assert.equal(st.layers()[0].start,old.start,'Undo restores original In point');
+ assert.equal(st.placeLayerAbove(a,b),true,'Layer-list drag action places layer above another');
+ assert.equal(st.layers()[1].id,a);
+ console.log('PASS: no-edit export, Razor/ripple, undoable graphic timing, tracks and stacking');
 })().catch(e=>{console.error(e);process.exitCode=1;});
