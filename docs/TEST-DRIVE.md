@@ -90,3 +90,14 @@ The automated tests can be run with Node 22 using the loop in the v0.4 release-g
 7. Re-test screenshots, Wacom ink, browser-tab recording, and multiple consecutive recordings to guard the working v0.4 baseline.
 
 Known limitations: G2/G3 are *graphics* layers, not separate video imports; frame-accurate sample editing and offline universal MP4 are later work. Browser permissions, native codecs and full-screen remote interaction remain unchanged from v0.4.
+
+## v0.5.1 interaction + workspace field test
+
+1. Start recording from an ordinary HTTP(S) page. Pick a monitor in the browser dialog. The recorder must identify **ENTIRE SCREEN**, explain the mirror effect, and leave remote-click actions disabled/unpromised.
+2. Click **Go to linked source tab**. The original page should activate without ending the recording. The linked tab may differ from the surface selected in the capture dialog.
+3. If Chrome/Edge captures a browser **tab**, click **Enable captured-tab wheel control** and test wheel motion over the whole preview. Click again to disable it. Wheel forwarding is opt-in and may occur without a modifier while enabled.
+4. On Firefox, select the checkbox for the explicit linked-tab fallback and hold Ctrl+Alt while scrolling over the preview; verify the linked source page scrolls (not arbitrary monitor clicks/typing).
+5. In Clip Studio, import a source and switch between **Edit / Graphics / Timeline** layouts; test Shift+1/2/3 and layout persistence. Click **+ Title** and **+ Callout** in the timeline toolbar and verify editable G2/G3 layers.
+6. Check recorder stop, recovery, Wacom zoom and undo, screenshot PNG/PDF, Razor/ripple, overlays, native MP4/WebM export, and 3 consecutive recordings.
+
+These changes are not a desktop-wide remote-control system. Supported captured-tab wheel forwarding is experimental and not universal across browser versions.

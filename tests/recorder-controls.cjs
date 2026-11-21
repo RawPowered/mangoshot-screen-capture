@@ -1,7 +1,7 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),path=require('node:path');
 const read=n=>fs.readFileSync(path.join(__dirname,'..',n),'utf8');
 const elements=new Map(),windowEvents={},downloads=[],sent=[],appendCalls=[];
-let displayCalls=0,micCalls=0,scrollForwarded=false,stoppedTracks=0,clearCalls=0,latestRecorder;
+let displayCalls=0,micCalls=0,scrollForwarded=false,stoppedTracks=0,clearCalls=0,latestRecorder,forwardElement=null,sourceActivated=0;
 function track(){return {stop(){stoppedTracks++;},getSettings(){return {width:800,height:450,displaySurface:'browser'};},addEventListener(){}};}
 const cameraTrack=track(),canvasTrack=track();
 function screenStream(){return {getTracks(){return [cameraTrack];},getVideoTracks(){return [cameraTrack];},getAudioTracks(){return [];},addTrack(){}};}
@@ -25,11 +25,11 @@ class MockRecorder{
 const document={getElementById:el,body:{appendChild(){}},createElement(type){return el(type);}};
 const window={addEventListener(k,fn){windowEvents[k]=fn;},MediaRecorder:MockRecorder};
 const navigator={mediaDevices:{getDisplayMedia:async()=>{displayCalls++;return screenStream();},getUserMedia:async()=>{micCalls++;throw Object.assign(new Error('denied'),{name:'NotAllowedError'});}}};
-const URL={createObjectURL(){return 'blob:test';},revokeObjectURL(){}};
+const URL=function(){this.host='example.test';};URL.createObjectURL=()=> 'blob:test';URL.revokeObjectURL=()=>{};
 const MangoRecovery={async begin(mime){return {id:'session-1',mime,created:Date.now()};},async append(s,i,blob){appendCalls.push({s,i,blob});},async mark(){},async latest(){return null;},async restore(){return new Blob([]);},async discard(){},async clearAll(){clearCalls++;}};
 const MangoClips={save:async()=>{},load:async()=>{}};
-const chrome={runtime:{lastError:null,id:'mock',getURL:p=>'chrome-extension://mock/'+p},scripting:{executeScript(o,cb){cb([]);}},tabs:{get(id,cb){cb({id,url:'https://example.test/'});},sendMessage(id,message,cb){sent.push(message);cb({ok:true});},create(o,cb){cb({id:50});}}};
-class CaptureController{forwardWheel(){scrollForwarded=true;return Promise.resolve();}setFocusBehavior(){}}
+const chrome={runtime:{lastError:null,id:'mock',getURL:p=>'chrome-extension://mock/'+p},scripting:{executeScript(o,cb){cb([]);}},tabs:{get(id,cb){cb({id,url:'https://example.test/'});},sendMessage(id,message,cb){sent.push(message);cb({ok:true});},update(id,info,cb){sourceActivated++;cb({id,...info});},create(o,cb){cb({id:50});}}};
+class CaptureController{forwardWheel(el){forwardElement=el;scrollForwarded=!!el;return Promise.resolve();}setFocusBehavior(){}}
 const ctx={document,window,navigator,CaptureController,MediaRecorder:MockRecorder,URL,URLSearchParams,location:{search:'?source=23'},Blob,MangoRecovery,MangoClips,chrome,
  Date,Math,Number,Promise,requestAnimationFrame:()=>1,cancelAnimationFrame(){},setInterval:()=>1,clearInterval(){},setTimeout:(fn,ms)=>{const t=setTimeout(fn,Math.min(30,ms||0));t.unref();return t;},clearTimeout};
 ctx.globalThis=ctx;
@@ -40,9 +40,14 @@ const keyboard=(key,ctrl=false,alt=false)=>({key,code:'Key'+key.toUpperCase(),ct
 (async()=>{
  assert.equal(el('start').disabled,false);
  await el('start').listeners.click();assert.equal(displayCalls,1);assert.equal(micCalls,1);
+ assert.equal(el('source-surface').textContent,'SOURCE · BROWSER TAB');
+ assert.equal(el('source-focus').disabled,false,'Linked source should be actionable');
  assert.equal(el('stop').disabled,false);assert.match(el('status').textContent,/Microphone unavailable/);
+ await el('source-focus').listeners.click();assert.equal(sourceActivated,1,'Source tab activation should be user-triggered');
  assert.equal(el('enable-scroll').disabled,false);
  el('enable-scroll').listeners.click();await Promise.resolve();assert.equal(scrollForwarded,true);
+ assert.equal(forwardElement,el('screen-wrap'),'Wheel forwarding covers composed monitor, not hidden video only');
+ el('enable-scroll').listeners.click();await Promise.resolve();assert.equal(scrollForwarded,false, 'Native forwarding must be togglable off');
  // Wacom strokes: verify more than 50 undo decisions remain usable without raster snapshots.
  for(let n=0;n<60;n++){
   el('ink').listeners.pointerdown(pointer(100,200));

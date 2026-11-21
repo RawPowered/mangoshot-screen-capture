@@ -26,6 +26,18 @@ const call=(fn,...args)=>new Promise((resolve,reject)=>{
  catch(error){reject(error);}
 });
 function active(){return !!screen&&!stopping&&recording;}
+function explainCaptureSurface(kind){
+ const tag=get('source-surface'),info=get('source-guidance');
+ if(!tag||!info)return;
+ const types={browser:'BROWSER TAB',window:'APPLICATION WINDOW',monitor:'ENTIRE SCREEN'};
+ tag.textContent='SOURCE · '+(types[kind]||'DISPLAY');
+ tag.dataset.kind=kind||'unknown';
+ if(kind==='browser')info.textContent='Captured-tab scrolling can be enabled in Chromium. Hold Ctrl+Alt for a consented linked-tab fallback. Clicks and typing happen in the actual tab.';
+ else if(kind==='monitor')info.textContent='Entire-screen recording: the preview cannot remote-control this monitor. If MangoShot is visible on that monitor it creates a mirror effect. Switch to the real app or source tab to interact while capture continues.';
+ else if(kind==='window')info.textContent='Window recording: work in that actual application window. The preview is for camera framing, ink and review; it does not forward mouse clicks.';
+ else info.textContent='Recording source selected. Preview interaction depends on the selected browser surface.';
+}
+
 function normalized(event){const rect=ink.getBoundingClientRect();
  return {x:Math.max(0,Math.min(1,(event.clientX-rect.left)/Math.max(1,rect.width))),
    y:Math.max(0,Math.min(1,(event.clientY-rect.top)/Math.max(1,rect.height)))};
@@ -132,6 +144,7 @@ function resetControls(){start.disabled=false;stop.disabled=true;pause.disabled=
 function cleanup(){stopTracks();stopClock();screen=null;mic=null;
  preview.srcObject=null;recorder=null;controller=null;captureSource='';scrollPermission=false;forwardingActive=false;
  get('video-placeholder').hidden=false;composite.style.display='none';ink.style.opacity='1';
+ get('enable-scroll').disabled=true;get('enable-scroll').textContent='Enable captured-tab wheel control';
  recording=false;stopping=false;resetControls();}
 function saveBlob(blob,labelType){if(!blob?.size){label('No encoded video available.');return false;}
  const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;
@@ -201,12 +214,13 @@ function stopCapture(reason='Stopped by user'){
   }},8000);
  }
 }
-async function tryLinkedTab(){linkedAvailable=false;
+async function tryLinkedTab(){linkedAvailable=false;get('source-focus').disabled=true;
  if(!Number.isInteger(source)||source<1||!api?.scripting?.executeScript||!api.tabs?.sendMessage)return;
  try{const tab=await call(api.tabs.get.bind(api.tabs),source);if(!/^https?:/.test(tab?.url??''))return;
    await call(api.scripting.executeScript.bind(api.scripting),{target:{tabId:source},files:['linked-tab.js']});
-   linkedAvailable=true;get('linked-label').textContent='Linked tab: '+new URL(tab.url).host+'. Hold Ctrl+Alt and scroll over the preview after enabling the linked-tab checkbox. Actual clicks and typing require the real tab.';
- }catch{get('linked-label').textContent='Linked-tab scrolling unavailable. Share a browser tab and use Enable tab scrolling (Chrome/Edge), or operate the source tab directly.';}
+   linkedAvailable=true;get('source-focus').disabled=false;
+   get('linked-label').textContent='Linked source: '+new URL(tab.url).host+'. This is the page that launched MangoShot and may differ from the tab selected in the browser picker.';
+ }catch{get('source-focus').disabled=true;get('linked-label').textContent='Linked-tab access unavailable. Open the real application yourself, or start MangoShot from an ordinary webpage.';}
 }
 async function scrollLinked(dy,where){if(!linkedAvailable||!get('linked-consent').checked||!ctrlHeld||!altHeld)return;
  queuedScroll+=dy;if(scrollBusy)return;scrollBusy=true;
@@ -214,13 +228,31 @@ async function scrollLinked(dy,where){if(!linkedAvailable||!get('linked-consent'
  const result=await call(api.tabs.sendMessage.bind(api.tabs),source,{type:'MANGO_LINKED_SCROLL',dx:0,dy:amount,x:where.x,y:where.y});
  if(result?.ok===false)throw new Error(result.error||'Linked tab scroll rejected');}}
  catch(error){label('Linked-tab scroll unavailable: '+error.message);queuedScroll=0;}finally{scrollBusy=false;}}
+get('source-focus').addEventListener('click',async()=>{
+ if(!linkedAvailable||!Number.isInteger(source)||source<1){label('No authorized linked source tab. Start MangoShot from a webpage.');return;}
+ try{
+   const tab=await call(api.tabs.get.bind(api.tabs),source);
+   if(!/^https?:/.test(tab?.url||''))throw new Error('Linked source is no longer a webpage.');
+   await call(api.tabs.update.bind(api.tabs),source,{active:true});
+   if(tab.windowId!=null&&api.windows?.update)await call(api.windows.update.bind(api.windows),tab.windowId,{focused:true}).catch(()=>{});
+   label('Switched to linked source tab. Interact there; MangoShot keeps recording.');
+ }catch(error){label('Cannot focus linked tab: '+error.message+' · Open the source manually.');}
+});
 get('enable-scroll').addEventListener('click',()=>{
+ if(forwardingActive){
+   controller?.forwardWheel(null).then(()=>{forwardingActive=false;scrollPermission=false;
+     get('enable-scroll').textContent='Enable captured-tab wheel control';label('Native tab wheel forwarding OFF. You can use Ctrl+Alt with the linked-tab fallback.');
+   }).catch(error=>label('Could not disable tab wheel control: '+error.message));
+   return;
+ }
  if(!controller?.forwardWheel||captureSource!=='browser'){
    label('Direct scrolling needs a shared browser tab; for full-screen capture use the linked-tab fallback.');return;
  }
  // A button click provides the transient activation required by forwardWheel.
- controller.forwardWheel(preview).then(()=>{forwardingActive=true;scrollPermission=true;
-   get('enable-scroll').textContent='Tab scroll enabled';label('Hold Ctrl+Alt and wheel over the preview to scroll the shared tab.');})
+ // Forward events on the whole monitor area, not only the hidden source video.
+ // This handles wheel input over a canvas overlay as well as over the video.
+ controller.forwardWheel(wrap).then(()=>{forwardingActive=true;scrollPermission=true;
+   get('enable-scroll').textContent='Tab wheel forwarding ON';label('Captured-tab wheel forwarding enabled. It may apply without Ctrl+Alt; turn it off to annotate or use linked-tab fallback.');})
    .catch(error=>label('Browser rejected scrolling ('+error.name+'). Enable the linked-tab fallback if appropriate.'));
 });
 wrap.addEventListener('wheel',event=>{
@@ -312,6 +344,7 @@ start.addEventListener('click',async()=>{
   screen=await navigator.mediaDevices.getDisplayMedia(options);
   if(!screen?.getVideoTracks().length)throw new Error('No video track was granted.');
   tracks.push(...screen.getTracks());captureSource=screen.getVideoTracks()[0].getSettings()?.displaySurface||'';
+  explainCaptureSurface(captureSource);
   await tryLinkedTab();
   if(get('mic').checked){label('Requesting microphone permission…');try{
      mic=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});

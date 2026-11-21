@@ -2,8 +2,8 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const root=path.join(__dirname,'..');
 const specs={
- 'recorder.html':['start','stop','pause','record-state','screen-wrap','ink','live-composite','zoomRegion','resetZoom','recovery-select','result','enable-scroll'],
- 'clip-studio.html':['video','timeline','timeline-ruler','timeline-playhead','make-thumbnails','split','add-marker','export-webm','export-mp4','save-original'],
+ 'recorder.html':['start','stop','pause','record-state','screen-wrap','ink','live-composite','zoomRegion','resetZoom','recovery-select','result','enable-scroll','source-surface','source-guidance','source-focus'],
+ 'clip-studio.html':['video','timeline','timeline-ruler','timeline-playhead','make-thumbnails','split','add-marker','export-webm','export-mp4','save-original','workspace-status','quick-text','quick-callout'],
  'editor.html':['base','ink','workspace','stroke-list','undo','redo','clear','png','pdf','tool','zoom']
 };
 for(const [file,ids] of Object.entries(specs)){

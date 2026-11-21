@@ -72,3 +72,35 @@ body.studio{color-scheme:dark;background:var(--studio-bg);color:var(--studio-tex
 .clip-properties .graphic-inspector{order:-1}
 
 .project-open{width:100%;justify-content:center;margin-top:6px;font-size:12px}.clip-bin #save-project{width:100%;font-size:12px}
+
+/* MangoShot v0.5.1 professional interaction and docked workspace refinement */
+.studio .capture-context{border-top:1px solid var(--studio-line);background:#202b2e;padding:11px 14px;color:#d6e0db;line-height:1.5;font-size:12px}
+.capture-context-top{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.capture-context-top strong{font-size:12px;letter-spacing:.02em}
+.capture-context-top button{margin-left:auto;min-height:31px;background:#344a3d;border:1px solid #678b73;color:#e6f4e5}
+.surface-pill{font:700 10px system-ui;letter-spacing:.08em;border:1px solid #4c6663;border-radius:4px;background:#314144;padding:5px 8px;color:#d4e7df}
+.surface-pill[data-kind=monitor]{border-color:#b48b61;background:#51402b;color:#ffe0b1}
+.surface-pill[data-kind=browser]{border-color:#6a9d6d;background:#324935;color:#daf5d6}
+.capture-context p{margin:6px 0 0;max-width:90ch;color:#b9cbc4}
+.capture-context .capture-source-hint{font-size:11px;color:#91ada7}
+.studio-clip .workspace-switch{display:inline-flex;gap:3px;padding:3px;border:1px solid #475558;background:#171f22;border-radius:7px;margin-left:auto}
+.workspace-switch button{padding:5px 11px;min-height:29px;background:transparent;border:1px solid transparent;font-size:11px;color:#bccfc9}
+.workspace-switch button[aria-pressed=true]{background:#425847;border-color:#90b68e;color:#f0ffeb}
+.studio .workspace-status{font-size:10px;color:#b9c5c1;white-space:nowrap}
+.studio-clip .studio-live-status{max-width:310px}
+.studio-clip .timeline-tools #quick-text,.studio-clip .timeline-tools #quick-callout{border-color:#678672;background:#31413c;color:#dff2e6}
+.editor-shortcuts{font-size:11px;position:relative;max-width:290px;color:#d4e1de}
+.editor-shortcuts summary{cursor:pointer;border-radius:4px;padding:5px 10px;background:#374548;list-style:none}
+.editor-shortcuts>div{background:#202d30;max-width:340px;line-height:2;border:1px solid #536362;border-radius:6px;padding:12px;position:absolute;z-index:15;right:0;top:30px;box-shadow:0 10px 24px #0009}
+.studio-clip[data-workspace=graphics] .clip-layout{grid-template-columns:240px minmax(0,1fr) 335px}
+.studio-clip[data-workspace=graphics] .clip-properties{border-color:#729978}
+.studio-clip[data-workspace=graphics] .clip-program{min-height:440px}
+.studio-clip[data-workspace=timeline] .clip-layout{grid-template-columns:175px minmax(0,1fr) 235px;grid-template-rows:minmax(255px,calc(100vh - 630px)) minmax(380px,auto)}
+.studio-clip[data-workspace=timeline] .clip-timeline-panel{min-height:390px}
+.studio-clip[data-workspace=timeline] .clip-bin,.studio-clip[data-workspace=timeline] .clip-properties,.studio-clip[data-workspace=timeline] .clip-program{max-height:330px;min-height:250px}
+.studio-clip[data-workspace=timeline] .clip-program .clip-preview{min-height:175px;max-height:calc(100vh - 690px)}
+.studio-clip[data-workspace=timeline] .clip-program .clip-preview video{max-height:235px}
+.studio-clip[data-workspace=timeline] .timeline-scroll{min-height:265px}
+@media(max-width:1320px){.studio-clip .studio-transport{flex-wrap:wrap}.studio-clip .workspace-switch{margin-left:0}.studio-clip .studio-live-status{margin-left:0;max-width:100%}}
+@media(max-width:1200px){.studio-clip[data-workspace=graphics] .clip-layout,.studio-clip[data-workspace=timeline] .clip-layout{grid-template-columns:190px minmax(0,1fr);grid-template-rows:auto auto}.studio-clip[data-workspace=graphics] .clip-properties,.studio-clip[data-workspace=timeline] .clip-properties{grid-column:1/-1;min-height:0;max-height:none}.studio-clip[data-workspace=timeline] .clip-program{max-height:none}.studio-clip[data-workspace=timeline] .clip-timeline-panel{grid-column:1/-1}}
+@media(max-width:760px){.studio-clip .workspace-switch{width:100%}.studio-clip .workspace-switch button{flex:1}.studio-clip[data-workspace=graphics] .clip-layout,.studio-clip[data-workspace=timeline] .clip-layout{display:flex;flex-direction:column}.capture-context-top button{margin-left:0;width:100%}.studio .capture-context{padding:10px}}

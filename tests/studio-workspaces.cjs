@@ -1,0 +1,20 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const events={},nodes={},attrs={},saved={};
+function n(id){return nodes[id]??={id,disabled:false,textContent:'',dataset:{},listeners:{},addEventListener(name,fn){this.listeners[name]=fn;},click(){this.clicked=(this.clicked||0)+1},setAttribute(name,value){attrs[this.id+':'+name]=value;}};}
+const buttons=['edit','graphics','timeline'].map(name=>{const el=n('layout-'+name);el.dataset.workspace=name;return el;});
+const doc={body:{dataset:{},classList:{contains:n=>n==='studio-clip'}},querySelectorAll:q=>q==='[data-workspace]'?buttons:[],getElementById:n};
+const win={addEventListener:(name,fn)=>events[name]=fn,localStorage:{getItem:k=>saved[k],setItem:(k,v)=>saved[k]=v}};
+const ctx={document:doc,window:win};
+vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..','studio-workspaces.js'),'utf8'),ctx);
+assert.equal(doc.body.dataset.workspace,'edit');
+buttons[1].listeners.click();assert.equal(doc.body.dataset.workspace,'graphics');assert.equal(attrs['layout-graphics:aria-pressed'],'true');
+assert.equal(saved.MangoShotClipWorkspaceV1,'graphics');
+let prevented=false;events.keydown({key:'3',shiftKey:true,ctrlKey:false,altKey:false,metaKey:false,target:{closest:()=>null},preventDefault(){prevented=true}});
+assert.equal(prevented,true);assert.equal(doc.body.dataset.workspace,'timeline');
+const initial=doc.body.dataset.workspace;
+events.keydown({key:'1',shiftKey:true,ctrlKey:false,altKey:false,metaKey:false,target:{closest:()=>({})},preventDefault(){throw Error('Field shortcut should be ignored')}});
+assert.equal(doc.body.dataset.workspace,initial);
+n('quick-text').listeners.click();assert.equal(n('add-text').clicked,1);
+n('add-callout').disabled=true;n('quick-callout').listeners.click();assert.equal(n('add-callout').clicked||0,0);
+assert.match(n('status').textContent,/Import a video/);
+console.log('PASS: layout choice, persistent workspace, hotkeys, safe quick graphics');
