@@ -1,6 +1,6 @@
-# MangoShot v0.3.1 test drive — Windows / Wacom
+# MangoShot v0.3.2 test drive — Windows / Wacom
 
-Install v0.3.1 into Chrome, Edge and Firefox as a new unpacked/temporary extension. Retain v0.2.1 ZIP as rollback. Test only on a regular HTTP(S) tab where you control the content; Chrome/Firefox internal pages are protected.
+Install v0.3.2 into Chrome, Edge and Firefox as a new unpacked/temporary extension. Retain v0.2.1 ZIP as rollback. Test only on a regular HTTP(S) tab where you control the content; Chrome/Firefox internal pages are protected.
 
 ## 1. Regression baseline
 
@@ -44,10 +44,26 @@ Install v0.3.1 into Chrome, Edge and Firefox as a new unpacked/temporary extensi
 
 If a feature fails, capture the browser and version, source type (tab/window/screen), exact action, MangoShot status text, and browser console error. Do not report an interaction as certified from static tests alone.
 
-## v0.3.1 targeted validation
+## v0.3.2 targeted regression test
 
-1. Record a browser tab. Test Ctrl+wheel, Ctrl+drag, Zoom +/−, Zoom region with a Wacom pen, and Reset zoom. **Live preview must visibly zoom** with the same framing later found in the saved video.
-2. Confirm Interaction ON still scrolls the linked/selected tab, with pen annotations working when switched off.
-3. Open an untouched MP4, verify **Source container: MP4**, and choose **Save MP4 (instant)**. There must be no progress bar and the file should retain its original bytes/audio/video. Save original (instant) is independent of edit decisions.
-4. Choose **Convert & export WebM** for that MP4. This must be labeled conversion and is expected to run approximately real-time. Cuts/trims also require encoding.
-5. Recheck visible/full screenshots, Wacom annotation, PNG/PDF exports, and short recorded clip audio before wider release.
+1. Begin recording a browser tab in Edge/Firefox. Before, Ctrl+wheel changed only exported framing; now zooming must **visibly enlarge the live preview** and change the percent readout. Test **Zoom +**, **Zoom −**, **Zoom region** with Wacom pen drag, **Reset zoom**, then Ctrl+wheel and Ctrl+drag.
+2. While Interaction is ON, verify linked-tab wheel scrolling still works. Zoom region should temporarily override the interaction pointer overlay, without changing source-page scroll unexpectedly.
+3. Make a 5-second recording with pen annotations and zoom, stop, save original, and confirm the exported pixels show the same zoom seen live.
+4. Open the user's 1:42.21 MP4 in Clip Studio. Above the timeline it should say **Source container: MP4**. With no edits, click **Save MP4 (instant)**: the download should begin immediately without a progress bar, with no audio/video quality loss. **Save original** works regardless of edit decisions.
+5. On that MP4 source, **Convert & export WebM** must explicitly show a conversion and the progress bar may run for around the kept timeline duration (rather than instantly). Inspect its actual codec/container afterward.
+6. Apply a 2–4-second trim, export MP4: this needs real-time encoding and progress. Undo/reset fully and check whether the untouched matching-format fast copy returns.
+7. Verify the unmodified 0.2.1 screenshot workflow (visible/full capture, Wacom ink, PDF/PNG) after updating the extension.
+
+**Remaining constraints:** Browser-reserved Ctrl shortcuts can override the app; clickable Zoom buttons are the fallback. Recording a screen/window does not grant unrestricted remote interaction. Actual pen and captured surface tests remain pending for this build.
+
+## v0.3.2 critical acceptance (do before a long recording)
+
+1. Record a 20-second clip and click **Stop**. Screen-sharing indicator, timer and live draw loop should cease promptly; a native original download should start after encoding completes. Play the downloaded file and confirm audio/video.
+2. Start another clip and close the recorder tab while recording. Reopen MangoShot to check the recovery banner; **Recover stored video** may reconstruct flushed fragments, but validate playback: incomplete MP4 metadata may not be usable.
+3. Hold **Ctrl** and Wacom-drag **upward** 100px to zoom in smoothly, **downward** to zoom out. The live preview and saved video must match.
+4. Click **Zoom region**, draw a rectangle and visually confirm a bright dashed border appears *during* the stroke before framing the selected area.
+5. Make 60 marks, then press **Ctrl+Z** at least 50 times; each press should remove one mark. Clear with **Ctrl+E**, then Ctrl+Z to restore.
+6. Share a browser **tab** (not the entire screen), click **Enable tab scrolling** to grant browser permission, hold **Ctrl+Alt** while scrolling the preview; the actual captured tab should scroll. On Firefox, check linked-tab consent instead. Release Ctrl+Alt to annotate.
+7. Re-run an ordinary visible/full-page screenshot with PNG/PDF and one Clip Studio unedited MP4 export, checking for regressions.
+
+**Known constraints:** MediaRecorder shutdown can still be delayed by browser/platform encoders, although capture resources stop immediately and recovery is exposed. Captured Surface Control supports wheel scrolling rather than remote clicks or typing. Firefox's fallback requires the user to confirm the linked source tab; sharing an entire monitor does not permit remote interaction with arbitrary windows.

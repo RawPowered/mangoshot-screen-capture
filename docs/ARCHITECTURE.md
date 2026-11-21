@@ -26,8 +26,18 @@ Local capture/recording only; no external network endpoints, analytics, or telem
 
 Static syntax, extension manifest, original screenshot regression, camera geometry, timeline algebra, recorder-hotkey simulation, and clip editor decision-list simulation run in Node without remote dependencies. Mandatory manual gates: Chrome/Edge and Firefox screen-picker/scroll behavior, Wacom pressure and shortcuts, audio capture, real video WebM and MP4 playback, IndexedDB quota, and long-clip performance. Draft status until gates pass.
 
-## v0.3.1 recorder/display invariant and export optimization
+## 0.3.2 fixes
 
-The recorder composes the camera crop and Wacom ink into the live-composite canvas. The **same canvas** is displayed in the preview and used as the recorded captureStream source; the source preview remains underneath as the captured-tab wheel-forwarding target. The transparent pen-input overlay retains pointer events but no longer visually duplicates ink.
+The recorder keeps the captured source video as the audio and CaptureController wheel-forwarding target, but displays and records **one identical canvas composition** containing the virtual camera crop and ink. The pen input canvas remains transparent in the rendered stage while its bitmap is composited into the visible recorded canvas. This removes the discrepancy between exported zoom and live preview.
 
-The media-format module identifies MP4 by ftyp and WebM by EBML header. An unchanged single full-length segment requested in the same recognized container takes a direct original-Blob download path with no decode, encode, or pixel/audio transformations. Edits or target-container changes still use the existing real-time MediaRecorder export. MIME values are never blindly relabeled to claim conversion.
+`media-format.js` checks MP4 `ftyp` and WebM EBML header signatures. An unedited, single full-length segment with matching requested output container takes a byte-preserving Blob download path; cross-format or edited exports still use canvas+MediaRecorder in real time. Unknown container formats are not mislabeled for instant export.
+
+## v0.3.2 stop state machine and input routing
+
+`stopCapture()` changes from recording to stopping, calls `MediaRecorder.stop()`, and immediately cancels the requestAnimationFrame compositor, stops all display/audio/output tracks and freezes the elapsed timer. The final `dataavailable` precedes `onstop`; only at `onstop` is the complete Blob assembled and automatically downloaded. A bounded watchdog exposes already-flushed fragments as an explicitly incomplete result, never claiming a valid container. If `onstop` later completes, the full Blob replaces the partial result and a complete download is initiated.
+
+`recording-safety.js` maintains a local per-session IndexedDB store with independently committed MediaRecorder dataavailable fragments. Recovery is best effort because late encoder data and MP4 metadata may not exist following a crash; the DB is local and includes potentially sensitive screen footage, so the recovery UI provides an explicit deletion control. No automatic background screen access is added.
+
+Ink operations are stored as pressure-bearing point strokes. Each completed stroke or Clear is an undo transaction, with 80 immutable snapshot references rather than full-frame raster images. `Ctrl+Z` reconstructs the ink canvas. `Ctrl+drag` operates the virtual camera along the Y axis using exponential zoom around the pointer. The region tool shows a DOM marquee above the compositor and applies a camera box only upon pointer release.
+
+Interaction mode is **hold Ctrl+Alt**, not a persistent toggle. While held, the ink pointer surface passes wheel events to the captured browser tab through explicit browser permission or to an explicitly linked source tab through the existing script fallback. The extension never claims arbitrary remote pointer/keyboard interaction.

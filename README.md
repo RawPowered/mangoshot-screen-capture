@@ -2,11 +2,11 @@
 
 Ad-free, local-first screenshot, Wacom annotation, and screen-recording extension for **Chrome, Microsoft Edge and Firefox**.
 
-**v0.3.1 · recording-interaction and Clip Studio test-drive candidate.** No analytics, accounts, or video uploads. Keep using the previous v0.2.1 ZIP as your known-working fallback until you finish v0.3 validation.
+**v0.3.2 · recording-interaction and Clip Studio test-drive candidate.** No analytics, accounts, or video uploads. Keep using the previous v0.2.1 ZIP as your known-working fallback until you finish v0.3 validation.
 
 ## Installation
 
-Extract `MangoShot-v0.3.1-test-drive.zip` before loading it. In Chrome/Edge, open extensions, enable Developer mode, choose **Load unpacked** and select the folder containing `manifest.json`. In Firefox, open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on**, and select `manifest.json`. For clean tests, remove or disable the older unpacked MangoShot first.
+Extract `MangoShot-v0.3.2-test-drive.zip` before loading it. In Chrome/Edge, open extensions, enable Developer mode, choose **Load unpacked** and select the folder containing `manifest.json`. In Firefox, open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on**, and select `manifest.json`. For clean tests, remove or disable the older unpacked MangoShot first.
 
 ## Recording interactions
 
@@ -58,9 +58,22 @@ See `docs/TEST-DRIVE.md` and `docs/ARCHITECTURE.md` for risk notes and stepwise 
 
 Copyright © 2026 RawPowered. All rights reserved pending a separate license decision.
 
-## v0.3.1 — Visible zoom and lossless fast export
+## v0.3.2 zoom and export fix
 
-- The recorder now uses one visible/recorded composite canvas, so zoom changes appear **during** recording rather than only in the exported video. Available controls: Ctrl+wheel, Ctrl+drag, Zoom +, Zoom −, Zoom region (Wacom-friendly), Reset zoom.
-- Clip Studio identifies MP4/WebM from the file signature and displays the source container. With no edits, same-format exports download the **unchanged bytes instantly** without encoding; Save original (instant) works even after edits. Cross-format and edited exports still need real-time re-encoding and clearly say **Convert & export**.
-- The earlier source-tab interaction/scrolling and Wacom annotation workflows remain unchanged. MP4 encoding support is browser-specific.
-- JavaScript, screenshot protocol, timeline, recorder mock, file-header, no-edit copy, and ZIP integrity tests passed. Real Windows browser zoom/recording remains the installation acceptance gate.
+- The recorded video composition is now also displayed **live**. Zoom via Ctrl+wheel, Ctrl+drag, the dedicated **Zoom + / Zoom −** buttons, or the **Zoom region** button for Wacom pen selection. Use Reset zoom at any time. This addresses the v0.3 visual feedback defect without changing captured-tab scrolling.
+- The Clip Studio determines the **real container** from the first bytes, not the file extension. The format appears above the timeline.
+- **Save original (instant)** saves the original video without conversion. If the timeline is unchanged and the requested export matches the source container, **Save MP4 (instant)** or **Save WebM (instant)** skips the full timeline re-encode. The original bytes are copied locally.
+- Exporting MP4 footage **as WebM** is still a format conversion, and exporting *edited* footage still requires re-encoding. These actions are labeled **Convert & export** and generally proceed at playback speed. No native FFmpeg/WASM codec was added.
+- Verification: static/simulated recorder, timeline, and file-header tests passed. Actual browser screen-share, pen and codec playback remain the user's on-device release gate.
+
+## v0.3.2 — Stop reliability, Wacom dolly and undo
+
+**Recording stop:** Clicking Stop immediately halts the canvas drawing loop, screen/audio tracks and elapsed timer, before waiting for `MediaRecorder` to finish encoding. Completed video is automatically downloaded as the unchanged original. A watchdog makes already-flushed fragments available when the encoder stalls instead of showing an endless "Finalizing" state. A late final encoder event upgrades the result and downloads the complete recording. **Interrupted MP4 fragments may be unplayable** without final container metadata.
+
+**Crash/close protection:** Each emitted recording chunk is independently persisted in IndexedDB under a recovery session. On the next launch, use **Recover stored video** to reconstruct and download available chunks. Browser storage quotas and shutdown timing mean this is best-effort recovery, not a guarantee of a playable file. Do not rely on it as your only copy; confirm the automatic download after Stop.
+
+**Controls:** Hold **Ctrl+Alt** over the recorder preview for browser-tab scroll interaction (only where browser APIs or explicit linked-tab consent permit it); release to return to annotation. **Ctrl+drag upward** zooms in, **downward** zooms out with an anchored focal point. The **Zoom region** button activates a visible bright dashed marquee; select a rectangular area using the pen or mouse. **Ctrl+Z** undoes the last mark or clear action with **80 history steps**. Ctrl+E clears ink and Ctrl+Alt+0 resets zoom.
+
+**Browser limitations:** The captured-surface API cannot remote-click or type into arbitrary windows, and direct tab scrolling requires first clicking **Enable tab scrolling** from the recorder UI on supporting Chromium browsers. Full-monitor sharing cannot be remotely scrolled; the explicitly consented *linked source tab* can be scrolled as a fallback. For real clicks and typing, switch to the source tab and interact there.
+
+Source screenshot capture, PNG/PDF export, Clip Studio and MP4/WebM handling are unchanged in this hotfix.

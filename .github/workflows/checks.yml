@@ -1,0 +1,19 @@
+name: MangoShot regression gates
+on:
+  push:
+  pull_request:
+jobs:
+  browser-extension-unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Manifest, editor, recorder and export regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test in static routing editor-protocol timeline-camera recorder-controls stop-safety clip-studio-mock media-format pdf; do
+            node "tests/${test}.cjs"
+          done
