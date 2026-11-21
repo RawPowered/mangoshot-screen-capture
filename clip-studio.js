@@ -243,7 +243,7 @@ globalThis.MangoClipView={
    layer.end=Math.min(layer.end,MangoEditOps.length(segments));
    remember();layers.push(layer);selectedLayerId=layer.id;refreshed();label(layer.name+' layer added.');
  },
- selectLayer(id){selectedLayerId=id;globalThis.MangoLayerUI?.render?.();paintPreview();},
+ selectLayer(id,quiet=false){selectedLayerId=id;if(!quiet)globalThis.MangoLayerUI?.render?.();paintPreview();},
  updateLayer(id,changes){const index=layers.findIndex(l=>l.id===id);
    if(index<0||exporting||layers[index].locked)return;
    remember();layers[index]={...layers[index],...changes};refreshed();
@@ -254,11 +254,35 @@ globalThis.MangoClipView={
    layers.push(dup);selectedLayerId=dup.id;refreshed();},
  beginLayerMove(id){if(exporting)return;const l=layers.find(x=>x.id===id);if(l&&!l.locked)remember();},
  moveLayer(id,x,y){const l=layers.find(x=>x.id===id);if(!l||l.locked)return;l.x=x;l.y=y;paintPreview();},
+ resizeLayer(id,width,fontSize){const l=layers.find(x=>x.id===id);if(!l||l.locked)return;
+  l.width=Math.max(.1,Math.min(1-l.x,width));l.fontSize=Math.max(12,Math.min(220,fontSize));paintPreview();},
  endLayerMove(){refreshed();},
  setLayerHidden(id,value){const l=layers.find(x=>x.id===id);if(!l)return;remember();l.visible=!value;refreshed();},
  setLayerLocked(id,value){const l=layers.find(x=>x.id===id);if(!l)return;remember();l.locked=!!value;refreshed();},
  styleLayer(id,preset){const index=layers.findIndex(l=>l.id===id);if(index<0||layers[index].locked)return;
    remember();layers[index]=MangoGraphics.style(layers[index],preset);refreshed();},
+ reorderLayer(id,direction){const source=layers.find(l=>l.id===id);
+   if(!source||source.locked||exporting)return false;
+   const next=MangoLayerOps.reorder(layers,id,direction);
+   if(next.every((l,i)=>l.id===layers[i].id)){label('Layer is already at the end of this stack.');return false;}
+   remember();layers=next;selectedLayerId=id;refreshed();label('Graphic stacking order changed.');return true;
+ },
+ placeLayerAbove(id,targetId){const a=layers.find(l=>l.id===id),b=layers.find(l=>l.id===targetId);
+   if(!a||!b||a.locked||exporting||id===targetId)return false;
+   const next=MangoLayerOps.placeAbove(layers,id,targetId);
+   if(next.every((l,i)=>l.id===layers[i].id&&l.track===layers[i].track))return false;
+   remember();layers=next;selectedLayerId=id;refreshed();label('Layer moved above '+b.name+' on G'+b.track+'.');return true;
+ },
+ commitLayerTimeline(id,candidate){const index=layers.findIndex(l=>l.id===id);
+   if(index<0||layers[index].locked||exporting)return false;
+   const original=layers[index],sequenceLength=MangoEditOps.length(segments);
+   if(!Number.isFinite(candidate.start)||!Number.isFinite(candidate.end)||!Number.isFinite(candidate.track)||
+      candidate.start<0||candidate.end>sequenceLength+.001||candidate.end-candidate.start<MangoLayerOps.MIN-.001||
+      ![2,3].includes(candidate.track)){label('Invalid graphic time range or track.');return false;}
+   if(!MangoLayerOps.changed(original,candidate))return false;
+   remember();layers[index]={...original,start:candidate.start,end:candidate.end,track:candidate.track};
+   selectedLayerId=id;refreshed();label('Graphic timing updated: '+candidate.start.toFixed(2)+'–'+candidate.end.toFixed(2)+' s on G'+candidate.track+'. Ctrl+Z to undo.');return true;
+ },
 };
 video.addEventListener('timeupdate',()=>{globalThis.MangoClipTimeline?.playhead?.();paintPreview();});
 video.addEventListener('seeked',paintPreview);video.addEventListener('loadeddata',paintPreview);

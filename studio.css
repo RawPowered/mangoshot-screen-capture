@@ -110,3 +110,36 @@ body.studio{color-scheme:dark;background:var(--studio-bg);color:var(--studio-tex
 .timeline-ruler{touch-action:none;cursor:ew-resize}
 .timeline-playhead:focus-visible{outline:2px solid var(--studio-accent)}
 .timeline-tools #ripple-delete:not(:disabled){border-color:#9fb79f;color:#e1efe1}
+
+/* v0.5.3 professional direct manipulation for Wacom/mouse/touch graphics. */
+.graphic-timeline-clip{min-width:20px;display:flex;align-items:center;touch-action:none;cursor:grab;user-select:none;
+  border-radius:4px;overflow:visible;white-space:nowrap;box-sizing:border-box;transition:box-shadow .12s}
+.graphic-timeline-clip:hover{box-shadow:0 0 0 1px #d5e6e4;z-index:3}
+.graphic-timeline-clip.is-selected{z-index:4}
+.graphic-timeline-clip.is-dragging{cursor:grabbing;border-style:dashed}
+.graphic-chip-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;pointer-events:none;padding:0 9px}
+.graphic-clip-handle{position:absolute;top:0;bottom:0;width:9px;z-index:5;background:rgba(189,225,226,.8);cursor:ew-resize;touch-action:none}
+.graphic-clip-handle.handle-start{left:0;border-radius:3px 0 0 3px}
+.graphic-clip-handle.handle-end{right:0;border-radius:0 3px 3px 0}
+.graphic-timeline-clip:hover .graphic-clip-handle,.graphic-timeline-clip.is-selected .graphic-clip-handle{background:#d2edb1}
+.graphic-track.is-drop-track{border-color:#d7eaae;background:#354b43;box-shadow:inset 0 0 0 1px #c7dfbd}
+.graphic-timeline-ghost{position:absolute;z-index:30;pointer-events:none;border:1px solid #d8f2ab;
+  border-radius:4px;background:#577961d9;color:white;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 3px 14px #000a;white-space:nowrap;font-size:11px;font-weight:700;padding:0 8px;min-width:20px;overflow:hidden}
+.graphic-duration{display:block;font:11px/1.5 system-ui,sans-serif;color:#d0eea6;background:#24362e;
+  border:1px solid #506b58;border-radius:4px;padding:6px 8px;margin:6px 0 9px}
+#graphics-snap[aria-pressed=true]{border-color:#b8db85;background:#344935;color:#e4f9c0}
+#graphics-snap[aria-pressed=false]{border-color:#4b5a58;color:#aabbb5}
+.layer-entry{display:grid;grid-template-columns:27px minmax(0,1fr) 27px 27px;gap:3px;align-items:center;padding:5px;touch-action:pan-y}
+.layer-entry .layer-grip{grid-column:1;grid-row:1 / span 2;font-size:17px!important;padding:3px!important;
+  cursor:grab;touch-action:none;min-width:24px;background:#33444b}
+.layer-entry .layer-entry-select{grid-column:2;grid-row:1;max-width:none}
+.layer-entry .layer-entry-time{grid-column:2;grid-row:2;color:#9fbbb5;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.layer-entry>button:nth-last-child(2){grid-column:3;grid-row:1 / span 2}
+.layer-entry>button:last-child{grid-column:4;grid-row:1 / span 2}
+.layer-entry.is-drop-target{border:1px dashed #ceeaa9;background:#405d4b}
+.layer-entry.is-dragging{opacity:.65}
+
+/* G2/G3 expanded rows for precise Wacom pen and mouse edge grips. */
+.graphic-track{height:38px}
+.graphic-timeline-clip{top:4px;bottom:4px}
