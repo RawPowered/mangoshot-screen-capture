@@ -1,49 +1,48 @@
 # 🥭 MangoShot
 
-Local-first screenshot, annotation and screen-recording browser extension for Chrome, Edge and Firefox.
+An ad-free, local-first screenshot, annotation and screen-recording extension for **Chrome, Microsoft Edge and Firefox**.
 
-**Status:** v0.1.0 engineering prototype, not browser-certified or store-ready.
+**Version:** 0.2.0 test-drive candidate. Not yet browser-store-certified. No account, analytics or cloud upload.
 
-## Features in this branch
+## Try it
 
-- User-triggered visible-tab PNG capture
-- Scrolling, stitched PNG capture of vertically scrolling HTTP(S) pages (with known limitations)
-- Browser-based ink editor, Wacom/Pointer Events pressure, pen/highlighter/eraser, undo and clear
-- PNG download, browser Print / Save to PDF
-- Screen/window/tab recording with ink drawn into the exported video
-- Microphone and browser-provided shared audio mixing
-- Native MP4 where supported, with honest WebM fallback
-- No accounts, analytics, remote APIs or cloud uploads
+Download the `MangoShot-v0.2.0-test-drive.zip` provided with this build (or the `feat/mangoshot-mvp` branch source), extract it, then:
 
-## Run locally
+| Browser | Development installation |
+| --- | --- |
+| Chrome | `chrome://extensions` → Developer mode → **Load unpacked** → select the extracted folder containing `manifest.json` |
+| Edge | `edge://extensions` → Developer mode → **Load unpacked** → select the extracted folder containing `manifest.json` |
+| Firefox | `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on** → choose `manifest.json`. This is a temporary session; Firefox permanent installs need a signed add-on. |
 
-### Chrome or Edge
+Pin **MangoShot** to your browser toolbar. Open a regular HTTP(S) webpage and try **Capture visible area** or **Capture entire page**. After capture, use ink, highlighter, eraser, arrows, rectangles, solid redaction and text. Export PNG or a locally generated multipage A4 PDF. Click **Record screen / audio** for the separate video studio.
 
-1. Download the `feat/mangoshot-mvp` branch as a ZIP and extract it.
-2. Open `chrome://extensions` (Chrome) or `edge://extensions` (Edge).
-3. Enable Developer mode, choose **Load unpacked**, and select the extracted directory containing `manifest.json`.
-4. Open an ordinary HTTP(S) webpage and click the MangoShot toolbar icon.
+See [the guided test drive](docs/TEST-DRIVE.md) for suggested checks and expected limitations.
 
-### Firefox
+## Capabilities
 
-1. Download/extract this branch.
-2. Open `about:debugging#/runtime/this-firefox` and choose **Load Temporary Add-on**.
-3. Select `manifest.json` in the extracted folder. This is a temporary development installation.
+- **Visible and vertical full-page screenshots:** user-triggered capture and scroll stitching, max 40 frames / 48 megapixels; scroll restoration and basic duplicate sticky/fixed-element suppression
+- **Image studio:** pointer pressure for Wacom-compatible pens, pen, highlighter, eraser, arrows, rectangles, opaque redaction, text, undo, clear, zoom
+- **Exports:** full-resolution PNG, standalone A4 multipage PDF without server or third-party runtime package
+- **Video studio:** explicit native screen/window/tab picker, live ink composited into recording, optional microphone and shared audio, pause/resume, elapsed timer, local download
+- **Recording format:** native MP4 when the browser supports a suitable recording codec; otherwise correctly labeled WebM
+- **Privacy:** no external network requests or background recording; in-memory screenshot frames and browser-consent screen sharing
 
-No build tool or npm install is needed for this prototype.
+## Supported workflow and limitations
 
-## Limitations
+- Screenshot capture operates on normal HTTP(S) tabs. Browser-internal pages and protected content are excluded.
+- Full-page capture is viewport stitching, not a page renderer. Infinite-scroll pages, CSS transforms, lazy-loaded content, iframes, canvas-heavy pages, sticky components and horizontal scrolling may need another pass.
+- Solid redaction is permanently flattened in exported images/PDFs; it is not a semantic privacy audit of every metadata/copy pathway. Do not use in place of a sensitive-data review.
+- Recording audio depends on the selected screen/window/tab and browser/OS support; requesting audio does not guarantee an audio track.
+- Wacom input operates inside the MangoShot image editor and video preview. Drawing **over other desktop apps while recording** requires a future optional native Windows companion.
+- Long recordings are retained in memory until saved; please test shorter sessions first.
+- No store or physical-device certification has been completed. Install temporarily for testing, not production deployment.
 
-Current full-page capture is a viewport-scroll stitcher, not a browser-internal print renderer. Fixed/sticky elements may repeat; infinite scrolling, cross-origin frames, horizontally overflowing pages, highly dynamic layouts, and large screenshots need further engineering. Browser print-to-PDF is not yet a dedicated paginated PDF export pipeline.
+## Engineering checks
 
-**MP4 cannot be guaranteed across browsers using MediaRecorder alone.** The recorder exports WebM when MP4 is unsupported. System audio is provided only where the selected browser/OS screen-share implementation allows it. Wacom pen input works in the editor and recorder preview; drawing directly over other desktop apps requires an optional native desktop companion.
+Run `node tests/static.cjs` for JS syntax, manifest, asset references and mocked session routing. Run `node tests/pdf.cjs` for the PDF binary writer using included JPEG fixtures, then open the generated `tests/sample.pdf` with a PDF reader.
 
-Full compatibility and reliability tests are pending. See [architecture and release gates](docs/ARCHITECTURE.md).
-
-## Privacy & security
-
-MangoShot operates entirely in-browser; it performs no remote uploads. Screen selection relies on the browser's user-consent picker. Screenshot capture is initiated via the extension UI on regular pages, not passively.
+**Evidence:** syntax checks, mocked capture protocol test and 3-page PDF parse/render test passed in development. Automated end-to-end extension execution in the available headless Chromium environment was blocked by its extension-launch configuration. This build remains a test candidate until Chrome/Edge/Firefox and Wacom/recording checks are completed on a supported desktop.
 
 ## Licensing
 
-Copyright © 2026 RawPowered. All rights reserved pending a separate licensing decision. A public GitHub repository does not by itself grant an open-source license.
+Copyright © 2026 RawPowered. All rights reserved until an explicit open-source license is selected.

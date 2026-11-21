@@ -1,38 +1,29 @@
-# MangoShot architecture and release gates
+# Architecture, security and acceptance notes
 
-## Capture
-- Explicit action popup opens an inactive editor tab, leaving the source visible.
-- Editor registers an in-memory session; injects content.js into the currently authorized HTTP(S) page.
-- Content scrolls viewport-height chunks and requests PNG frames via captureVisibleTab.
-- Editor receives images in memory, stitches into a canvas and draws vector-like raster ink on a second canvas.
-- The page restores scroll position in a finally block.
-- Current full-page capture does not handle horizontally overflowing documents, all sticky/fixed elements, animated content, infinite scroll or canvases exceeding safe memory limits. These are known follow-up gates, not certified feature parity with FireShot.
+## Screenshot authorization and flow
+
+1. Toolbar popup uses its user-gesture `activeTab` grant and creates an inactive editor tab.
+2. Editor registers a short-lived capture token in the event page/service worker and injects `content.js` into the active source HTTP(S) tab.
+3. The content script gathers viewport/page dimensions, scrolls viewport intervals and asks the background process to capture each frame.
+4. Background checks the authorized source tab, current active state, time/size limits and Chromium's 2-captures-per-second throttle, then forwards frames to the editor over extension messaging.
+5. The editor stitches frames at actual measured scroll offsets. Source scroll position and modified styles are restored in a `finally` block; failures activate the editor with an explanation.
+6. Screenshot frames are held only in memory, then cleared after assembly.
+
+Chrome and Edge use the Manifest V3 service worker. Firefox uses the documented `background.scripts` event page fallback in the same manifest. Extension worker suspension or a tab closing ends the in-progress capture; no persistent background screenshot storage.
+
+## Export and annotation
+
+Base PNG and a separate annotation canvas; undo uses stroke-command history rather than massive full-canvas snapshots. Ink supports pointer pressure, shape commands and opaque masks. Flattening creates local PNG bytes or a dependency-free, multi-page A4 PDF using JPEG strip XObjects, one per page. PDF output is inherently rasterized, not a searchable original webpage PDF.
 
 ## Recording
-- User gesture opens getDisplayMedia browser picker, optionally microphone getUserMedia.
-- Video frames and live ink are composited to an offscreen canvas and encoded with MediaRecorder.
-- Audio tracks, when supplied, are mixed via Web Audio. System audio availability is browser and OS dependent.
-- Native MP4 when MediaRecorder supports it; otherwise downloadable WebM. No misleading MP4 extension for WebM payloads.
-- Wacom pens use Pointer Events pressure; native tablet drivers and their configuration remain OS responsibilities.
-- Native desktop overlay for drawing over other apps, full system audio portability, and guaranteed MP4 require a future optional signed desktop companion.
 
-## Privacy
-- No remote servers, accounts, analytics, hidden capture or passive surveillance.
-- Capture only from user-triggered flows; browser-managed screen-share prompt.
-- The full-page mechanism currently excludes restricted pages and dynamic layout edge cases.
+A direct user gesture calls `getDisplayMedia`. Browser returns optional shared audio track(s). Optional microphone uses `getUserMedia`; audio tracks are mixed through the Web Audio API. The video element and annotation canvas are composited into a canvas stream. MediaRecorder tests supported codec strings and exports MP4 or WebM according to the actual MIME type. It does not transcode mislabeled video. Stop/ended/close paths release tracks and audio context. Video chunks remain in memory until save.
 
-## Acceptance before publishing
-1. Load unpacked extension in Chrome, Edge and Firefox; confirm manifest compatibility.
-2. Visible and full capture on static long webpages, retina/scale variations, pages with fixed headers and lazy images.
-3. Verify full-page offsets, screenshots over 15k px, horizontal overflow rejection, and safe failure cleanup.
-4. Ink with Wacom mouse/pen pressure, undo, eraser, export and PDF print pagination.
-5. Screen recording tab/window/screen; audio availability; MP4 or WebM fallback; pause/stop and early share termination.
-6. Permission review, CSP review, no outbound requests, memory/CPU measurements and basic accessibility.
-7. Cross-browser verification is **pending**. Do not label this prototype release-ready.
+## Trust and release gates
 
-## Next milestones
-- Robust full-page fixed/sticky suppression, lazy-load handling, cross-origin iframes, clipping, crop/shape/text/blur tools.
-- Multi-page print-quality PDF exporter using a local bundled PDF library.
-- Optional local FFmpeg.wasm MP4 transcoder (performance gate) or native helper.
-- Native Windows companion for region capture, global hotkeys, desktop-wide real-time ink and system audio capture.
-- Automated browser integration tests and reproducible unsigned dev packages.
+- No hidden page access, accounts, remote telemetry, network calls or cookies storage.
+- Permission scope only `activeTab` and `scripting`; no `<all_urls>` at release.
+- Manual validation: Chrome, Edge, Firefox, Windows screen/window/tab/audio, Wacom pen and Retina/Windows scaling.
+- Recording needs real user selection; audio source availability varies. Browser pages are not equivalent to a native global Windows drawing overlay.
+- Dynamic sites, sticky elements, infinite scroll, CSS transforms, cross-origin iframes and heavy pages need adversarial testing.
+- No store publication, auto-update release or PR merge until manual acceptance is complete.
