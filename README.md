@@ -102,3 +102,11 @@ Clip Studio now has direct G2/G3 manipulation: drag the center of a graphic for 
 Clip Studio now has **actionable V1 selection**: click an individual green clip, then Ripple Delete to close that gap. Use Shift+drag on the timeline ruler (or **Select range · R**) for a directly visible time selection. The editing transaction consistently updates source clip decisions, overlapping graphic clips, markers and playhead. Ctrl+Z / Ctrl+Shift+Z perform full undo/redo, including marker changes. Trim handles use the same downstream ripple rules.
 
 The current target is a **development test drive**, not a certified release. See `docs/V0.5.4-RIPPLE-RELEASE-GATES.md` for repeatable test cases and browser/codec limitations.
+
+## v0.5.5 — AutoCut Studio (development)
+
+Clip Studio now includes **⚡ AutoCut**: detect quiet audio passages or low-motion screen sections, mark suggested removals across the ruler, review/disable each proposed cut, then ripple-delete approved intervals in a single undoable operation. It preserves the original source and retimes graphics and markers. Local-only processing; no AI service or upload.
+
+Modes: **Silence (audio)** uses browser-native decoding with a local accelerated-playback fallback (codec/browser restrictions apply); **Still screen** samples video frames and is opt-in because motionless content can be intentional. Editable threshold, minimum duration, preserved edge padding, optional overlay protection, progress and cancellation. Automatic suggestions are capped at 70% removed and never applied without the user's action.
+
+See [AutoCut design, limitations and test gates](docs/V0.5.5-AUTOCUT.md). This is a test-drive candidate, not yet cross-browser certified.

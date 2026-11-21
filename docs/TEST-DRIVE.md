@@ -120,3 +120,12 @@ These changes are not a desktop-wide remote-control system. Supported captured-t
 - Drag text over the Program Monitor with mouse or Wacom pen. Drag its lower-right square to resize width and font size. The selection outline must be absent in the exported video.
 - Enable Snap and move near another layer edge or playhead; hold Alt during drag to bypass. Test Arrow Left/Right nudging with a focused clip.
 - Confirm recorded MP4/WebM source is not overwritten; when video is unchanged except graphics, use a normal encode rather than claiming an instant original save.
+
+## v0.5.5 AutoCut quick test
+
+1. Import an audible video containing two deliberate 2–3 second pauses. Click ⚡ AutoCut → Silence, adjust min 1.2 s / padding 0.18 s / threshold -38 dB, click Analyze. Confirm red marks cover quiet intervals, not spoken words.
+2. Uncheck one suggestion. Ripple-delete the others. Confirm V1 closes without gaps, G2/G3 graphics and markers ripple, one Ctrl+Z restores all cuts, and redo re-applies them.
+3. Repeat after manually cutting the source with Razor. AutoCut suggestions must map into retained sequence time, not removed source time.
+4. For no-audio footage, choose Still screen, min duration 3 s. Review suggested idle periods; this mode must not silently delete a stationary but meaningful webpage.
+5. Test Apply with selected graphic protection on/off, change settings after analysis (old suggestions must disappear), cancel analysis, and import another file (stale candidates must disappear).
+6. Export edited WebM or MP4 where native encoders support it, then verify duration, audio playback and last frame. No universal offline MP4 transcoder is bundled.

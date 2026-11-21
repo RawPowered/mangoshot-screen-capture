@@ -15,7 +15,7 @@ function restore(snap){segments=clone(snap.segments);layers=clone(snap.layers);s
  byId('out').value=Math.min(length,selection.end).toFixed(2);
  globalThis.MangoClipTimeline?.loadMarkers?.(snap.markers||[]);
  refreshed();}
-function refreshed(){render();globalThis.MangoClipTimeline?.render?.();globalThis.MangoLayerUI?.render?.();paintPreview();}
+function refreshed(){render();globalThis.MangoClipTimeline?.render?.();globalThis.MangoLayerUI?.render?.();paintPreview();globalThis.MangoAutoCutUI?.onEditorChange?.();}
 
 const label=text=>status.textContent=text;
 const time=t=>`${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}.${String(Math.round(t%1*100)).padStart(2,'0')}`;
@@ -98,7 +98,7 @@ async function load(blob){if(exporting)throw new Error('Finish the current expor
  if(!Number.isFinite(duration)||duration<=0||duration>86400)throw new Error('The browser could not determine video duration. Try importing a finalized MP4/WebM file.');
  segments=[{start:0,end:duration}];layers=[];selectedLayerId=null;selectedClipIndex=null;rangeSelected=false;history=[];redoHistory=[];byId('in').value='0';byId('out').value=duration.toFixed(2);
  byId('in').max=byId('out').max=duration.toFixed(2);
- render();globalThis.MangoClipTimeline?.reset?.();globalThis.MangoLayerUI?.render?.();paintPreview();label('Loaded '+time(duration)+' video · original is unchanged.');
+ render();globalThis.MangoClipTimeline?.reset?.();globalThis.MangoLayerUI?.render?.();paintPreview();globalThis.MangoAutoCutUI?.onEditorChange?.();label('Loaded '+time(duration)+' video · original is unchanged.');
 }
 function readRange(){const clip=selectedClipIndex!==null&&!rangeSelected?MangoSequenceOps.bounds(segments,selectedClipIndex):null;
  return clip||MangoTimeline.range(Number(byId('in').value),Number(byId('out').value),MangoEditOps.length(segments));}
@@ -277,6 +277,12 @@ globalThis.MangoClipView={
  seekOutput:time=>{const source=MangoEditOps.toSource(segments,time);if(source!==null)video.currentTime=source;},
  commit(next,message){commitSequence(next,message);},
  commitMarkers(next,message){if(!original||exporting)return false;remember();globalThis.MangoClipTimeline?.loadMarkers?.(next);refreshed();label(message);return true;},
+ commitAutoCut(ranges){
+   if(!original||exporting)return false;
+   try{const tx=MangoAutoCut.apply(segments,layers,globalThis.MangoClipTimeline?.markers?.()||[],ranges);
+    return applyTransaction(tx,'AutoCut removed '+tx.applied+' inactive sections ('+time(tx.removed)+') with zero gaps. Ctrl+Z restores everything.');
+   }catch(error){label('AutoCut not applied: '+error.message);return false;}
+ },
  rippleDelete,deleteSelection,deleteSelected(){
   if(selectedLayerId&&!rangeSelected&&selectedClipIndex===null){this.deleteLayer(selectedLayerId);return true;}
   return deleteSelection();
