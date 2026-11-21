@@ -1,13 +1,13 @@
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path'),assert=require('node:assert/strict');
 const items=new Map(),events={},commits=[],messages=[];
-const node=(id)=>{if(items.has(id))return items.get(id);const o={id,value:id==='timeline-zoom'?'1':'',textContent:'',disabled:false,style:{},children:[],listeners:{},
+const node=(id)=>{if(items.has(id))return items.get(id);const o={id,value:id==='timeline-zoom'?'1':'',textContent:'',disabled:false,style:{},dataset:{},children:[],listeners:{},setAttribute(){},
  addEventListener(k,fn){this.listeners[k]=fn;},replaceChildren(){this.children=[];},appendChild(child){this.children.push(child);},getBoundingClientRect(){return {left:100,width:600};},click(){this.listeners.click?.();}};items.set(id,o);return o;};
 const video={currentTime:60,pause(){},play(){return Promise.resolve();}};
-const state={duration:()=>120,video:()=>video,segments:()=>[{start:0,end:120}],url:()=>null,exporting:()=>false,
+const state={duration:()=>120,outputDuration:()=>120,outputAt:x=>x,seekOutput:x=>{video.currentTime=x;},video:()=>video,segments:()=>[{start:0,end:120}],url:()=>null,exporting:()=>false,
  message:s=>messages.push(s),commit:(segments,message)=>{commits.push(segments);messages.push(message);}};
 const ctx={document:{getElementById:node,createElement:type=>({type,style:{},textContent:'',className:'',title:''}),addEventListener(k,fn){events[k]=fn;}},
  globalThis:{MangoClipView:state},Math,Number,Promise,setTimeout};
-vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..','clip-timeline-ui.js'),'utf8'),ctx);
+vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..','clip-edit-ops.js'),'utf8'),ctx);ctx.MangoEditOps=ctx.globalThis.MangoEditOps;vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..','clip-timeline-ui.js'),'utf8'),ctx);
 const ui=ctx.globalThis.MangoClipTimeline;
 ui.reset();assert.ok(node('timeline-ruler').children.length>=5,'Timeline ruler ticks');
 node('add-marker').listeners.click();assert.equal(node('marker-list').children.length,1,'Marker should be represented in project bin');

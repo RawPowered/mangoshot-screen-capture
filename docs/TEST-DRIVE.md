@@ -78,3 +78,15 @@ If a feature fails, capture the browser and version, source type (tab/window/scr
 6. Check UI at desktop 1366×768, 1440×900, 1920×1080 and a narrow browser window. No overlapping tools or concealed Stop/Reset Camera buttons are acceptable.
 
 The automated tests can be run with Node 22 using the loop in the v0.4 release-gate document. A browser policy blocks headless local extension navigation in the authoring environment, so the live OS-level acceptance remains manual.
+
+## v0.5 Layered Clip Studio test-drive
+
+1. Open a short WebM/MP4 recording. Choose **Razor (C)** and click V1 twice to split clips; use Select (V), ruler seeking, and Ctrl+K at the playhead.
+2. Set In/Out values and press **Ripple delete** / Alt+Backspace. Confirm the gap closes and the remaining sequence duration decreases. Undo with Ctrl+Z.
+3. Add Text on G2 and Callout on G3, adjust In/Out, text content, position, custom color/background/outline, pointer, opacity, fades and presets. Confirm G3 appears above G2. Try visibility, lock, duplicate, bring forward and send backward.
+4. Drag a selected graphic within the preview. Confirm the preview and output WebM show the same placement and the exported file contains audio where supported.
+5. Save a JSON editing project. Delete one graphic; re-import the JSON with the same source file and confirm restored graphics, cuts and markers. Confirm a mismatched video is rejected.
+6. With no edits or visible graphics, save the matching original format instantly. With visible graphics, export is labeled conversion/re-encoding. Verify actual container codec in a media player.
+7. Re-test screenshots, Wacom ink, browser-tab recording, and multiple consecutive recordings to guard the working v0.4 baseline.
+
+Known limitations: G2/G3 are *graphics* layers, not separate video imports; frame-accurate sample editing and offline universal MP4 are later work. Browser permissions, native codecs and full-screen remote interaction remain unchanged from v0.4.
