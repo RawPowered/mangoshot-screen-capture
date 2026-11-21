@@ -1,6 +1,6 @@
 /* MangoShot Clip Studio: non-destructive cut list, local real-time export. */
 const byId=id=>document.getElementById(id),video=byId('video'),status=byId('status');
-let original=null,originalUrl=null,segments=[],history=[],duration=0,sequencePlaying=false,exporting=false,cancelExport=false;
+let original=null,originalUrl=null,segments=[],history=[],duration=0,sequencePlaying=false,exporting=false,cancelExport=false,originalFormat=null;
 const label=text=>status.textContent=text;
 const time=t=>`${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}.${String(Math.round(t%1*100)).padStart(2,'0')}`;
 const mp4Types=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4'];
@@ -8,15 +8,22 @@ const webmTypes=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','vide
 function supported(types){if(typeof MediaRecorder==='undefined')return null;return types.find(t=>MediaRecorder.isTypeSupported(t))||null;}
 function setControls(){const loaded=!!original;
  byId('file').disabled=exporting;byId('open-last').disabled=exporting;byId('forget-last').disabled=exporting;
+ byId('save-original').disabled=!loaded||exporting;
  for(const id of ['in','out','mark-in','mark-out','trim','cut','reset','play-edited','export-webm','export-mp4'])byId(id).disabled=!loaded||exporting;
  byId('undo').disabled=!loaded||!history.length||exporting;
  byId('export-webm').disabled=!loaded||exporting||!supported(webmTypes)||!segments.length;
- byId('export-mp4').disabled=!loaded||exporting||!supported(mp4Types)||!segments.length;
+ byId('export-mp4').disabled=!loaded||exporting||(!supported(mp4Types)&&!MangoFormat.fastCopy(originalFormat,'mp4',segments,duration))||!segments.length;
+ byId('export-webm').disabled=!loaded||exporting||(!supported(webmTypes)&&!MangoFormat.fastCopy(originalFormat,'webm',segments,duration))||!segments.length;
  byId('cancel-export').disabled=!exporting;
+ const mp4Instant=MangoFormat.fastCopy(originalFormat,'mp4',segments,duration);
+ const webmInstant=MangoFormat.fastCopy(originalFormat,'webm',segments,duration);
+ byId('export-mp4').textContent=mp4Instant?'Save MP4 (instant)':'Convert & export MP4';
+ byId('export-webm').textContent=webmInstant?'Save WebM (instant)':'Convert & export WebM';
  const hint=byId('export-hint');
- hint.textContent=supported(mp4Types)?
-  'MP4 conversion is available through your browser\'s native encoder. Export processes retained segments locally at real-time playback speed.':
-  'MP4 encoding is unavailable in this browser. WebM export remains available; a packaged FFmpeg/WASM encoder is planned for universal offline MP4.';
+ if(mp4Instant||webmInstant)hint.textContent='No edits: matching-format export copies the original file instantly without quality loss. Changing formats will re-encode at approximately real-time playback speed.';
+ else hint.textContent=supported(mp4Types)?
+   'Edited or converted exports require re-encoding at approximately real-time playback speed. Preserve your original with Save original (instant).':
+   'MP4 encoding unavailable in this browser; edited MP4 export is disabled. Save original (instant) does not convert the file.';
 }
 function render(){const durationOut=MangoTimeline.outputDuration(segments);
  byId('duration').textContent=original?'Kept '+time(durationOut)+' of '+time(duration):'No video loaded';
@@ -42,7 +49,8 @@ function waitVideoEvent(type,timeout=8000){return new Promise((resolve,reject)=>
 async function load(blob){if(exporting)throw new Error('Finish the current export first.');
  if(!(blob instanceof Blob)||!blob.size)throw new Error('Select a nonempty video.');
  sequencePlaying=false;video.pause();if(originalUrl)URL.revokeObjectURL(originalUrl);
- original=blob;originalUrl=URL.createObjectURL(blob);video.src=originalUrl;
+ original=blob;originalFormat=await MangoFormat.detect(blob);originalUrl=URL.createObjectURL(blob);video.src=originalUrl;
+ byId('source-format').textContent='Source container: '+(originalFormat?.toUpperCase()||'UNKNOWN')+' · '+(blob.size/1048576).toFixed(1)+' MiB';
  await waitVideoEvent('loadedmetadata');duration=video.duration;
  if(!Number.isFinite(duration)||duration<=0){
    // WebM files from MediaRecorder sometimes omit explicit duration metadata.
@@ -93,11 +101,15 @@ async function playRanges(ranges,shouldStop,onProgress,v=video){let used=0,total
 byId('play-edited').onclick=async()=>{if(sequencePlaying||exporting||!segments.length)return;sequencePlaying=true;
  try{await playRanges(segments,()=>!sequencePlaying,null);}catch(e){label('Preview error: '+e.message);}finally{sequencePlaying=false;}};
 
-function download(blob,extension){const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;
- link.download='MangoShot-edited-'+new Date().toISOString().replace(/[:.]/g,'-')+'.'+extension;
+function download(blob,extension,untouched=false){const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;
+ link.download='MangoShot-'+(untouched?'original-':'edited-')+new Date().toISOString().replace(/[:.]/g,'-')+'.'+extension;
  document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);}
 async function exportClip(format){if(!original||!segments.length||exporting)return;
  const types=format==='mp4'?mp4Types:webmTypes;
+ if(MangoFormat.fastCopy(originalFormat,format,segments,duration)){
+   // No editing or transcoding. The exact uploaded/recorded bytes are downloaded unchanged.
+   download(original,format,true);label('Saved unchanged '+format.toUpperCase()+' instantly; no encoding or quality loss.');return;
+ }
  if(!supported(types)){label(format.toUpperCase()+' export cannot run because this browser lacks the encoder.');return;}
  exporting=true;cancelExport=false;sequencePlaying=false;render();byId('progress').hidden=false;byId('progress').value=0;
  let ctx=null,rec=null,exportStream=null,paintHandle=0,recorded=[],tempTracks=[],exportVideo=null;
@@ -134,6 +146,10 @@ async function exportClip(format){if(!original||!segments.length||exporting)retu
  finally{cancelAnimationFrame(paintHandle);for(const t of tempTracks)t.stop();exportVideo?.pause();exportVideo?.removeAttribute('src');exportVideo?.remove();
   if(ctx)ctx.close().catch(()=>{});exporting=false;byId('progress').hidden=true;render();}
 }
+byId('save-original').onclick=()=>{if(!original||exporting)return;
+ if(!originalFormat){label('Unknown source format. Cannot safely assign a video extension.');return;}
+ download(original,originalFormat,true);label('Saved original '+originalFormat.toUpperCase()+' immediately, byte-for-byte unchanged.');
+};
 byId('export-webm').onclick=()=>exportClip('webm');byId('export-mp4').onclick=()=>exportClip('mp4');
 byId('cancel-export').onclick=()=>{cancelExport=true;label('Stopping export…');};
 window.addEventListener('beforeunload',event=>{if(exporting){event.preventDefault();event.returnValue='';}});
