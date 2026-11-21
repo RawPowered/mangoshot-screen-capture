@@ -9,15 +9,15 @@ const call=(fn,...args)=>new Promise((resolve,reject)=>{
   try{fn(...args,value=>{const error=api.runtime.lastError;error?reject(new Error(error.message)):resolve(value);});}
   catch(error){reject(error);}
 });
-let meta,frames=[],ready=false,drawing=false,active=null,strokes=[],renderPending=false;
+let meta,frames=[],ready=false,drawing=false,active=null,strokes=[],renderPending=false,history=[],redoHistory=[];
 function label(message){status.textContent=message;}
 function activate(){call(api.tabs.getCurrent.bind(api.tabs)).then(tab=>
   tab?.id&&call(api.tabs.update.bind(api.tabs),tab.id,{active:true})).catch(()=>{});}
-function setReady(value){ready=value;for(const id of ['png','pdf','clear'])document.getElementById(id).disabled=!value;document.getElementById('undo').disabled=!value||!strokes.length;}
+function setReady(value){ready=value;for(const id of ['png','pdf','clear'])document.getElementById(id).disabled=!value;document.getElementById('undo').disabled=!value||!history.length;const redo=document.getElementById('redo');if(redo)redo.disabled=!value||!redoHistory.length;renderStrokeList();}
 function image(dataUrl){return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error('Screenshot image failed to decode.'));img.src=dataUrl;});}
 function zoom(){if(!base.width)return;const selected=document.querySelector('#zoom').value;
   const factor=selected==='fit'?Math.min(1,(workspace.clientWidth-44)/base.width):Number(selected);
-  wrap.style.width=Math.max(1,Math.round(base.width*factor))+'px';
+  wrap.style.width=Math.max(1,Math.round(base.width*factor))+'px';const zoomInfo=document.getElementById('img-zoom-readout');if(zoomInfo)zoomInfo.textContent=selected==='fit'?'Fit · '+Math.round(factor*100)+'%':Math.round(factor*100)+'%';
 }
 document.querySelector('#zoom').addEventListener('change',zoom);
 window.addEventListener('resize',()=>{if(document.querySelector('#zoom').value==='fit')zoom();});
@@ -32,7 +32,7 @@ async function assemble(){
     const available=Math.min(bitmap.height,height-top);
     if(available>0)ctx.drawImage(bitmap,0,0,bitmap.width,available,0,top,width,available);
   }
-  frames=[];setReady(true);zoom();label('Ready · '+width+' × '+height+' · ink and exports enabled');activate();
+  frames=[];setReady(true);zoom();label('Ready · '+width+' × '+height+' · ink and exports enabled');const info=document.getElementById('image-meta');if(info)info.textContent=width+' × '+height+' px · original preserved';activate();
 }
 api.runtime.onMessage.addListener((message,sender,reply)=>{
   if(message?.captureId!==captureId)return;
@@ -100,6 +100,13 @@ function drawStroke(stroke){
   pen.restore();
 }
 function redraw(){pen.clearRect(0,0,ink.width,ink.height);for(const stroke of strokes)drawStroke(stroke);drawStroke(active);}
+function snapshot(){history.push(strokes.slice());if(history.length>80)history.shift();redoHistory=[];}
+function undo(){if(!history.length)return;redoHistory.push(strokes.slice());strokes=history.pop();redraw();setReady(ready);}
+function redo(){if(!redoHistory.length)return;history.push(strokes.slice());strokes=redoHistory.pop();redraw();setReady(ready);}
+function renderStrokeList(){const list=document.getElementById('stroke-list');if(!list||typeof document.createElement!=='function'||typeof list.replaceChildren!=='function')return;list.replaceChildren();if(!strokes.length){list.textContent='No annotations yet';return;}
+  strokes.forEach((stroke,i)=>{const row=document.createElement('div');row.className='stroke-entry';const title=document.createElement('span');title.textContent=String(i+1).padStart(2,'0')+' · '+stroke.type;const remove=document.createElement('button');remove.textContent='Remove';remove.title='Remove annotation '+(i+1);remove.onclick=()=>{snapshot();strokes.splice(i,1);redraw();setReady(ready);};row.append(title,remove);list.appendChild(row);});}
+const toolButtons=[...(document.querySelectorAll?.('[data-studio-tool]')||[])];function syncTool(){for(const button of toolButtons){const selected=button.dataset.studioTool===tool.value;button.classList.toggle('is-active',selected);button.setAttribute('aria-pressed',String(selected));}}
+tool.addEventListener('change',syncTool);for(const button of toolButtons)button.addEventListener('click',()=>{tool.value=button.dataset.studioTool;syncTool();});syncTool();
 function scheduleRedraw(){if(renderPending)return;renderPending=true;requestAnimationFrame(()=>{renderPending=false;redraw();});}
 ink.addEventListener('pointerdown',event=>{
   if(!ready||event.button!==0)return;
@@ -108,7 +115,7 @@ ink.addEventListener('pointerdown',event=>{
   active={type,points:[p],size:Number(size.value)*(ink.width/ink.getBoundingClientRect().width),color:color.value,
     text:document.querySelector('#text-value').value};
   drawing=true;
-  if(type==='text'){strokes.push(active);active=null;drawing=false;redraw();setReady(true);}
+  if(type==='text'){snapshot();strokes.push(active);active=null;drawing=false;redraw();setReady(true);}
   else scheduleRedraw();
 });
 ink.addEventListener('pointermove',event=>{
@@ -119,11 +126,15 @@ ink.addEventListener('pointermove',event=>{
   scheduleRedraw();event.preventDefault();
 });
 function finishStroke(){if(!drawing)return;drawing=false;
-  if(active){strokes.push(active);active=null;redraw();setReady(true);}
+  if(active){snapshot();strokes.push(active);active=null;redraw();setReady(true);}
 }
 for(const event of ['pointerup','pointercancel','lostpointercapture'])ink.addEventListener(event,finishStroke);
-document.querySelector('#undo').addEventListener('click',()=>{strokes.pop();redraw();setReady(true);});
-document.querySelector('#clear').addEventListener('click',()=>{strokes=[];redraw();setReady(true);});
+document.querySelector('#undo').addEventListener('click',undo);document.getElementById('redo')?.addEventListener('click',redo);
+document.querySelector('#clear').addEventListener('click',()=>{if(strokes.length){snapshot();strokes=[];redraw();setReady(true);}});
+window.addEventListener('keydown',event=>{if(!ready||!event.ctrlKey||event.target?.matches?.('input,textarea,select,[contenteditable]'))return;
+ if(event.key.toLowerCase()==='z'){event.preventDefault();event.shiftKey?redo():undo();}
+ else if(event.key.toLowerCase()==='y'){event.preventDefault();redo();}
+},true);
 function flatten(){const canvas=document.createElement('canvas');canvas.width=base.width;canvas.height=base.height;
   const merged=canvas.getContext('2d');merged.drawImage(base,0,0);merged.drawImage(ink,0,0);return canvas;}
 function download(blob,extension){const url=URL.createObjectURL(blob),a=document.createElement('a');

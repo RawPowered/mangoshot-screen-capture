@@ -15,8 +15,11 @@ let zoomState=MangoCamera.camera(),zoomRegion=false,gesture=null;
 let ctrlHeld=false,altHeld=false,scrollPermission=false,forwardingActive=false,linkedAvailable=false;
 let scrollBusy=false,queuedScroll=0,warnings=[],startedAt=0,pausedAt=0,pausedTotal=0;
 let strokes=[],activeStroke=null,history=[],renderPending=false;
-let recoverySession=null,recoveryQueue=Promise.resolve(),recoveryBroken=false,chunkIndex=0;
+// Every capture owns its own encoder/chunks/storage; late onstop cannot corrupt the next session.
+let activeSession=null;
 const label=text=>{status.textContent=text;};
+function recordState(value){const el=get('record-state');if(!el)return;el.dataset.state=value;el.textContent=({ready:'Ready',recording:'Recording',stopped:'Capture stopped',finalizing:'Finalizing video',recovery:'Recovery available',complete:'Ready to edit',error:'Capture error'})[value]||value;}
+recordState('ready');
 const clock=ms=>`${String(Math.floor(ms/60000)).padStart(2,'0')}:${String(Math.floor(ms/1000)%60).padStart(2,'0')}`;
 const call=(fn,...args)=>new Promise((resolve,reject)=>{
  try{fn(...args,value=>{const error=api.runtime.lastError;error?reject(new Error(error.message)):resolve(value);});}
@@ -103,7 +106,8 @@ ink.addEventListener('pointermove',event=>{
 function finishPointer(event){
  if(gesture?.type==='region'){
    if(event?.clientX!==undefined)zoom(MangoCamera.box(zoomState,gesture.start,normalized(event)));
-   regionEnabled(false);
+   // Keep the selected region tool engaged until the user exits it or chooses another tool.
+   get('zoom-selection').hidden=true;
  }
  if(gesture?.type==='dolly')hideFeedback();
  gesture=null;
@@ -123,8 +127,8 @@ function stopClock(){if(timer)clearInterval(timer);timer=0;
  const now=pausedAt||Date.now();if(startedAt)elapsed.textContent=clock(Math.max(0,now-startedAt-pausedTotal));
  light.className='record-dot idle';}
 function resetControls(){start.disabled=false;stop.disabled=true;pause.disabled=true;pause.textContent='Pause';
- for(const id of ['resetZoom','zoomIn','zoomOut','zoomRegion'])get(id).disabled=true;
- regionEnabled(false);ctrlHeld=false;altHeld=false;updateMode();}
+ for(const id of ['zoomIn','zoomOut','zoomRegion'])get(id).disabled=true;
+ get('resetZoom').disabled=false;regionEnabled(false);ctrlHeld=false;altHeld=false;updateMode();}
 function cleanup(){stopTracks();stopClock();screen=null;mic=null;
  preview.srcObject=null;recorder=null;controller=null;captureSource='';scrollPermission=false;forwardingActive=false;
  get('video-placeholder').hidden=false;composite.style.display='none';ink.style.opacity='1';
@@ -143,38 +147,59 @@ function showResult(blob,partial=false){if(!blob?.size){label('No encoded data r
  lastBlob=blob;get('result').hidden=false;
  get('result-meta').textContent=(blob.size/1048576).toFixed(1)+' MiB · '+(blob.type.includes('mp4')?'MP4':'WebM')+
  (partial?' · INCOMPLETE, attempt recovery':' · source capture stopped');
- if(!partial)saveBlob(blob,'Capture stopped. Original video download started; local recovery is retained.');
+ if(!partial)saveBlob(blob,'Video finalized. Original download requested; confirm it in your Downloads folder.');
  else label('Encoder delayed: the flushed chunks are available for emergency saving; file may be incomplete.');
 }
-function queueChunk(blob){if(!blob?.size)return;chunks.push(blob);
- if(recoverySession&&!recoveryBroken){const index=chunkIndex++;
-   recoveryQueue=recoveryQueue.then(()=>MangoRecovery.append(recoverySession,index,blob)).catch(error=>{
-     recoveryBroken=true;warnings.push('Local recovery storage failed ('+error.message+').');
-     label('Storage quota warning: recording continues, but download the original promptly on Stop.');
-   });}
+function createSession(token,mime,encoder){
+ return {token,mime,encoder,chunks:[],chunkIndex:0,storage:null,queue:Promise.resolve(),storageError:false,
+  stopped:false,partial:false,complete:false,watchdog:0};
+}
+function queueChunkFor(session,blob){
+ if(!blob?.size)return;
+ session.chunks.push(blob);
+ if(activeSession===session&&get('chunk-info'))get('chunk-info').textContent=session.chunks.length+' encoded fragment(s) available locally';
+ if(session.storage&&!session.storageError){const index=session.chunkIndex++;
+  session.queue=session.queue.then(()=>MangoRecovery.append(session.storage,index,blob)).catch(error=>{
+   session.storageError=true;warnings.push('Recovery storage failed: '+error.message);
+   if(activeSession===session)label('Recording continues, but recovery storage failed. Save the video when complete.');
+  });
+ }
 }
 async function markRecovered(session,queue,status){if(!session)return;
  try{await queue;await MangoRecovery.mark(session,status);}catch(error){warnings.push('Recovery state update failed: '+error.message);}
 }
-function finalize(partial=false){if(finalized)return;finalized=true;partialShown=partial;
- if(stopTimeout)clearTimeout(stopTimeout);stopTimeout=0;
- const blob=new Blob(chunks,{type:recordingMime||'video/webm'});
- const session=recoverySession,queue=recoveryQueue;
- cleanup();showResult(blob,partial);
- void markRecovered(session,queue,partial?'interrupted':'finished').then(()=>refreshRecovery());
+function finishSession(session,partial=false){
+ if(!session||session.complete||partial&&session.partial)return;
+ if(session.watchdog)clearTimeout(session.watchdog);session.watchdog=0;
+ if(partial)session.partial=true;else session.complete=true;
+ const blob=new Blob(session.chunks,{type:session.mime||'video/webm'});
+ const isCurrent=activeSession===session;
+ if(isCurrent){
+  finalized=true;partialShown=partial;cleanup();recordState(partial?'recovery':'complete');
+  showResult(blob,partial);
+ }else if(!partial&&blob.size){
+  // This belongs to a former session. Do not replace the current recording's UI.
+  // Recovery storage also retains this result even if the automatic download is blocked.
+  saveBlob(blob,null);
+ }
+ void markRecovered(session.storage,session.queue,partial?'interrupted':'finished').then(()=>refreshRecovery());
 }
 function stopCapture(reason='Stopped by user'){
- if(stopping||!recorder||recorder.state==='inactive')return;
- stopping=true;recording=false;stop.disabled=true;pause.disabled=true;
- stopClock();label('Capture stopped · saving encoded video…');
- const current=recorder;
- try{current.stop();}catch(error){warnings.push('Encoder stop: '+error.message);}
- // Unlike v0.3.1, stop the expensive video loop and all capture/audio tracks NOW,
- // not inside recorder.onstop, which may be delayed until encoder flushing completes.
+ const session=activeSession;
+ if(!session||session.stopped||!recorder)return;
+ session.stopped=true;stopping=true;recording=false;stop.disabled=true;pause.disabled=true;
+ stopClock();recordState('stopped');label('Capture stopped. Finalizing video file separately…');
+ try{if(session.encoder.state!=='inactive')session.encoder.stop();}
+ catch(error){warnings.push('Encoder stop failed: '+error.message);}
  stopTracks();
- if(!finalized){stopTimeout=setTimeout(()=>{
-   if(!finalized){label('Encoder did not complete within 8 seconds; exposing flushed fragments.');finalize(true);}
- },8000);}
+ if(session.complete)return; // onstop may fire synchronously in some implementations
+ recordState('finalizing');
+ if(!session.complete&&!session.partial){
+  session.watchdog=setTimeout(()=>{if(!session.complete){
+   label('Encoder delayed. Available fragments are accessible through recovery; they may be incomplete.');
+   finishSession(session,true);
+  }},8000);
+ }
 }
 async function tryLinkedTab(){linkedAvailable=false;
  if(!Number.isInteger(source)||source<1||!api?.scripting?.executeScript||!api.tabs?.sendMessage)return;
@@ -222,6 +247,8 @@ window.addEventListener('keydown',event=>{
  const ignored=event.target?.matches?.('input,textarea,select,[contenteditable]');
  ctrlHeld=!!event.ctrlKey;altHeld=!!event.altKey;updateMode();
  if(ignored)return;
+ if(event.key==='Escape'&&gesture){gesture=null;get('zoom-selection').hidden=true;hideFeedback();label('Selection cancelled.');return;}
+ if(event.key==='Escape'&&zoomRegion){regionEnabled(false);return;}
  if(event.ctrlKey&&!event.altKey&&event.key.toLowerCase()==='z'){
    event.preventDefault();undoInk();return;
  }
@@ -235,30 +262,43 @@ window.addEventListener('keydown',event=>{
 window.addEventListener('keyup',event=>{ctrlHeld=!!event.ctrlKey;altHeld=!!event.altKey;updateMode();});
 window.addEventListener('blur',()=>{ctrlHeld=false;altHeld=false;updateMode();});
 async function checkRecovery(){
- try{const latest=await MangoRecovery.latest();if(!latest)return;
-   const banner=get('recovery-banner');banner.hidden=false;banner.dataset.id=latest.id;
-   get('recovery-meta').textContent='Local '+(latest.status==='finished'?'saved':'interrupted')+
-      ' session from '+new Date(latest.created).toLocaleString()+'. Recover flushed fragments if needed.';
- }catch{get('recovery-meta').textContent='Local recovery storage unavailable in this browser.';}
+ try{
+  const sessions=typeof MangoRecovery.list==='function'?await MangoRecovery.list():[await MangoRecovery.latest()].filter(Boolean);
+  const banner=get('recovery-banner'),select=get('recovery-select');
+  if(!sessions.length){banner.hidden=true;return;}
+  const previous=select?.value;
+  if(select){select.replaceChildren();for(const item of sessions){
+   const option=document.createElement('option');option.value=item.id;
+   option.textContent=new Date(item.created).toLocaleString()+' · '+item.status+' · '+(item.mime?.includes('mp4')?'MP4':'WebM');
+   select.appendChild(option);
+  }
+  if(sessions.some(item=>item.id===previous))select.value=previous;
+  }
+  banner.hidden=false;
+  get('recovery-meta').textContent=sessions.length+' locally stored recording session(s). Choose a session to recover. Video fragments stay on this device.';
+ }catch(error){get('recovery-meta').textContent='Local recovery unavailable: '+error.message;}
 }
 async function refreshRecovery(){try{await checkRecovery();}catch{}}
 get('recover').addEventListener('click',async()=>{
  const button=get('recover');button.disabled=true;label('Loading local recording fragments…');
- try{const latest=await MangoRecovery.latest();const blob=await MangoRecovery.restore(latest);
-   lastBlob=blob;get('result').hidden=false;
-   get('result-meta').textContent=(blob.size/1048576).toFixed(1)+' MiB · recovered '+(blob.type.includes('mp4')?'MP4':'WebM');
-   label('Recovered stored video fragments. Choose Save original; interrupted MP4 fragments may not be playable.');
+ try{const sessions=typeof MangoRecovery.list==='function'?await MangoRecovery.list():[await MangoRecovery.latest()].filter(Boolean);
+  const target=sessions.find(item=>item.id===get('recovery-select')?.value)||sessions[0];
+  if(!target)throw new Error('No recording selected.');
+  const blob=await MangoRecovery.restore(target);lastBlob=blob;get('result').hidden=false;
+  get('result-meta').textContent=(blob.size/1048576).toFixed(1)+' MiB · '+(target.status==='finished'?'finalized':'INCOMPLETE')+' · '+(blob.type.includes('mp4')?'MP4':'WebM');
+  label('Recovered local fragments. Save original to download; interrupted MP4 may lack final playback metadata.');
  }catch(error){label('Cannot recover: '+error.message);}finally{button.disabled=false;}
 });
 get('dismiss-recovery').addEventListener('click',async()=>{
  const button=get('dismiss-recovery');button.disabled=true;
  try{await MangoRecovery.clearAll();get('recovery-banner').hidden=true;
- label('All locally stored recovery fragments deleted.');}catch(error){label('Could not clear recovered recording: '+error.message);}finally{button.disabled=false;}
+ label('All locally stored recovery fragments deleted.');}catch(error){label('Could not clear recovery: '+error.message);}finally{button.disabled=false;}
 });
 start.addEventListener('click',async()=>{
- if(start.disabled)return;start.disabled=true;chunks=[];chunkIndex=0;lastBlob=null;
- recoverySession=null;recoveryQueue=Promise.resolve();recoveryBroken=false;
+ if(start.disabled)return;start.disabled=true;
  recording=false;stopping=false;finalized=false;partialShown=false;recordingToken++;const token=recordingToken;
+ // Never overwrite a previous encoder's chunks or callbacks.
+ activeSession=null;recordState('ready');
  get('result').hidden=true;
  elapsed.textContent='00:00';warnings=[];resetZoom();history=[];strokes=[];activeStroke=null;redrawInk();get('undo').disabled=true;
  try{
@@ -297,26 +337,21 @@ start.addEventListener('click',async()=>{
     tracks.push(...dest.stream.getTracks());await audio.resume();
    }catch(error){warnings.push('Audio mixing unavailable ('+error.name+').');audio?.close().catch(()=>{});audio=null;}}
   recorder=supportedRecorder(output);recordingMime=recorder.mimeType||'video/webm';
-  try{recoverySession=await MangoRecovery.begin(recordingMime);}
+  const session=createSession(token,recordingMime,recorder);activeSession=session;
+  try{session.storage=await MangoRecovery.begin(recordingMime);}
   catch(error){warnings.push('Storage unavailable: download original immediately when finished.');}
-  recorder.ondataavailable=event=>{if(token===recordingToken)queueChunk(event.data);};
+  recorder.ondataavailable=event=>queueChunkFor(session,event.data);
   recorder.onerror=event=>{
     warnings.push('Encoder error ('+(event.error?.message||'unknown')+').');
     label('Encoder error. Preserving flushed chunks…');
   };
-  recorder.onstop=()=>{if(token!==recordingToken)return;
-    if(partialShown){
-      // A late encoder stop can contain the missing end-of-file metadata.
-      const complete=new Blob(chunks,{type:recordingMime||'video/webm'});
-      if(complete.size>(lastBlob?.size||0)){showResult(complete,false);
-        const session=recoverySession,queue=recoveryQueue;
-        void markRecovered(session,queue,'finished').then(()=>refreshRecovery());}
-      partialShown=false;return;
-    }
-    finalize(false);
+  recorder.onstop=()=>{
+    // A late stop from session N still finalizes N, even if session N+1 has started.
+    // It must not reset the controls or replace the preview of the newer session.
+    finishSession(session,false);
   };
-  screen.getVideoTracks()[0].addEventListener('ended',()=>stopCapture('Screen sharing ended'),{once:true});
-  recorder.start(1000);recording=true;
+  screen.getVideoTracks()[0].addEventListener('ended',()=>{if(activeSession===session)stopCapture('Screen sharing ended');},{once:true});
+  recorder.start(1000);recording=true;recordState('recording');
   stop.disabled=false;pause.disabled=false;
   for(const id of ['resetZoom','zoomIn','zoomOut','zoomRegion'])get(id).disabled=false;
   get('enable-scroll').disabled=!(controller?.forwardWheel&&captureSource==='browser');
@@ -325,7 +360,7 @@ start.addEventListener('click',async()=>{
   label('Recording '+w+'×'+h+' · '+(captureSource||'display')+' · '+(audio?'audio':'no audio')+
     (warnings.length?' · '+warnings.join(' '):''));
   if(controller?.setFocusBehavior)try{controller.setFocusBehavior('focus-capturing-application');}catch{}
- }catch(error){cleanup();label('Could not record: '+(error.name==='NotAllowedError'?'Permission denied or picker closed.':error.message));}
+ }catch(error){cleanup();recordState('error');label('Could not record: '+(error.name==='NotAllowedError'?'Permission denied or picker closed.':error.message));}
 });
 stop.addEventListener('click',()=>stopCapture());
 pause.addEventListener('click',()=>{

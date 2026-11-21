@@ -38,6 +38,13 @@
       return b - a >= 0.04 ? [{start:a,end:b}]:[];
     }), duration);
   }
+  function resize(items,index,edge,value,duration){
+    if(!Array.isArray(items)||index<0||index>=items.length||!['start','end'].includes(edge)||!Number.isFinite(value))throw new Error('Invalid trim handle');
+    const next=items.map(item=>({...item})),s=next[index];
+    if(edge==='start')s.start=clamp(value,s.start,s.end-.04);
+    else s.end=clamp(value,s.start+.04,s.end);
+    return next;
+  }
   function outputDuration(items) { return items.reduce((sum, seg) => sum + seg.end - seg.start, 0); }
   function sourceAt(items, outputTime) {
     if (!finite(outputTime)) throw new Error('Invalid playback time.');
@@ -49,5 +56,5 @@
     }
     return items.length ? items[items.length - 1].end : 0;
   }
-  root.MangoTimeline = {range, normalize, remove, trim, outputDuration, sourceAt};
+  root.MangoTimeline = {range, normalize, remove, trim, resize, outputDuration, sourceAt};
 })(typeof globalThis !== 'undefined' ? globalThis : this);

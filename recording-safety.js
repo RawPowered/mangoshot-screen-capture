@@ -39,6 +39,12 @@
     if(!session)return;
     await transaction(['sessions'],'readwrite',tx=>tx.objectStore('sessions').put({...session,status,updated:Date.now()}));
   }
+  async function list(){
+    return transaction(['sessions'],'readonly',(tx,set)=>{
+      const req=tx.objectStore('sessions').getAll();
+      req.onsuccess=()=>set(req.result.sort((a,b)=>b.created-a.created));
+    });
+  }
   async function latest(){
     return transaction(['sessions'],'readonly',(tx,set)=>{
       const req=tx.objectStore('sessions').getAll();
@@ -68,5 +74,5 @@
   async function clearAll(){await transaction(['sessions','chunks'],'readwrite',tx=>{
     tx.objectStore('sessions').clear();tx.objectStore('chunks').clear();
   });}
-  root.MangoRecovery={begin,append,mark,latest,restore,discard,clearAll};
+  root.MangoRecovery={begin,append,mark,list,latest,restore,discard,clearAll};
 })(typeof globalThis!=='undefined'?globalThis:this);
