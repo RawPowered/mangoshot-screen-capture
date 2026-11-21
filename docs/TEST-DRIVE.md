@@ -1,58 +1,45 @@
-# MangoShot v0.2.1 — guided first test drive
+# MangoShot v0.3.0 test drive — Windows / Wacom
 
-Use test/demo pages, not customer systems or sensitive data, until capture, audio and export behavior has been checked.
+Install v0.3.0 into Chrome, Edge and Firefox as a new unpacked/temporary extension. Retain v0.2.1 ZIP as rollback. Test only on a regular HTTP(S) tab where you control the content; Chrome/Firefox internal pages are protected.
 
-## 1. Installation and permissions
+## 1. Regression baseline
 
-- Extract the ZIP and load unpacked / temporary extension as described in the README.
-- Verify the toolbar icon appears as a dark square with an orange mango.
-- Verify the extension requests `activeTab` and `scripting` rather than broad all-sites access.
-- Open a regular HTTP(S) site and pin/open the popup.
+1. Capture a visible webpage; expect **one frame**, a fully rendered image and enabled PNG/PDF buttons.
+2. Capture a tall page; expect correct stitch order, restored scroll position, and nonblank exports.
+3. Draw, use Wacom pressure, clear, undo, save PNG and multi-page PDF. Inspect outputs.
+4. If the editor shows `Frame 2 / 1`, `Missing screenshot frames`, or blank canvas, stop: screenshot regression.
 
-## 2. Visible screenshot
+## 2. Recording, zoom and interaction
 
-- Click **Capture visible area**, leave the source tab active until capture finishes, then inspect the editor.
-- Draw a pen stroke and a rectangle; click Undo. Add an arrow and text.
-- Use Redact to cover a test-only region, and export PNG. Open the exported PNG and verify those pixels are covered.
-- Export PDF, open it, and verify no blank pages.
+1. Navigate to a safe website with a long page and launch **Record screen/audio** from that tab.
+2. Select the **same browser tab** from the system screen-picker; record with microphone unchecked first.
+3. Use Wacom ink on the preview. Press **Ctrl+E** while recorder is focused and verify it clears.
+4. Hold **Ctrl** and wheel over the preview to zoom; this should visibly zoom the recording preview's captured content, with a `%` readout.
+5. Hold Ctrl and drag a rectangle to zoom into a subsection. Press **Ctrl+Alt+0** or Reset zoom; expect 100% framing.
+6. Press **Ctrl+Alt+C** or click Interaction. On Chrome/Edge, scroll over the preview and confirm the selected captured browser tab scrolls. If browser blocks the shortcut, use the toolbar toggle.
+7. For Firefox, check **I selected the tab I launched from** to explicitly allow scrolling the linked tab; toggle Interaction ON and wheel over the preview. If permission is unavailable, return to the source tab and scroll directly.
+8. Stop recording and choose **Save original**. Confirm video plays, ink and camera zoom are burned into pixels, audio if selected, and file extension matches actual MIME type.
+9. Try microphone enabled and denied; video must still complete.
 
-## 3. Full-page screenshot
+**Expected boundary:** Browser preview cannot reliably deliver trusted click or text events into remote windows/apps. Shortcut key presses require recorder focus; global desktop input needs a native companion. Interaction ON is scrolling, not remote full control.
 
-- Select a long, static webpage (approximately 2–4 screens).
-- Click **Capture entire page**. Keep the captured tab active while MangoShot scrolls it.
-- Confirm the editor eventually activates, scroll position returns, and the entire page is present.
-- Inspect seams, sticky headers, cut-off content, blank strips and lazy images. Report the URL and screenshots if a seam fails.
-- Try a long page; the app should refuse unsafe dimensions rather than freeze.
-- Try a horizontally overflowing page; it currently reports an explicit limitation.
+## 3. Clip Studio
 
-## 4. Pen / Wacom
+1. Click **Edit in Clip Studio** after recording; confirm recorded video loads locally. Also test **Open video file** with an existing MP4/WebM.
+2. Choose In=2s and Out=4s; press **Cut selection**. Expect two retained segments and shortened total duration.
+3. Undo, trim to 2–4s, reset, and preview the edited sequence. Check that source file remains unchanged.
+4. Export WebM, inspect playback and audio continuity. Cuts have hard boundaries and can be approximate by a frame.
+5. In a browser with native MP4 recording support, press **Convert & export MP4**. Verify the downloaded file is genuine MP4 by opening it in a media player. In browsers without native MP4 support, the button should be disabled, not generate mislabeled files.
+6. Choose **Forget stored recording** and verify the local last-clip transfer no longer loads.
 
-- Connect the Wacom tablet and make sure its Windows driver is running.
-- Test pen strokes and pressure changes on the screenshot canvas.
-- Try arrow, highlighter, text, eraser, redaction and undo; confirm the exported PNG and PDF match.
-- Test a high-DPI monitor at 100%, 125% and 150% Windows scale if available.
+## 4. Known release blockers
 
-## 5. Video recording
+- No real-browser cross-platform validation was available within the authoring container; check each device/browser.
+- Native MP4 encoding is not cross-browser; browser-independent WASM conversion remains future work.
+- Long recordings and exports consume memory and IndexedDB quota. Test short clips first.
+- Audio from browser/system capture depends on the browser, operating system, and source choice.
+- MP4 re-encode timing/codec and WebM indefinite-duration metadata require practical media-file validation.
+- Pressing Ctrl+E / Ctrl+Alt combinations may be intercepted by some browser shortcuts; visible buttons are fallback.
+- No global desktop-wide remote interaction; no OS-wide Wacom overlay.
 
-- Open **Record screen / audio**. Confirm an idle instruction appears instead of an unexplained blank screen. Leave mic unchecked for first video.
-- Click Start and select a browser tab or window from the browser-owned sharing picker.
-- Draw on the *preview* during recording; the ink should be embedded in the resulting video.
-- Pause, resume, then Stop & save; check file extension, actual playback and duration.
-- Repeat with microphone enabled; verify it is audible in the file. If mic permission is denied, video should continue and status should explain audio is unavailable.
-- Repeat with shared audio; some Firefox / OS combinations will not provide a track, even when requested.
-- Stop sharing using the browser UI and confirm the recording finalizes.
-
-## When a capture fails
-
-- The editor should display an explicit failure, not `Frame 2 / 1` or a blank white capture.
-- If capture is unsuccessful, reopen the source page and click the extension icon again so the `activeTab` grant renews. Reopening the editor URL itself is not a valid way to initiate a capture.
-- If recording is blocked, **click Start recording**, check whether the native browser share picker opens, and note the precise status text if it does not.
-- Do not expect a live preview before clicking Start and choosing the browser's capture source.
-
-## What to report
-
-Browser and version, Windows build, monitor scale, Wacom model/driver, target URL (only if safe to share), selected recording source, what failed, and any errors shown in MangoShot's status area.
-
-## Known limits in 0.2.0
-
-No desktop-wide annotation overlay, no guaranteed MP4 transcode, no scrolling capture of horizontal overflow or virtualized/infinite pages, no region-selection capture, no browser-store signing yet. This is a local test-drive build, not a finished FireShot replacement.
+If a feature fails, capture the browser and version, source type (tab/window/screen), exact action, MangoShot status text, and browser console error. Do not report an interaction as certified from static tests alone.

@@ -17,6 +17,10 @@ async function capture(mode){
 document.querySelector('#visible').addEventListener('click',()=>capture('visible'));
 document.querySelector('#full').addEventListener('click',()=>capture('full'));
 document.querySelector('#record').addEventListener('click',async()=>{
-  try{await call(api.tabs.create.bind(api.tabs),{url:api.runtime.getURL('recorder.html')});window.close();}
+  try{const [tab]=await call(api.tabs.query.bind(api.tabs),{active:true,currentWindow:true});
+    const source=tab?.id&&/^https?:/.test(tab.url||'')?'?source='+tab.id:'';
+    await call(api.tabs.create.bind(api.tabs),{url:api.runtime.getURL('recorder.html')+source});window.close();}
   catch(error){status.textContent=error.message;}
 });
+
+document.querySelector('#clip-studio').addEventListener('click',async()=>{try{await call(api.tabs.create.bind(api.tabs),{url:api.runtime.getURL('clip-studio.html')});window.close();}catch(error){status.textContent=error.message;}});

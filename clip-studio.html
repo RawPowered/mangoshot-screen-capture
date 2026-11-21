@@ -1,0 +1,14 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MangoShot · Clip Studio</title><link rel="stylesheet" href="style.css"></head><body>
+<header><div class="brand">🥭 MangoShot <span class="muted">/ Clip Studio</span></div><small>LOCAL VIDEO EDITOR · NO UPLOAD</small></header>
+<section class="clip-toolbar"><label class="file-pick">Open video file <input type="file" id="file" accept="video/*,.webm,.mp4"></label><button id="open-last">Open latest recording</button><button id="forget-last">Forget stored recording</button><span id="status" class="status" role="status" aria-live="polite">Open your recording or choose a video file.</span></section>
+<main class="clip-main"><div class="clip-preview"><video id="video" controls playsinline preload="metadata"></video><div class="clip-preview-note">Original video remains unchanged. Edit decisions control the exported timeline.</div></div>
+<section class="clip-editor" aria-label="Clip editing timeline">
+ <div class="clip-head"><strong>Timeline</strong><span id="duration">No video loaded</span></div>
+ <div id="timeline" class="clip-timeline" role="group" aria-label="Kept video segments"></div>
+ <div class="selection"><label>In <input id="in" type="number" value="0" min="0" step="0.01" disabled></label><button id="mark-in" disabled>Mark In at playhead</button><label>Out <input id="out" type="number" min="0" step="0.01" disabled></label><button id="mark-out" disabled>Mark Out at playhead</button></div>
+ <div class="edit-actions"><button id="trim" disabled>Trim to selection</button><button id="cut" disabled>Cut selection</button><button id="undo" disabled>Undo</button><button id="reset" disabled>Reset edits</button><button id="play-edited" disabled>Play edited sequence</button></div>
+ <div id="segments" class="segment-list" aria-live="polite"></div>
+ <div class="export-panel"><div><strong>Finalize</strong><p id="export-hint">Exports re-encode the kept segments locally at real-time playback speed. Audio is preserved where the browser permits.</p></div><button id="export-webm" disabled>Export WebM</button><button id="export-mp4" class="primary" disabled>Convert & export MP4</button><button id="cancel-export" disabled>Cancel export</button></div>
+ <progress id="progress" value="0" max="100" hidden></progress>
+</section></main>
+<script src="clip-timeline.js"></script><script src="clip-store.js"></script><script src="clip-studio.js"></script></body></html>

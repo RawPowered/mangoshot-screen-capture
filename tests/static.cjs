@@ -3,13 +3,14 @@ const root=path.join(__dirname,'..');
 const read=n=>fs.readFileSync(path.join(root,n),'utf8');
 const manifest=JSON.parse(read('manifest.json'));
 assert.equal(manifest.manifest_version,3);
+assert.equal(manifest.version,'0.3.0');
 assert.deepEqual(manifest.permissions,['activeTab','scripting']);
 assert.equal(manifest.background.service_worker,'background.js');
 assert.deepEqual(manifest.background.scripts,['background.js']);
-for(const file of ['background.js','content.js','popup.js','editor.js','pdf-export.js','recorder.js']){
+for(const file of ['background.js','content.js','popup.js','editor.js','pdf-export.js','recorder.js','linked-tab.js','camera.js','clip-timeline.js','clip-store.js','clip-studio.js']){
  new vm.Script(read(file),{filename:file});console.log('Syntax OK:',file);
 }
-for(const html of ['editor.html','popup.html','recorder.html']){
+for(const html of ['editor.html','popup.html','recorder.html','clip-studio.html']){
  const htmlText=read(html);
  for(const script of [...htmlText.matchAll(/<script\s+src="([^"]+)"/g)])
   assert.ok(fs.existsSync(path.join(root,script[1])),'Missing '+script[1]);
