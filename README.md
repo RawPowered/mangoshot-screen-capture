@@ -77,3 +77,5 @@ Copyright © 2026 RawPowered. All rights reserved pending a separate license dec
 **Browser limitations:** The captured-surface API cannot remote-click or type into arbitrary windows, and direct tab scrolling requires first clicking **Enable tab scrolling** from the recorder UI on supporting Chromium browsers. Full-monitor sharing cannot be remotely scrolled; the explicitly consented *linked source tab* can be scrolled as a fallback. For real clicks and typing, switch to the source tab and interact there.
 
 Source screenshot capture, PNG/PDF export, Clip Studio and MP4/WebM handling are unchanged in this hotfix.
+
+**Recovery privacy:** The **Delete ALL local recovery data** control clears the local recovery session metadata and chunks. Browser storage is finite; if it fails, immediately download the original from the recorder.

@@ -150,6 +150,7 @@ function queueChunk(blob){if(!blob?.size)return;chunks.push(blob);
  if(recoverySession&&!recoveryBroken){const index=chunkIndex++;
    recoveryQueue=recoveryQueue.then(()=>MangoRecovery.append(recoverySession,index,blob)).catch(error=>{
      recoveryBroken=true;warnings.push('Local recovery storage failed ('+error.message+').');
+     label('Storage quota warning: recording continues, but download the original promptly on Stop.');
    });}
 }
 async function markRecovered(session,queue,status){if(!session)return;
@@ -251,8 +252,8 @@ get('recover').addEventListener('click',async()=>{
 });
 get('dismiss-recovery').addEventListener('click',async()=>{
  const button=get('dismiss-recovery');button.disabled=true;
- try{const session=await MangoRecovery.latest();if(session)await MangoRecovery.discard(session);
- get('recovery-banner').hidden=true;}catch(error){label('Could not clear recovered recording: '+error.message);}finally{button.disabled=false;}
+ try{await MangoRecovery.clearAll();get('recovery-banner').hidden=true;
+ label('All locally stored recovery fragments deleted.');}catch(error){label('Could not clear recovered recording: '+error.message);}finally{button.disabled=false;}
 });
 start.addEventListener('click',async()=>{
  if(start.disabled)return;start.disabled=true;chunks=[];chunkIndex=0;lastBlob=null;

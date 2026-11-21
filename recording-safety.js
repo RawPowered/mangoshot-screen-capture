@@ -65,5 +65,8 @@
       };
     });
   }
-  root.MangoRecovery={begin,append,mark,latest,restore,discard};
+  async function clearAll(){await transaction(['sessions','chunks'],'readwrite',tx=>{
+    tx.objectStore('sessions').clear();tx.objectStore('chunks').clear();
+  });}
+  root.MangoRecovery={begin,append,mark,latest,restore,discard,clearAll};
 })(typeof globalThis!=='undefined'?globalThis:this);

@@ -41,3 +41,5 @@ The recorder keeps the captured source video as the audio and CaptureController 
 Ink operations are stored as pressure-bearing point strokes. Each completed stroke or Clear is an undo transaction, with 80 immutable snapshot references rather than full-frame raster images. `Ctrl+Z` reconstructs the ink canvas. `Ctrl+drag` operates the virtual camera along the Y axis using exponential zoom around the pointer. The region tool shows a DOM marquee above the compositor and applies a camera box only upon pointer release.
 
 Interaction mode is **hold Ctrl+Alt**, not a persistent toggle. While held, the ink pointer surface passes wheel events to the captured browser tab through explicit browser permission or to an explicitly linked source tab through the existing script fallback. The extension never claims arbitrary remote pointer/keyboard interaction.
+
+**Recovery privacy:** The **Delete ALL local recovery data** control clears the local recovery session metadata and chunks. Browser storage is finite; if it fails, immediately download the original from the recorder.
