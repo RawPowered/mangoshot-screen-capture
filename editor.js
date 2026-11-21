@@ -60,10 +60,17 @@ function drawStroke(stroke){
   pen.globalAlpha=stroke.type==='highlighter'?.27:1;
   if(stroke.type==='eraser')pen.globalCompositeOperation='destination-out';
   if(['pen','highlighter','eraser'].includes(stroke.type)){
-    pen.beginPath();pen.moveTo(start.x,start.y);
-    for(const p of rest)pen.lineTo(p.x,p.y);
-    if(!rest.length)pen.lineTo(start.x+.01,start.y+.01);
-    pen.stroke();
+    const factor=stroke.type==='highlighter'||stroke.type==='eraser'?5:1;
+    let previous=start;
+    if(!rest.length){
+      pen.lineWidth=stroke.size*factor*(start.p||1);
+      pen.beginPath();pen.moveTo(start.x,start.y);pen.lineTo(start.x+.01,start.y+.01);pen.stroke();
+    }
+    for(const next of rest){
+      pen.lineWidth=stroke.size*factor*Math.max(.2,((previous.p||1)+(next.p||1))/2);
+      pen.beginPath();pen.moveTo(previous.x,previous.y);pen.lineTo(next.x,next.y);pen.stroke();
+      previous=next;
+    }
   }else if(stroke.type==='rectangle'||stroke.type==='redact'){
     const x=Math.min(start.x,finish.x),y=Math.min(start.y,finish.y),w=Math.abs(finish.x-start.x),h=Math.abs(finish.y-start.y);
     if(stroke.type==='redact'){pen.globalAlpha=1;pen.fillStyle='#111';pen.fillRect(x,y,w,h);}
