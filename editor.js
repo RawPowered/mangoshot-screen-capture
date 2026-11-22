@@ -16,12 +16,14 @@ const editorCore=globalThis.MangoImageEditorCore;
 const layerCore=globalThis.MangoImageLayersV0612;
 const typeEffects=globalThis.MangoImageTypeV0613;
 const vectorCore=globalThis.MangoImageVectorV0615;
+const penInput=globalThis.MangoPenInputV0616;
 const selectedBox=document.getElementById('text-selection-box'),inline=document.getElementById('text-inline'),
  inlineInput=document.getElementById('text-inline-input'),contextMenu=document.getElementById('image-context-menu');
 const textFontSize=document.getElementById('text-font-size'),textFontFamily=document.getElementById('text-font-family'),
  textContent=document.getElementById('text-content');
 let selectedText=-1,textDraft=null,dragText=null,textPreset='plain';
 let selectedImage=-1,selectedObject=-1,dragImage=null,maskDraw=null,dragVector=null,inspectorTab='layers';
+let entireErase=null,lastEraserMode='erase-brush';
 let resizeDrag=null;
 function label(message){status.textContent=message;}
 function activate(){call(api.tabs.getCurrent.bind(api.tabs)).then(tab=>
@@ -172,11 +174,22 @@ document.getElementById('clipboard-import')?.addEventListener?.('click',()=>{
    .catch(error=>label('Could not open clipboard editor: '+error.message));
 });
 
-function point(event){const rect=ink.getBoundingClientRect();return {x:(event.clientX-rect.left)*ink.width/rect.width,
-  y:(event.clientY-rect.top)*ink.height/rect.height,p:event.pointerType==='pen'?Math.max(.2,event.pressure||.5):1};}
+function point(event){
+ const rect=ink.getBoundingClientRect();
+ const enabled=document.getElementById('image-pen-pressure')?.checked!==false;
+ return penInput?.localPoint?.(event,rect,ink.width,ink.height,enabled)||{
+  x:(event.clientX-rect.left)*ink.width/rect.width,
+  y:(event.clientY-rect.top)*ink.height/rect.height,
+  p:event.pointerType==='pen'?Math.max(.04,Number(event.pressure)||.5):1};
+}
+function pointerSamples(event){
+ const parts=penInput?.samples?.(event)||[event];
+ return parts.map(part=>point(part));
+}
 function drawStroke(stroke){
   if(!stroke||stroke.visible===false)return;
   if(stroke.type==='image'){layerCore?.paint(pen,stroke);return;}
+  if(penInput?.paintEraser?.(pen,stroke))return;
   if(vectorCore?.isVector?.(stroke)){vectorCore.paint(pen,stroke);return;}
   const [start,...rest]=stroke.points,finish=stroke.points.at(-1)||start;
   if(!start)return;
