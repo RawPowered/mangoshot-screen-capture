@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "MangoShot",
-  "version": "0.6.8",
-  "description": "MangoShot Clip Studio: visual-first, compact motion inspector with animation galleries and advanced edit controls.",
+  "version": "0.6.9",
+  "description": "MangoShot Premium Studio: branded capture and editing, 24 motion-graphic compositions and Creative Resources.",
   "permissions": [
     "activeTab",
     "scripting"
