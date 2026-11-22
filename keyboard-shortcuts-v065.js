@@ -87,6 +87,7 @@
  let capturing=null;
  const active=()=>!!modal?.open;
  function dispatch(e){
+  if(root.MangoShortcutsV0617?.active)return;
   if(!e||e.defaultPrevented)return;
   if(capturing){
    e.preventDefault();e.stopImmediatePropagation();
