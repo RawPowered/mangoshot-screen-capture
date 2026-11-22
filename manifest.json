@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "MangoShot",
-  "version": "0.6.12",
-  "description": "MangoShot Layer Studio: editable imported image layers, visual typography, non-destructive masks and quick flat-color cutout.",
+  "version": "0.6.13",
+  "description": "MangoShot Image Studio: editable text layer effects, visual presets and proportion-locked resize handles with Shift-to-stretch.",
   "permissions": [
     "activeTab",
     "scripting"
