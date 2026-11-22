@@ -76,7 +76,7 @@ function render(){const durationOut=MangoTimeline.outputDuration(segments);
   const row=document.createElement('button');row.className='segment-row';row.textContent=`Clip ${i+1}: ${time(s.start)} → ${time(s.end)} (${time(s.end-s.start)})`;
   row.onclick=()=>{selectedClipIndex=i;rangeSelected=false;sequencePreview?.stop();sequencePreview?.seekOutput(MangoSequenceMedia.sections(segments)[i].outputStart);render();};list.appendChild(row);
  }
- setControls();globalThis.MangoClipTimeline?.render?.();
+ globalThis.MangoUnifiedV062?.rejoin?.();setControls();globalThis.MangoClipTimeline?.render?.();
 }
 function waitVideoEvent(type,timeout=8000){return new Promise((resolve,reject)=>{
  const timer=setTimeout(()=>{clear();reject(new Error('Video '+type+' timed out.'));},timeout);
