@@ -183,7 +183,7 @@ function syncSelectedText(){
  const stroke=selectedStroke();
  if(stroke){
   if(textContent)textContent.value=stroke.text||'';
-  if(textFontSize)textFontSize.value=String(Math.round(stroke.fontSize||48));
+  if(textFontSize)textFontSize.value=String(Math.round((stroke.fontSize||48)*(stroke.scaleY??1)));
   if(textFontFamily)textFontFamily.value=stroke.fontFamily||'sans';
   textPreset=stroke.styleId||'plain';
   color.value=stroke.color||color.value;
@@ -260,7 +260,7 @@ function beginInline(pos,index=-1){
  selectedText=existing?index:-1;
  if(existing){
   textPreset=existing.styleId||'plain';
-  if(textFontSize)textFontSize.value=Math.round(existing.fontSize||48);
+  if(textFontSize)textFontSize.value=Math.round((existing.fontSize||48)*(existing.scaleY??1));
   if(textFontFamily)textFontFamily.value=existing.fontFamily||'sans';
   color.value=existing.color||color.value;
  }
@@ -276,7 +276,7 @@ function commitInline(){
  const old=draft.index>=0?strokes[draft.index]:null;
  snapshot();
  const pixelSize=Number(textFontSize?.value)||48;
- const stroke=old?{...old,text:value,fontSize:pixelSize,fontFamily:textFontFamily?.value||'sans',styleId:textPreset,color:color.value}:
+ const stroke=old?{...old,text:value,fontSize:pixelSize/(old.scaleY??1),fontFamily:textFontFamily?.value||'sans',styleId:textPreset,color:color.value}:
   {type:'text',points:[{x:draft.x,y:draft.y,p:1}],size:Math.max(3,pixelSize/5),
    fontSize:pixelSize,fontFamily:textFontFamily?.value||'sans',styleId:textPreset,color:color.value,text:value,
    scaleX:1,scaleY:1,effects:typeEffects?.initial?.()};
@@ -445,7 +445,7 @@ for(const button of document.querySelectorAll?.('[data-text-size]')||[]){
   const value=Number(button.dataset.textSize);if(!Number.isFinite(value))return;
   textFontSize.value=String(value);
   const output=document.getElementById('text-size-readout');if(output)output.textContent=value+' px';
-  if(selectedStroke())updateSelectedText({fontSize:value});
+  if(selectedStroke())updateVisualFontSize(value);
  });
 }
 document.getElementById('text-fill-color')?.addEventListener?.('change',event=>{
@@ -600,8 +600,15 @@ textFontSize?.addEventListener?.('input',()=>{
  if(output)output.textContent=textFontSize.value+' px';
  if(textDraft)positionInline(textDraft);
 });
+function updateVisualFontSize(value){
+ const layer=selectedStroke();if(!layer)return false;
+ const shown=Math.max(1,(layer.fontSize||48)*(layer.scaleY??1));
+ const ratio=Math.max(.05,Math.min(25,Number(value)/shown));
+ return updateSelectedText({scaleX:Math.max(.08,Math.min(25,(layer.scaleX??1)*ratio)),
+  scaleY:Math.max(.08,Math.min(25,(layer.scaleY??1)*ratio))});
+}
 textFontSize?.addEventListener?.('change',()=>{
- if(selectedStroke())updateSelectedText({fontSize:Number(textFontSize.value)});
+ if(selectedStroke())updateVisualFontSize(Number(textFontSize.value));
 });
 textFontFamily?.addEventListener?.('change',()=>{
  if(selectedStroke())updateSelectedText({fontFamily:textFontFamily.value});
