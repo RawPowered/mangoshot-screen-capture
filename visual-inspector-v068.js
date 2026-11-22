@@ -54,6 +54,11 @@
  const layerSection=layerList.closest('.inspector-section');
  const layerDock=create('details','v068-layers-dock');
  const layerSummary=create('summary','', 'Layers');layerDock.append(layerSummary);
+ const deleteSelected=btn('×','v0610-delete-selected','Delete selected graphic layer (Ctrl+Z to undo)',()=>{
+  const l=selectLayer();if(l&&!l.locked&&!view()?.exporting?.())view()?.deleteLayer?.(l.id);
+ });
+ deleteSelected.setAttribute('aria-label','Delete selected graphic layer');
+ layerDock.append(deleteSelected);
  if(layerSection)layerDock.append(layerSection);
  graphics.insertBefore(layerDock,graphicTabs.bar);
  // Preserve original visual style gallery, text editor and quick tools.
@@ -264,6 +269,8 @@
  }
  function sync(){
   const l=selectLayer();layerSummary.textContent='Layers · '+(view()?.layers?.()?.length||0)+(l?' · '+l.name:' · Select a layer');
+  deleteSelected.disabled=!l||l.locked||!!view()?.exporting?.();
+  deleteSelected.title=l?'Delete '+l.name+' (Ctrl+Z to undo)':'Select a layer to delete';
   drawers.hidden=!l;
   transitionAdvanced.hidden=!selectedTransition();
   const current=el('v067-'+currentPhase+'-type')?.value||'none';
