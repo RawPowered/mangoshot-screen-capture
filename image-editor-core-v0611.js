@@ -11,7 +11,10 @@
  const fonts=Object.freeze({
   sans:'system-ui, -apple-system, "Segoe UI", sans-serif',
   serif:'Georgia, "Times New Roman", serif',
-  mono:'ui-monospace, "SFMono-Regular", Consolas, monospace'
+  mono:'ui-monospace, "SFMono-Regular", Consolas, monospace',
+  display:'Impact, "Arial Narrow", sans-serif',
+  rounded:'"Trebuchet MS", "Arial Rounded MT Bold", sans-serif',
+  classic:'Palatino, "Palatino Linotype", Georgia, serif'
  });
  const clamp=(v,min,max)=>Math.min(max,Math.max(min,Number.isFinite(Number(v))?Number(v):min));
  function textMetrics(ctx,stroke){
