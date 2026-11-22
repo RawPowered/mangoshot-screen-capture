@@ -842,7 +842,11 @@ function syncTool(){
  updateEditorControls();syncVectorControls();
  if(tool.value==='text')switchInspectorTab('type');
  else if(tool.value.startsWith('mask-'))switchInspectorTab('mask');
- else if(tool.value!=='select'||vectorCore?.isVector?.(selectedAnyStroke()))switchInspectorTab('tools');
+ else if(tool.value==='select'){
+  if(vectorCore?.isVector?.(selectedAnyStroke()))switchInspectorTab('tools');
+  else if(selectedStroke())switchInspectorTab('type');
+  else switchInspectorTab('layers');
+ }else switchInspectorTab('tools');
 }
 function chooseImageTool(name){
  if(textDraft)commitInline();
