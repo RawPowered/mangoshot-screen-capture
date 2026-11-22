@@ -14,7 +14,15 @@
   step:{fontSize:50,font:'sans',weight:'800',color:'#182318',background:'#b8f544ee',outline:'#223823',outlineWidth:1,shadow:9,align:'center',opacity:1},
   warning:{fontSize:50,font:'sans',weight:'800',color:'#fff5e9',background:'#d45d20ee',outline:'#642709',outlineWidth:2,shadow:10,align:'center',opacity:1},
   minimal:{fontSize:40,font:'sans',weight:'500',color:'#ffffff',background:'#111921bd',outline:'#101010',outlineWidth:0,shadow:3,align:'left',opacity:1},
-  outline:{fontSize:48,font:'sans',weight:'800',color:'#e7ffe3',background:'transparent',outline:'#111717',outlineWidth:4,shadow:10,align:'center',opacity:1}
+  outline:{fontSize:48,font:'sans',weight:'800',color:'#e7ffe3',background:'transparent',outline:'#111717',outlineWidth:4,shadow:10,align:'center',opacity:1},
+  editorial:{fontSize:66,font:'serif',weight:'700',color:'#f9f1df',background:'#1c2730da',outline:'#121d23',outlineWidth:1,shadow:10,align:'center',opacity:1},
+  kinetic:{fontSize:77,font:'display',weight:'800',color:'#dcff53',background:'transparent',outline:'#192019',outlineWidth:3,shadow:15,align:'center',opacity:1},
+  techNote:{fontSize:42,font:'mono',weight:'700',color:'#b8fff0',background:'#0b2a2fe9',outline:'#2bd3b1',outlineWidth:1,shadow:6,align:'left',opacity:1},
+  softBadge:{fontSize:43,font:'rounded',weight:'800',color:'#21341b',background:'#e1ff9aed',outline:'#6b9343',outlineWidth:1,shadow:6,align:'center',opacity:1},
+  quoteCard:{fontSize:56,font:'serif',weight:'600',color:'#fff8f0',background:'#283747e3',outline:'#8ba2b4',outlineWidth:1,shadow:13,align:'center',opacity:1},
+  pointerPop:{fontSize:44,font:'sans',weight:'800',color:'#fff8ec',background:'#e46f2fe9',outline:'#703714',outlineWidth:2,shadow:12,align:'center',opacity:1},
+  premium:{fontSize:59,font:'serif',weight:'700',color:'#f4e4b5',background:'#27231eea',outline:'#a98c47',outlineWidth:2,shadow:11,align:'center',opacity:1},
+  checklist:{fontSize:42,font:'mono',weight:'700',color:'#eaffdf',background:'#234331e9',outline:'#4fbc77',outlineWidth:1,shadow:7,align:'left',opacity:1}
  };
  const cp=value=>JSON.parse(JSON.stringify(value));
  function create(kind,preset='none',at=0,opts={}){
@@ -29,6 +37,10 @@
   if(preset==='lowerThird'){layer.y=.78;layer.x=.06;layer.width=.63;}
   if(['glass','step','warning'].includes(preset)){layer.y=.30;layer.x=.25;layer.width=.5;}
   if(preset==='minimal'){layer.y=.82;layer.x=.07;layer.width=.55;}
+  if(['editorial','quoteCard','premium'].includes(preset)){layer.y=.28;layer.x=.15;layer.width=.70;}
+  if(preset==='kinetic'){layer.y=.18;layer.x=.12;layer.width=.76;}
+  if(['techNote','checklist'].includes(preset)){layer.y=.76;layer.x=.06;layer.width=.68;}
+  if(['softBadge','pointerPop'].includes(preset)){layer.y=.34;layer.x=.28;layer.width=.44;}
   if(isCallout&&preset==='none')layer.background='#ffffffdc';
   return {...layer,...opts};
  }
