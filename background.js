@@ -46,8 +46,12 @@ api.runtime.onMessage.addListener((message,sender,respond)=>{
        !Number.isInteger(message.source)||message.source<1||
        !Number.isInteger(message.windowId)||message.windowId<0)
       respond({ok:false,error:'Invalid capture session.'});
-    else if(sessions.has(message.source))
-      respond({ok:false,error:'A screenshot is already running on this tab.'});
+    else if(sessions.has(message.source)){
+      const existing=sessions.get(message.source);
+      // Retrying an uncertain INIT response must never create a second session.
+      respond(existing.id===message.captureId?{ok:true,captureId:existing.id}:
+        {ok:false,error:'A screenshot is already running on this tab.'});
+    }
     else{
       sessions.set(message.source,{id:message.captureId,source:message.source,windowId:message.windowId,
         started:Date.now(),nextIndex:0,meta:null,frames:[],lastFrame:0});
@@ -75,7 +79,7 @@ api.runtime.onMessage.addListener((message,sender,respond)=>{
     else if(entry.meta||!m||!Number.isFinite(m.width)||!Number.isFinite(m.height)||
         !Number.isFinite(m.dpr)||m.dpr<=0||!Number.isInteger(m.frames)||
         m.width<1||m.height<1||m.frames<1||m.frames>40||
-        m.pageHeight<1||m.pageHeight>30000||m.width*m.pageHeight*m.dpr*m.dpr>48000000)
+        !Number.isFinite(m.pageHeight)||m.pageHeight<1||m.pageHeight>30000||m.width*m.pageHeight*m.dpr*m.dpr>48000000)
       respond({ok:false,error:'Screenshot dimensions exceed the supported limit.'});
     else {entry.meta=m;respond({ok:true,frames:m.frames});}
     return false;
