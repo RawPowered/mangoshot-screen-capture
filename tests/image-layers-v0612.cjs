@@ -57,6 +57,6 @@ const M=globals.MangoImageLayersV0612;
  assert.ok(script.includes('function importImages(')&&script.includes('maskDraw.path.points.push('));
  assert.ok(!html.includes('iframe'),'Imported images must be local; no iframe');
  assert.deepEqual(JSON.parse(read('manifest.json')).permissions,['activeTab','scripting']);
- assert.equal(JSON.parse(read('manifest.json')).version,'0.6.12');
+ assert.equal(JSON.parse(read('manifest.json')).version,'0.6.13');
  console.log('PASS: local image import, native alpha mask, flat-background cutout, nondestructive assets and layer UI contracts');
 })().catch(e=>{console.error(e);process.exitCode=1;});

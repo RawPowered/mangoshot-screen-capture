@@ -13,12 +13,14 @@ const call=(fn,...args)=>new Promise((resolve,reject)=>{
 let meta,frames=[],ready=false,drawing=false,active=null,strokes=[],renderPending=false,history=[],redoHistory=[];
 const editorCore=globalThis.MangoImageEditorCore;
 const layerCore=globalThis.MangoImageLayersV0612;
+const typeEffects=globalThis.MangoImageTypeV0613;
 const selectedBox=document.getElementById('text-selection-box'),inline=document.getElementById('text-inline'),
  inlineInput=document.getElementById('text-inline-input'),contextMenu=document.getElementById('image-context-menu');
 const textFontSize=document.getElementById('text-font-size'),textFontFamily=document.getElementById('text-font-family'),
  textContent=document.getElementById('text-content');
 let selectedText=-1,textDraft=null,dragText=null,textPreset='plain';
 let selectedImage=-1,selectedObject=-1,dragImage=null,maskDraw=null,inspectorTab='layers';
+let resizeDrag=null;
 function label(message){status.textContent=message;}
 function activate(){call(api.tabs.getCurrent.bind(api.tabs)).then(tab=>
   tab?.id&&call(api.tabs.update.bind(api.tabs),tab.id,{active:true})).catch(()=>{});}
@@ -118,7 +120,8 @@ function drawStroke(stroke){
     pen.moveTo(finish.x,finish.y);pen.lineTo(finish.x-head*Math.cos(angle-.55),finish.y-head*Math.sin(angle-.55));
     pen.moveTo(finish.x,finish.y);pen.lineTo(finish.x-head*Math.cos(angle+.55),finish.y-head*Math.sin(angle+.55));pen.stroke();
   }else if(stroke.type==='text'){
-    if(editorCore?.drawText)editorCore.drawText(pen,stroke);
+    if(typeEffects?.draw)typeEffects.draw(pen,stroke);
+    else if(editorCore?.drawText)editorCore.drawText(pen,stroke);
     else{pen.globalAlpha=Math.max(0,Math.min(1,stroke.opacity??1));pen.fillStyle=stroke.color;pen.font='bold '+Math.max(14,stroke.size*5)+'px system-ui';
       pen.fillText(stroke.text||'Note',start.x,start.y);}
   }
@@ -163,14 +166,15 @@ function selectImage(index){
 
 function textIndexAt(x,y){
  if(!editorCore?.hitText)return -1;
- for(let i=strokes.length-1;i>=0;i--)if(strokes[i].visible!==false&&editorCore.hitText(pen,strokes[i],x,y,10))return i;
+ for(let i=strokes.length-1;i>=0;i--)if(strokes[i].visible!==false&&
+   (typeEffects?.hit?.(pen,strokes[i],x,y,10)??editorCore.hitText(pen,strokes[i],x,y,10)))return i;
  return -1;
 }
 function updateSelectionBox(){
  if(!selectedBox)return;
  const stroke=selectedStroke();
  if(!ready||!stroke||stroke.visible===false||textDraft||!ink.width||!ink.height||!editorCore?.textMetrics){selectedBox.hidden=true;return;}
- const r=editorCore.textMetrics(pen,stroke);
+ const r=(typeEffects?.bounds?.(pen,stroke))||editorCore.textMetrics(pen,stroke);
  selectedBox.style.left=100*r.x/ink.width+'%';selectedBox.style.top=100*r.y/ink.height+'%';
  selectedBox.style.width=100*r.width/ink.width+'%';selectedBox.style.height=100*r.height/ink.height+'%';
  selectedBox.hidden=false;
@@ -179,7 +183,7 @@ function syncSelectedText(){
  const stroke=selectedStroke();
  if(stroke){
   if(textContent)textContent.value=stroke.text||'';
-  if(textFontSize)textFontSize.value=String(Math.round(stroke.fontSize||48));
+  if(textFontSize)textFontSize.value=String(Math.round((stroke.fontSize||48)*(stroke.scaleY??1)));
   if(textFontFamily)textFontFamily.value=stroke.fontFamily||'sans';
   textPreset=stroke.styleId||'plain';
   color.value=stroke.color||color.value;
@@ -189,7 +193,21 @@ function syncSelectedText(){
   button.setAttribute('aria-pressed',String(button.dataset.textPreset===textPreset));
  const out=document.getElementById('text-size-readout');
  if(out&&textFontSize)out.textContent=textFontSize.value+' px';
- updateEditorControls();updateSelectionBox();
+ syncTextEffects();updateEditorControls();updateSelectionBox();
+}
+function syncTextEffects(){
+ const layer=selectedStroke(),fx=typeEffects?.merged?.(layer?.effects);
+ for(const input of document.querySelectorAll?.('[data-fx-group]')||[]){
+  const group=input.dataset.fxGroup,field=input.dataset.fxField,value=fx?.[group]?.[field];
+  input.disabled=!layer||!!layer.locked;
+  if(value==null)continue;
+  if(input.type==='checkbox')input.checked=value===true;
+  else if(input.dataset.fxPercent!==undefined)input.value=String(Math.round(value*100));
+  else input.value=String(value);
+ }
+ for(const button of document.querySelectorAll?.('[data-fx-preset]')||[]){
+  button.disabled=!layer||!!layer.locked;
+ }
 }
 function updateEditorControls(){
  const selected=selectedStroke(),textMode=tool.value==='text'||!!selected;
@@ -199,7 +217,7 @@ function updateEditorControls(){
  const hint=document.getElementById('image-hint');
  if(hint)hint.textContent=textDraft?'Type here · Enter to place · Shift+Enter new line · Esc cancels':
   tool.value==='text'?'Click on the screenshot to type. Click existing text to edit.':
-  tool.value==='select'?'Click text to select, drag to reposition, or double-click to edit.':
+  tool.value==='select'?'Select an image or text layer. Drag corners to resize proportionally; hold Shift to stretch.':
   'Right-click the screenshot to copy all pixels and annotations.';
  if(textContent){textContent.disabled=!selected;textContent.placeholder=selected?'Edit selected text':'Click screenshot to create text';}
  if(textFontSize)textFontSize.disabled=!ready;
@@ -242,7 +260,7 @@ function beginInline(pos,index=-1){
  selectedText=existing?index:-1;
  if(existing){
   textPreset=existing.styleId||'plain';
-  if(textFontSize)textFontSize.value=Math.round(existing.fontSize||48);
+  if(textFontSize)textFontSize.value=Math.round((existing.fontSize||48)*(existing.scaleY??1));
   if(textFontFamily)textFontFamily.value=existing.fontFamily||'sans';
   color.value=existing.color||color.value;
  }
@@ -258,9 +276,10 @@ function commitInline(){
  const old=draft.index>=0?strokes[draft.index]:null;
  snapshot();
  const pixelSize=Number(textFontSize?.value)||48;
- const stroke=old?{...old,text:value,fontSize:pixelSize,fontFamily:textFontFamily?.value||'sans',styleId:textPreset,color:color.value}:
+ const stroke=old?{...old,text:value,fontSize:pixelSize/(old.scaleY??1),fontFamily:textFontFamily?.value||'sans',styleId:textPreset,color:color.value}:
   {type:'text',points:[{x:draft.x,y:draft.y,p:1}],size:Math.max(3,pixelSize/5),
-   fontSize:pixelSize,fontFamily:textFontFamily?.value||'sans',styleId:textPreset,color:color.value,text:value};
+   fontSize:pixelSize,fontFamily:textFontFamily?.value||'sans',styleId:textPreset,color:color.value,text:value,
+   scaleX:1,scaleY:1,effects:typeEffects?.initial?.()};
  if(old)strokes[draft.index]=stroke;else strokes.push(stroke);
  selectedText=old?draft.index:strokes.length-1;
  textDraft=null;inline.hidden=true;
@@ -296,7 +315,7 @@ function replaceLayer(index,patch){
  if(index<0||!strokes[index]||strokes[index].locked)return false;
  const current=strokes[index];
  if(Object.entries(patch).every(([k,v])=>current[k]===v))return false;
- snapshot();strokes[index]={...current,...patch};redraw();setReady(ready);syncLayerProperties();return true;
+ snapshot();strokes[index]={...current,...patch};redraw();setReady(ready);syncSelectedText();syncLayerProperties();return true;
 }
 function removeLayerAt(index){
  if(index<0||!strokes[index])return false;
@@ -337,7 +356,7 @@ function syncLayerProperties(){
  for(const [id,prop] of [['image-layer-x','x'],['image-layer-y','y'],['image-layer-width','width'],['image-layer-height','height']]){
   const el=document.getElementById(id);if(!el)continue;
   const b=l?.type==='image'?layerCore?.bounds(l):
-   l?.type==='text'?editorCore?.textMetrics(pen,l):null;
+   l?.type==='text'?(typeEffects?.bounds?.(pen,l)||editorCore?.textMetrics(pen,l)):null;
   el.value=b?.[prop]==null?'':Math.round(b[prop]);
   el.disabled=!l||!!l.locked||(!b&&['width','height'].includes(prop));
  }
@@ -355,6 +374,9 @@ function syncLayerProperties(){
  if(featherLabel&&feather)featherLabel.textContent=feather.value+' px';
  const inspectorState=document.getElementById('image-inspector-state');
  if(inspectorState)inspectorState.textContent=l?(l.type==='image'?'IMAGE LAYER':l.type==='text'?'TEXT LAYER':'ANNOTATION'):'IMAGE STUDIO';
+ const lock=document.getElementById('image-keep-ratio');if(lock)lock.disabled=!l||l.locked||!['image','text'].includes(l.type);
+ const ratioHint=document.getElementById('image-transform-readout');
+ if(ratioHint&&!resizeDrag)ratioHint.textContent='Drag corners to resize · hold Shift to stretch';
 }
 async function importImages(files){
  if(!ready||!layerCore){label('Open a screenshot before importing an image.');return;}
@@ -402,7 +424,16 @@ for(const [id,prop] of [['image-layer-x','x'],['image-layer-y','y'],['image-laye
  document.getElementById(id)?.addEventListener?.('change',event=>{
   const index=selectedAnyIndex(),layer=strokes[index],v=Number(event.target.value);
   if(!layer||!Number.isFinite(v)||layer.locked)return;
-  if(['width','height'].includes(prop)&&layer.type==='image')replaceLayer(index,{[prop]:Math.max(1,Math.round(v))});
+  if(['width','height'].includes(prop)&&['image','text'].includes(layer.type)&&typeEffects?.applyResize){
+   const b=layer.type==='image'?layerCore.bounds(layer):typeEffects.bounds(pen,layer);
+   const target={...b},k=Math.max(.05,v)/b[prop],ratioLocked=
+     document.getElementById('image-keep-ratio')?.checked!==false&&!event.shiftKey;
+   target[prop]=Math.max(1,v);
+   if(ratioLocked)target[prop==='width'?'height':'width']=
+     b[prop==='width'?'height':'width']*k;
+   replaceLayer(index,typeEffects.applyResize(layer,b,target));
+  }
+  else if(['width','height'].includes(prop)&&layer.type==='image')replaceLayer(index,{[prop]:Math.max(1,Math.round(v))});
   else if(['x','y'].includes(prop)){
    snapshot();layer.points[0]={...layer.points[0],[prop]:Math.round(v)};
    redraw();setReady(ready);syncLayerProperties();
@@ -414,13 +445,37 @@ for(const button of document.querySelectorAll?.('[data-text-size]')||[]){
   const value=Number(button.dataset.textSize);if(!Number.isFinite(value))return;
   textFontSize.value=String(value);
   const output=document.getElementById('text-size-readout');if(output)output.textContent=value+' px';
-  if(selectedStroke())updateSelectedText({fontSize:value});
+  if(selectedStroke())updateVisualFontSize(value);
  });
 }
 document.getElementById('text-fill-color')?.addEventListener?.('change',event=>{
  color.value=event.target.value;
  if(selectedStroke())updateSelectedText({color:event.target.value});
 });
+
+for(const input of document.querySelectorAll?.('[data-fx-group]')||[]){
+ input.addEventListener('change',()=>{
+  const current=selectedStroke();
+  if(!current||current.locked||!typeEffects)return;
+  const group=input.dataset.fxGroup,field=input.dataset.fxField;
+  const fx=typeEffects.merged(current.effects);
+  if(!fx[group]||!(field in fx[group]))return;
+  fx[group][field]=input.type==='checkbox'?input.checked:
+   input.type==='color'?input.value:
+   input.dataset.fxPercent!==undefined?Number(input.value)/100:Number(input.value);
+  updateSelectedText({effects:typeEffects.merged(fx)});
+ });
+}
+for(const button of document.querySelectorAll?.('[data-fx-preset]')||[]){
+ button.addEventListener('click',()=>{
+  const current=selectedStroke();if(!current||current.locked||!typeEffects)return;
+  const p=typeEffects.preset(button.dataset.fxPreset);
+  updateSelectedText({effects:p.effects,color:p.color});
+  switchInspectorTab('type');
+  label('Applied '+button.textContent+' text style. All effects remain editable.');
+ });
+}
+
 function beginMaskTool(mode){
  if(!selectedImageStroke()){label('Select an imported image layer before masking.');switchInspectorTab('layers');return;}
  tool.value=mode;syncTool();switchInspectorTab('mask');
@@ -545,8 +600,15 @@ textFontSize?.addEventListener?.('input',()=>{
  if(output)output.textContent=textFontSize.value+' px';
  if(textDraft)positionInline(textDraft);
 });
+function updateVisualFontSize(value){
+ const layer=selectedStroke();if(!layer)return false;
+ const shown=Math.max(1,(layer.fontSize||48)*(layer.scaleY??1));
+ const ratio=Math.max(.05,Math.min(25,Number(value)/shown));
+ return updateSelectedText({scaleX:Math.max(.08,Math.min(25,(layer.scaleX??1)*ratio)),
+  scaleY:Math.max(.08,Math.min(25,(layer.scaleY??1)*ratio))});
+}
 textFontSize?.addEventListener?.('change',()=>{
- if(selectedStroke())updateSelectedText({fontSize:Number(textFontSize.value)});
+ if(selectedStroke())updateVisualFontSize(Number(textFontSize.value));
 });
 textFontFamily?.addEventListener?.('change',()=>{
  if(selectedStroke())updateSelectedText({fontFamily:textFontFamily.value});
@@ -566,6 +628,66 @@ inlineInput?.addEventListener?.('keydown',event=>{
 document.getElementById('text-inline-place')?.addEventListener?.('click',commitInline);
 document.getElementById('text-inline-cancel')?.addEventListener?.('click',cancelInline);
 function scheduleRedraw(){if(renderPending)return;renderPending=true;requestAnimationFrame(()=>{renderPending=false;redraw();});}
+/* Corner handles use source-pixel geometry regardless of Fit/100% zoom.
+ * Preserve the opposite corner. Ratio stays locked unless Shift is held,
+ * or the user explicitly disables Lock Proportions in Layers.
+ * Handle UI lives outside Canvas and never appears in exported pixels. */
+const transformHandles=[...(document.querySelectorAll?.('[data-resize-handle]')||[])];
+for(const handle of transformHandles){
+ handle.addEventListener('pointerdown',event=>{
+  if(!ready||event.button!==0||!typeEffects?.resize||!typeEffects?.applyResize)return;
+  const kind=handle.dataset.resizeKind,index=kind==='image'?selectedImage:selectedText;
+  const layer=strokes[index];
+  if(!layer||layer.type!==kind||layer.locked||layer.visible===false)return;
+  if(textDraft)commitInline();
+  const bounds=kind==='image'?layerCore?.bounds(layer):typeEffects.bounds(pen,layer);
+  if(!bounds?.width||!bounds?.height)return;
+  event.preventDefault();event.stopPropagation();
+  handle.setPointerCapture?.(event.pointerId);
+  resizeDrag={pointerId:event.pointerId,handle,index,kind,corner:handle.dataset.resizeHandle,
+   initial:cloneStrokes([layer])[0],bounds:{x:bounds.x,y:bounds.y,width:bounds.width,height:bounds.height},
+   start:point(event),moved:false};
+ });
+}
+window.addEventListener('pointermove',event=>{
+ const d=resizeDrag;
+ if(!d||event.pointerId!==d.pointerId)return;
+ if(!strokes[d.index]||strokes[d.index].locked){resizeDrag=null;return;}
+ const p=point(event),dx=p.x-d.start.x,dy=p.y-d.start.y;
+ if(!d.moved&&Math.hypot(dx,dy)<2)return;
+ if(!d.moved){snapshot();d.moved=true;}
+ const locked=document.getElementById('image-keep-ratio')?.checked!==false;
+ const free=event.shiftKey||!locked;
+ const newRect=typeEffects.resize(d.bounds,d.corner,dx,dy,free);
+ const updated=typeEffects.applyResize(d.initial,d.bounds,newRect);
+ strokes[d.index]=updated;
+ redraw();
+ const readout=document.getElementById('image-transform-readout');
+ if(readout)readout.textContent=Math.round(newRect.width)+' × '+Math.round(newRect.height)+
+  (free?' · Free stretch':' · Ratio locked');
+ event.preventDefault();event.stopPropagation();
+});
+function completeResize(event,cancel=false){
+ const d=resizeDrag;if(!d||event.pointerId!==d.pointerId)return;
+ resizeDrag=null;
+ if(cancel&&d.moved){strokes[d.index]=d.initial;history.pop();redraw();}
+ if(d.moved&&!cancel){
+  setReady(ready);syncSelectedText();syncLayerProperties();
+  label((d.kind==='text'?'Text':'Image')+' resized · Ctrl+Z to undo.'+
+   (document.getElementById('image-keep-ratio')?.checked===false?' Free stretch enabled.':' Hold Shift while dragging to stretch.'));
+ }
+ const readout=document.getElementById('image-transform-readout');
+ if(readout)readout.textContent='Drag corners to resize · hold Shift to stretch';
+ d.handle.releasePointerCapture?.(event.pointerId);
+ event.preventDefault?.();
+}
+window.addEventListener('pointerup',event=>completeResize(event,false));
+window.addEventListener('pointercancel',event=>completeResize(event,true));
+document.getElementById('image-keep-ratio')?.addEventListener?.('change',event=>{
+ const readout=document.getElementById('image-transform-readout');
+ if(readout)readout.textContent=event.target.checked?
+  'Proportions locked · hold Shift to stretch':'Free stretching enabled';
+});
 function imageIndexAt(x,y){
  if(!layerCore)return -1;
  for(let i=strokes.length-1;i>=0;i--){
@@ -653,7 +775,7 @@ ink.addEventListener('pointermove',event=>{
   const dx=p.x-drag.start.x,dy=p.y-drag.start.y;
   if(!drag.moved&&Math.hypot(dx,dy)<3)return;
   if(!drag.moved){snapshot();drag.moved=true;}
-  const shape=editorCore?.textMetrics?.(pen,stroke),w=shape?.width||0,h=shape?.height||0;
+  const shape=typeEffects?.bounds?.(pen,stroke)||editorCore?.textMetrics?.(pen,stroke),w=shape?.width||0,h=shape?.height||0;
   stroke.points[0]={...stroke.points[0],x:Math.max(0,Math.min(ink.width-w,drag.origin.x+dx)),
    y:Math.max(0,Math.min(ink.height-h,drag.origin.y+dy))};
   redraw();event.preventDefault();return;
