@@ -13,7 +13,7 @@
  const fontNames={sans:'Clean Sans',serif:'Editorial Serif',mono:'Monospace',rounded:'Rounded',condensed:'Condensed',display:'Display Bold',handwritten:'Handwritten'};
  const presets=root.MangoGraphics?.styles||{};
  const names={none:'Custom',title:'Hero Title',lowerThird:'Lower Third',callout:'Bubble',spotlight:'Spotlight',
-  limeAccent:'Neon Lime',glass:'Glass',step:'Step',warning:'Warning',minimal:'Caption',outline:'Outline'};
+  limeAccent:'Neon Lime',glass:'Glass',step:'Step',warning:'Warning',minimal:'Caption',outline:'Outline',editorial:'Editorial',kinetic:'Impact',techNote:'Tech Note',softBadge:'Soft Badge',quoteCard:'Quote Card',pointerPop:'Pointer Pop',premium:'Premium',checklist:'Checklist'};
  const mk=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
  const btn=(label,description,action,cls)=>{const b=mk('button',cls,label);b.type='button';b.title=description;b.setAttribute('aria-label',description);b.addEventListener('click',action);return b;};
  const box=mk('section','v063-design-bench');
