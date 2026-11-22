@@ -5,6 +5,7 @@ const status=document.querySelector('#status'),wrap=document.querySelector('#can
 const tool=document.querySelector('#tool'),size=document.querySelector('#size'),color=document.querySelector('#color');
 const params=new URLSearchParams(location.search),source=Number(params.get('source'));
 const mode=params.get('mode')==='full'?'full':'visible',captureId=crypto.randomUUID();
+const stored=params.get('stored'),captureError=params.get('capture_error');
 const call=(fn,...args)=>new Promise((resolve,reject)=>{
   try{fn(...args,value=>{const error=api.runtime.lastError;error?reject(new Error(error.message)):resolve(value);});}
   catch(error){reject(error);}
@@ -56,12 +57,20 @@ api.runtime.onMessage.addListener((message,sender,reply)=>{
 });
 async function begin(){
   try{
-    if(!Number.isInteger(source)||source<1)throw new Error('No webpage selected.');
-    const result=await call(api.runtime.sendMessage.bind(api.runtime),{type:'MANGO_INIT',captureId,source,mode});
-    if(!result?.ok)throw new Error(result?.error||'Cannot start capture.');
-    await call(api.scripting.executeScript.bind(api.scripting),{target:{tabId:source},files:['content.js']});
-  }catch(error){label('Capture failed: '+error.message);activate();}
+    if(captureError){label('Capture failed: '+captureError);return;}
+    if(!stored)throw new Error('No completed capture was provided. Open MangoShot from a webpage.');
+    label('Loading screenshot from private local storage…');
+    const bundle=await globalThis.MangoCaptureStore.load(stored);
+    if(!bundle?.meta||!bundle.frames?.length)
+      throw new Error('Saved screenshot was not found. Try capturing again.');
+    meta=bundle.meta;frames=bundle.frames;
+    await assemble();
+    // Do not leave sensitive screenshot copies in the transfer database after
+    // they have been successfully assembled in Image Studio.
+    await globalThis.MangoCaptureStore.remove(stored).catch(()=>{});
+  }catch(error){label('Capture failed: '+error.message);}
 }
+
 function point(event){const rect=ink.getBoundingClientRect();return {x:(event.clientX-rect.left)*ink.width/rect.width,
   y:(event.clientY-rect.top)*ink.height/rect.height,p:event.pointerType==='pen'?Math.max(.2,event.pressure||.5):1};}
 function drawStroke(stroke){

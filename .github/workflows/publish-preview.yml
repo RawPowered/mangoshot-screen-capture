@@ -4,10 +4,8 @@ on:
     branches:
       - 'release/v*'
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
   publish-preview:
     if: github.repository == 'RawPowered/mangoshot-screen-capture'
@@ -15,37 +13,34 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Checkout release commit
+      - name: Checkout release snapshot
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Node runtime
+      - name: Set up Node 22
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-
-      - name: Validate version and release ref
+      - name: Validate release tag, manifest and notes
         shell: bash
         run: |
           set -euo pipefail
           tag="${GITHUB_REF_NAME#release/}"
           if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-preview\.[0-9]+$ ]]; then
-            echo "Release branches must be release/vX.Y.Z-preview.N" >&2
-            exit 1
+            echo "Use a release/vX.Y.Z-preview.N branch" >&2;exit 1
           fi
-          version="${tag#v}"
-          version="${version%%-*}"
-          python3 -c 'import json,sys; m=json.load(open("manifest.json")); assert m["version"]==sys.argv[1], "Manifest mismatch"' "$version"
+          version="${tag#v}";version="${version%%-*}"
+          python3 -c 'import json,sys; assert json.load(open("manifest.json"))["version"]==sys.argv[1]' "$version"
+          notes="docs/releases/$tag.md"
+          test -s "$notes"
           echo "RELEASE_TAG=$tag" >> "$GITHUB_ENV"
-
-      - name: Run local regression suite
+          echo "RELEASE_NOTES=$notes" >> "$GITHUB_ENV"
+      - name: Run all regression tests
         shell: bash
         run: |
           set -euo pipefail
-          for test in tests/*.cjs; do node "$test"; done
-
-      - name: Build and check downloadable ZIP packages
+          for t in tests/*.cjs;do echo "Running $t";node "$t";done
+      - name: Build extension and full source packages
         shell: bash
         run: |
           set -euo pipefail
@@ -54,24 +49,19 @@ jobs:
           unzip -t "dist/MangoShot-$RELEASE_TAG-Extension.zip"
           unzip -t "dist/MangoShot-$RELEASE_TAG-Source-and-Tools.zip"
           (cd dist && sha256sum MangoShot-*.zip > SHA256SUMS.txt)
-
-      - name: Publish immutable-version prerelease
+      - name: Publish versioned GitHub prerelease
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            echo "Tag $RELEASE_TAG is already published; refusing to overwrite a release." >&2
-            exit 1
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1;then
+            echo "Release already exists: refusing overwrite" >&2;exit 1
           fi
           gh release create "$RELEASE_TAG" \
             "dist/MangoShot-$RELEASE_TAG-Extension.zip" \
             "dist/MangoShot-$RELEASE_TAG-Source-and-Tools.zip" \
-            "dist/SHA256SUMS.txt" \
-            --target "$GITHUB_SHA" \
-            --title "MangoShot v0.5.6 - Public Preview 1" \
-            --notes-file "docs/releases/v0.5.6-preview.1.md" \
-            --prerelease \
-            --latest=false
+            dist/SHA256SUMS.txt \
+            --target "$GITHUB_SHA" --title "MangoShot $RELEASE_TAG" \
+            --notes-file "$RELEASE_NOTES" --prerelease --latest=false

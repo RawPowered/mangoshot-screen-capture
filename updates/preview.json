@@ -2,11 +2,11 @@
   "schema": 1,
   "app": "MangoShot",
   "channel": "preview",
-  "current_version": "0.5.6",
-  "release_tag": "v0.5.6-preview.1",
-  "release_url": "https://github.com/RawPowered/mangoshot-screen-capture/releases/tag/v0.5.6-preview.1",
-  "extension_zip": "https://github.com/RawPowered/mangoshot-screen-capture/releases/download/v0.5.6-preview.1/MangoShot-v0.5.6-preview.1-Extension.zip",
-  "checksums_url": "https://github.com/RawPowered/mangoshot-screen-capture/releases/download/v0.5.6-preview.1/SHA256SUMS.txt",
+  "current_version": "0.5.7",
+  "release_tag": "v0.5.7-preview.1",
+  "release_url": "https://github.com/RawPowered/mangoshot-screen-capture/releases/tag/v0.5.7-preview.1",
+  "extension_zip": "https://github.com/RawPowered/mangoshot-screen-capture/releases/download/v0.5.7-preview.1/MangoShot-v0.5.7-preview.1-Extension.zip",
+  "checksums_url": "https://github.com/RawPowered/mangoshot-screen-capture/releases/download/v0.5.7-preview.1/SHA256SUMS.txt",
   "is_prerelease": true,
   "automatic_updates": false
 }

@@ -1,54 +1,36 @@
-/* Regression for the actual v0.2 bug: browser runtime messages broadcast to
-   extension pages twice when the background forwards them. The editor MUST
-   never see source commands as screenshot deliveries. */
+/* End-to-end worker routing for popup-started full-page screenshot.
+   No inactive editor is required to receive a large screenshot message. */
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
-const root=path.resolve(__dirname,'..'),read=f=>fs.readFileSync(path.join(root,f),'utf8');
-let bgListener,editorListener,closedListener;
-let active=true,framesTaken=0;
-const srcTab={id:23,active:true,windowId:9,url:'https://example.test/'};
-const delivery=[];
-const api={
- runtime:{id:'test-ext',lastError:null,getURL:f=>'chrome-extension://test-ext/'+f,
- onMessage:{addListener:fn=>{bgListener=fn}},
- sendMessage(msg,cb){
-   // Simulate broadcast: every runtime message is observed by the editor.
-   delivery.push(msg);editorListener?.(msg,{id:'test-ext'},()=>{});cb({ok:true});
- }},
- tabs:{onRemoved:{addListener:fn=>closedListener=fn},get(id,cb){assert.equal(id,23);cb(srcTab)},
- captureVisibleTab(win,opts,cb){assert.equal(win,9);framesTaken++;cb('data:image/png;base64,AAA')}}
-};
-vm.runInNewContext(read('background.js'),{globalThis:{chrome:api},Map,Date,Number,Error,Promise,setTimeout});
-const accepted=[];
-editorListener=(msg,sender,respond)=>{
- if(!/^MANGO_EDITOR_/.test(msg.type))return;
- if(msg.type==='MANGO_EDITOR_FRAME')accepted.push(msg);
- respond({ok:true});
-};
-function send(msg,sender){return new Promise(resolve=>{
-  // Deliver original source request to editor as the real browser does.
-  editorListener(msg,sender,()=>{});
-  bgListener(msg,sender,resolve);
- });}
+const read=f=>fs.readFileSync(path.join(__dirname,'..',f),'utf8');
+let worker,removed,active=true,framesTaken=0,stored=null,opened=[];
+const tab={id:23,active:true,windowId:9,url:'https://example.test/long'};
+const png='data:image/png;base64,'+'A'.repeat(160);
+const store={valid:id=>/^[a-zA-Z0-9_-]{8,100}$/.test(id),png:d=>typeof d==='string'&&d.startsWith('data:image/png;base64,')&&d.length>100,
+ async save(id,meta,frames){stored={id,meta,frames};}};
+const api={runtime:{id:'mango',lastError:null,getURL:x=>'chrome-extension://mango/'+x,onMessage:{addListener:fn=>worker=fn}},
+ tabs:{onRemoved:{addListener:fn=>removed=fn},get(id,cb){assert.equal(id,23);cb({...tab,active})},
+ captureVisibleTab(w,opt,cb){assert.equal(w,9);assert.equal(opt.format,'png');framesTaken++;cb(png)},
+ create(opt,cb){opened.push(opt);cb({id:100});}}};
+vm.runInNewContext(read('background.js'),{globalThis:{chrome:api,MangoCaptureStore:store},Date,Number,Map,Promise,Error,URLSearchParams,setTimeout});
+const popup={id:'mango',url:'chrome-extension://mango/popup.html'};
+const source={id:'mango',tab};
+function send(message,sender){return new Promise((resolve,reject)=>{const ret=worker(message,sender,resolve);if(ret!==true&&message.type!=='MANGO_SETUP')reject(new Error('No response handler for '+message.type));});}
 (async()=>{
- const editor={id:'test-ext',url:'chrome-extension://test-ext/editor.html?source=23',tab:{id:42}};
- const source={tab:srcTab};
- assert.equal((await send({type:'MANGO_INIT',source:23,mode:'full',captureId:'c1'},editor)).ok,true);
- assert.equal((await send({type:'MANGO_SETUP'},source)).captureId,'c1');
- assert.equal((await send({type:'MANGO_SOURCE_START',captureId:'c1',meta:{width:800,height:600,pageHeight:1200,frames:2}},source)).ok,true);
- for(const [i,y] of [[0,0],[1,600]]){
-  assert.equal((await send({type:'MANGO_SOURCE_FRAME',captureId:'c1',index:i,scrollY:y},source)).ok,true);
- }
- assert.equal((await send({type:'MANGO_SOURCE_DONE',captureId:'c1'},source)).ok,true);
- assert.equal(framesTaken,2);
- assert.equal(accepted.length,2,'Editor must get exactly one image per frame');
- assert.ok(accepted.every((m,i)=>m.index===i && m.dataUrl.startsWith('data:image/png;base64,')));
+ const id='capture-123456';
+ assert.equal((await send({type:'MANGO_POPUP_INIT',mode:'full',source:23,captureId:id},popup)).ok,true);
+ assert.equal((await send({type:'MANGO_SETUP'},source)).captureId,id);
+ const meta={width:800,height:600,pageHeight:1200,frames:2,full:true};
+ assert.equal((await send({type:'MANGO_SOURCE_START',captureId:id,meta},source)).ok,true);
+ for(const [index,scrollY] of [[0,0],[1,600]])assert.equal((await send({type:'MANGO_SOURCE_FRAME',captureId:id,index,scrollY},source)).ok,true);
+ assert.equal((await send({type:'MANGO_SOURCE_DONE',captureId:id},source)).ok,true);
+ assert.equal(framesTaken,2);assert.equal(stored.id,id);assert.equal(stored.frames.length,2);
+ assert.equal(opened.length,1);assert.match(opened[0].url,/editor.html\?stored=capture-123456/);
  assert.equal((await send({type:'MANGO_SETUP'},source)).ok,false);
- assert.equal((await send({type:'MANGO_INIT',source:23,mode:'visible',captureId:'c2'},editor)).ok,true);
- assert.equal((await send({type:'MANGO_SOURCE_START',captureId:'c2',meta:{width:800,height:600,pageHeight:600,frames:1}},source)).ok,true);
- assert.equal((await send({type:'MANGO_SOURCE_FRAME',captureId:'c2',index:1,scrollY:0},source)).ok,false,'Reject out-of-order frames');
- assert.equal((await send({type:'MANGO_SOURCE_FRAME',captureId:'c2',index:0,scrollY:0},source)).ok,true);
- assert.equal((await send({type:'MANGO_SOURCE_FRAME',captureId:'c2',index:0,scrollY:0},source)).ok,false,'Reject duplicate frames');
- closedListener(42);
- assert.equal((await send({type:'MANGO_SETUP'},source)).ok,false);
- console.log('PASS: broadcast isolation, complete frames, no duplicates, index order, cleanup');
+ assert.equal((await send({type:'MANGO_POPUP_INIT',mode:'full',source:23,captureId:'capture-234567'},popup)).ok,true);
+ assert.equal((await send({type:'MANGO_SOURCE_START',captureId:'capture-234567',meta:{...meta,frames:1}},source)).ok,true);
+ assert.equal((await send({type:'MANGO_SOURCE_FRAME',captureId:'capture-234567',index:1,scrollY:0},source)).ok,false,'reject out-of-order frame');
+ assert.equal((await send({type:'MANGO_SOURCE_ERROR',captureId:'capture-234567',error:'Page denied capture'},source)).ok,true);
+ assert.match(opened.at(-1).url,/capture_error=Page\+denied\+capture/);
+ removed(23);
+ console.log('PASS: popup-initiated capture, PNG frames, saved bundle, editor handoff and errors');
 })().catch(e=>{console.error(e);process.exitCode=1});

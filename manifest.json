@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "MangoShot",
-  "version": "0.5.6",
+  "version": "0.5.7",
   "description": "Private screenshots, screen recordings and Wacom-friendly annotations.",
   "permissions": [
     "activeTab",
@@ -20,6 +20,7 @@
   "background": {
     "service_worker": "background.js",
     "scripts": [
+      "capture-store.js",
       "background.js"
     ]
   },
