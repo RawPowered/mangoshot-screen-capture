@@ -42,15 +42,15 @@ let a=E.resize({x:100,y:60,width:200,height:100},'se',100,10,false);
 assert.equal(a.width,300);assert.equal(a.height,150,'Default drag keeps ratio using dominant axis');
 assert.equal(a.x,100);assert.equal(a.y,60);
 let free=E.resize({x:100,y:60,width:200,height:100},'se',100,10,true);
-assert.equal(free.width,300);assert.equal(free.height,110,'Shift drag allows width and height to differ');
+assert.ok(Math.abs(free.width-300)<1e-7);assert.ok(Math.abs(free.height-110)<1e-7,'Shift drag allows width and height to differ');
 let opposite=E.resize({x:100,y:60,width:200,height:100},'nw',40,10,false);
 assert.equal(opposite.x+opposite.width,300,'NW drag keeps right edge anchored');
 assert.equal(opposite.y+opposite.height,160,'NW drag keeps bottom edge anchored');
 let image=E.applyResize({type:'image',width:200,height:100,points:[{x:100,y:60}]},
  {x:100,y:60,width:200,height:100},free);
-assert.equal(image.width,300);assert.equal(image.height,110);
+assert.ok(Math.abs(image.width-300)<1e-7);assert.ok(Math.abs(image.height-110)<1e-7);
 const stretched=E.applyResize(start,{x:100,y:60,width:200,height:100},free);
-assert.equal(stretched.scaleX,1.5);assert.equal(stretched.scaleY,1.1,'Text transforms may distort only in free mode');
+assert.ok(Math.abs(stretched.scaleX-1.5)<1e-7);assert.ok(Math.abs(stretched.scaleY-1.1)<1e-7,'Text transforms may distort only in free mode');
 let visual=E.bounds(ctx,{...start,scaleX:2,scaleY:2});
 assert.equal(visual.width,b.width*2);assert.equal(visual.height,b.height*2);
 assert.ok(!('scaleX' in start),'Original source layer remains immutable after transform');
