@@ -181,6 +181,7 @@
   importLabel.append(importer);
   footer.append(reset,exportButton,importLabel);
   shell.append(top,hint,list,feedback,footer);modal.append(shell);
+  modal.querySelector?.('[data-shortcuts-close]')?.addEventListener?.('click',()=>{modal.close?.();capturing=null;});
   modal.addEventListener('close',()=>{capturing=null;paint();});
   paint();
  }
