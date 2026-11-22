@@ -19,8 +19,12 @@
  const gallery=mk('div','v069-premium-grid');gallery.setAttribute('aria-label','Premium composition library');
  const foot=mk('div','v069-premium-actions');
  const detail=mk('p','v069-selected','Choose a composition to preview and insert.');
- const preview=mk('button','v069-primary','▶ Preview selected');
- const insert=mk('button','v069-primary v069-insert','+ Insert composition');
+ const preview=mk('button','v069-primary','▶ Preview');
+ const insert=mk('button','v069-primary v069-insert','+ Add to timeline');
+ const quick=mk('div','v0610-quick-add');quick.setAttribute('role','group');
+ quick.setAttribute('aria-label','Selected premium composition actions');
+ const quickButtons=mk('div','v0610-quick-buttons');quickButtons.append(preview,insert);
+ quick.append(detail,quickButtons);
  preview.type='button';insert.type='button';
  const settings=mk('details','v069-premium-settings');
  settings.append(mk('summary','', 'Customize selected composition'));
@@ -33,9 +37,9 @@
  const number=mk('output','','75%');strengthRow.append(strength,number);
  const setMessage=mk('span','v069-premium-hint','Changing the accent or intensity updates the selected premium graphic. Fine timing stays in Motion.');
  style.append(colorRow,strengthRow,setMessage);settings.append(style);
- foot.append(detail,preview,insert,settings);
- page.append(header,sub,toolbar,gallery,foot);
- let chosen='crystal-reveal',category='All',onlyFavorite=false;
+ foot.append(settings);
+ page.append(header,sub,toolbar,quick,gallery,foot);
+ let chosen='crystal-reveal',category='Titles',onlyFavorite=false;
  let favorites=[];
  try{const saved=JSON.parse(root.localStorage?.getItem('MangoShot.PremiumFavorites.v1')||'[]');
   if(Array.isArray(saved))favorites=saved.filter(x=>typeof x==='string'&&P.byId[x]);}catch{}
@@ -50,7 +54,7 @@
   const layer=P.make('text',preset.id,0,3.5);
   layer.text=preset.category==='Titles'?'PRECISION':preset.category==='Subtitles'?'Studio in motion':
    preset.category==='Callouts'?'FEATURE':'MANGOSHOT';
-  layer.x=.08;layer.y=.34;layer.width=.84;layer.fontSize=preset.category==='Titles'?65:49;
+  layer.x=.08;layer.y=.34;layer.width=.84;layer.fontSize=preset.category==='Titles'?164:135;
   layer.motion={enter:{type:'fade',duration:.6,ease:'easeOut'},exit:{type:'fade',duration:.4,ease:'easeIn'},
    numeric:{type:'none',from:0,to:100,duration:2,decimals:0,prefix:'',suffix:''}};
   G.render(ctx,[layer],time,w,h);
@@ -62,13 +66,17 @@
   button.setAttribute('aria-label','Select '+preset.name+' composition');
   const canvas=mk('canvas','v069-card-image');canvas.width=300;canvas.height=160;
   button.append(canvas,mk('strong','',preset.name),mk('small','',preset.description));
+  const add=mk('button','v0610-card-add','+');add.type='button';
+  add.title='Add '+preset.name+' to timeline';add.setAttribute('aria-label','Add '+preset.name+' to timeline');
+  add.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();chosen=preset.id;insertPremium();});
   const favorite=mk('button','v069-favorite','☆');favorite.type='button';favorite.title='Toggle favorite';
   favorite.setAttribute('aria-label','Favorite '+preset.name);favorite.setAttribute('aria-pressed','false');
   button.addEventListener('click',()=>{chosen=preset.id;sync();});
+  button.addEventListener('dblclick',e=>{e.preventDefault();chosen=preset.id;insertPremium();});
   favorite.addEventListener('click',()=>{if(favorites.includes(preset.id))favorites=favorites.filter(x=>x!==preset.id);
    else favorites.push(preset.id);persist();sync();});
-  wrapper.append(button,favorite);
-  cardNodes.set(preset.id,{wrapper,button,favorite,canvas});paintCard(canvas,preset);
+  wrapper.append(button,favorite,add);
+  cardNodes.set(preset.id,{wrapper,button,favorite,add,canvas});paintCard(canvas,preset);
  }
  for(const preset of P.catalog)makeCard(preset);
  function filter(){
@@ -99,6 +107,7 @@
   favToggle.setAttribute('aria-pressed',String(onlyFavorite));
   detail.textContent=preset.name+' · '+preset.category+' · '+preset.description;
   preview.disabled=false;insert.disabled=!loaded();
+  for(const c of cardNodes.values())c.add.disabled=!loaded();
   const l=active();const premium=l?.premium;
   color.value=premium?.accent||preset.accent;
   strength.value=String(Math.round((premium?.intensity??.74)*100));
@@ -114,8 +123,12 @@
  color.addEventListener('change',applyStyle);
  strength.addEventListener('input',()=>number.textContent=strength.value+'%');
  strength.addEventListener('change',applyStyle);
- insert.addEventListener('click',()=>{if(!loaded())return;const ok=current()?.addPremiumComposition?.(chosen);
-  if(ok){V.graphicTabs.activate('design');}});
+ function insertPremium(){
+  if(!loaded())return;
+  const ok=current()?.addPremiumComposition?.(chosen);
+  if(ok){V.graphicTabs.activate('design');}
+ }
+ insert.addEventListener('click',insertPremium);
  preview.addEventListener('click',()=>{
   const p=selection(),item=cardNodes.get(chosen);
   // Preview locally in its original gallery canvas, without committing to the project.

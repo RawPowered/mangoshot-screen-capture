@@ -55,7 +55,7 @@ function render(){const durationOut=MangoTimeline.outputDuration(segments);
   const node=document.createElement('button');node.className='clip-segment';node.type='button';
   node.style.width=100*(s.end-s.start)/Math.max(.01,durationOut)+'%';node.title=`Clip ${i+1}: ${time(s.start)} – ${time(s.end)}`;
   node.textContent=String(i+1);node.classList.toggle('is-selected',selectedClipIndex===i);node.setAttribute('aria-pressed',String(selectedClipIndex===i));
-  node.onclick=()=>{if(byId('timeline').dataset.tool==='razor')return;selectedClipIndex=i;rangeSelected=false;sequencePreview?.stop();sequencePreview?.seekOutput(MangoSequenceMedia.sections(segments)[i].outputStart);
+  node.onclick=()=>{if(byId('timeline').dataset.tool==='razor')return;selectedClipIndex=i;selectedLayerId=null;rangeSelected=false;sequencePreview?.stop();sequencePreview?.seekOutput(MangoSequenceMedia.sections(segments)[i].outputStart);
    render();label('Selected Clip '+(i+1)+' · Ripple Delete removes the clip and closes the gap.');};
   for(const edge of ['start','end']){const handle=document.createElement('span');handle.className='trim-grip trim-'+edge;handle.title='Drag inward to trim '+edge+' edge (undoable)';
    handle.addEventListener('pointerdown',event=>{if(exporting)return;event.preventDefault();event.stopPropagation();
@@ -351,10 +351,10 @@ globalThis.MangoClipView={
    }catch(error){label('AutoCut not applied: '+error.message);return false;}
  },
  rippleDelete,deleteSelection,deleteSelected(){
-  if(selectedLayerId&&!rangeSelected&&selectedClipIndex===null){this.deleteLayer(selectedLayerId);return true;}
+  if(selectedLayerId&&!rangeSelected&&selectedClipIndex===null)return this.deleteLayer(selectedLayerId);
   return deleteSelection();
  },setRange,clearSelection,range:()=>({active:rangeSelected,start:Number(byId('in').value),end:Number(byId('out').value)}),
- selectedClip:()=>selectedClipIndex,selectClip(index){if(!Number.isInteger(index)||index<0||index>=segments.length)return;selectedClipIndex=index;rangeSelected=false;render();globalThis.MangoVisualClip?.refresh?.();},
+ selectedClip:()=>selectedClipIndex,selectClip(index){if(!Number.isInteger(index)||index<0||index>=segments.length)return;selectedClipIndex=index;selectedLayerId=null;rangeSelected=false;render();globalThis.MangoLayerUI?.render?.();globalThis.MangoVisualClip?.refresh?.();},
  addPremiumComposition(presetId){
    if(!original||exporting||!globalThis.MangoPremium?.byId?.[presetId])return false;
    const at=MangoEditOps.toOutput(segments,video.currentTime)??0;
@@ -366,24 +366,37 @@ globalThis.MangoClipView={
    primary.premium.groupId=groupId;
    if(second)second.premium.groupId=groupId;
    remember();layers.push(primary);if(second)layers.push(second);
-   selectedLayerId=primary.id;refreshed();label('Premium composition inserted: '+primary.name);return true;
+   selectedLayerId=primary.id;selectedClipIndex=null;rangeSelected=false;refreshed();label('Premium composition inserted: '+primary.name);return true;
  },
  addLayer(kind,preset='none'){
    if(!original||exporting)return;
    const at=MangoEditOps.toOutput(segments,video.currentTime)??0;
    const layer=MangoGraphics.create(kind,preset,Math.min(at,Math.max(0,MangoEditOps.length(segments)-.1)));
    layer.end=Math.min(layer.end,MangoEditOps.length(segments));
-   remember();layers.push(layer);selectedLayerId=layer.id;refreshed();label(layer.name+' layer added.');
+   remember();layers.push(layer);selectedLayerId=layer.id;selectedClipIndex=null;rangeSelected=false;refreshed();label(layer.name+' layer added.');
  },
- selectLayer(id,quiet=false){selectedLayerId=id;if(!quiet)globalThis.MangoLayerUI?.render?.();paintPreview();},
+ selectLayer(id,quiet=false){selectedLayerId=id;
+   if(id){selectedClipIndex=null;rangeSelected=false;}
+   if(!quiet){render();globalThis.MangoLayerUI?.render?.();}
+   paintPreview();
+ },
  updateLayer(id,changes){const index=layers.findIndex(l=>l.id===id);
    if(index<0||exporting||layers[index].locked)return;
    remember();layers[index]={...layers[index],...changes};refreshed();
  },
- deleteLayer(id){if(exporting)return;remember();layers=layers.filter(l=>l.id!==id);selectedLayerId=null;refreshed();},
+ deleteLayer(id){
+   const index=layers.findIndex(l=>l.id===id);
+   if(exporting||index<0)return false;
+   if(layers[index].locked){label('Unlock this graphic layer before deleting it.');return false;}
+   const name=layers[index].name;
+   remember();layers.splice(index,1);
+   selectedLayerId=layers[Math.min(index,layers.length-1)]?.id||null;
+   selectedClipIndex=null;rangeSelected=false;
+   refreshed();label('Deleted '+name+'. Undo (Ctrl+Z) restores it.');return true;
+ },
  duplicateLayer(id){const source=layers.find(l=>l.id===id);if(!source||exporting)return;
    remember();const dup={...clone(source),id:(globalThis.crypto?.randomUUID?.()||String(Date.now())),name:source.name+' copy'};
-   layers.push(dup);selectedLayerId=dup.id;refreshed();},
+   layers.push(dup);selectedLayerId=dup.id;selectedClipIndex=null;rangeSelected=false;refreshed();},
  beginLayerMove(id){if(exporting)return;const l=layers.find(x=>x.id===id);if(l&&!l.locked)remember();},
  moveLayer(id,x,y){const l=layers.find(x=>x.id===id);if(!l||l.locked)return;l.x=x;l.y=y;paintPreview();},
  resizeLayer(id,width,fontSize){const l=layers.find(x=>x.id===id);if(!l||l.locked)return;

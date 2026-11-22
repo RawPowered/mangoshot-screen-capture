@@ -94,6 +94,9 @@
   for(const type of ['pointerup','pointercancel','lostpointercapture'])chip.addEventListener(type,finishTimelineGesture);
   chip.addEventListener('keydown',e=>{
    if(current().exporting()||layer.locked)return;
+   if(!e.ctrlKey&&!e.metaKey&&!e.altKey&&(e.key==='Delete'||e.key==='Backspace')){
+    e.preventDefault();e.stopPropagation();current()?.deleteLayer?.(layer.id);return;
+   }
    if(e.altKey&&['ArrowUp','ArrowDown'].includes(e.key)){
     e.preventDefault();current().reorderLayer(layer.id,e.key==='ArrowUp'?1:-1);return;
    }
@@ -112,12 +115,22 @@
   const items=st.layers();const ordered=items.slice().sort((a,b)=>b.track-a.track||items.indexOf(b)-items.indexOf(a));
   for(const layer of ordered){
    const row=document.createElement('div');row.className='layer-entry'+(st.selectedLayer()===layer.id?' selected':'');row.dataset.id=layer.id;
+   row.tabIndex=0;row.setAttribute('role','group');row.setAttribute('aria-label',layer.name+' graphic layer');
+   row.addEventListener('focus',()=>select(layer.id,true));
+   row.addEventListener('keydown',e=>{
+    if((e.key==='Delete'||e.key==='Backspace')&&!e.altKey&&!e.ctrlKey&&!e.metaKey){
+     e.preventDefault();e.stopPropagation();st.deleteLayer(layer.id);
+    }
+   });
    listGrip(layer,row,rows);
    const choose=button((layer.kind==='callout'?'◆ ':'T ')+layer.name,'Select '+layer.name,()=>select(layer.id));
    choose.className='layer-entry-select';row.appendChild(choose);
    const timing=document.createElement('span');timing.className='layer-entry-time';timing.textContent=`G${layer.track} · ${fmt(layer.start)}–${fmt(layer.end)}`;row.appendChild(timing);
    row.appendChild(button(layer.visible?'◉':'○',layer.visible?'Hide layer':'Show layer',()=>st.setLayerHidden(layer.id,layer.visible)));
    row.appendChild(button(layer.locked?'🔒':'▢',layer.locked?'Unlock layer':'Lock layer',()=>st.setLayerLocked(layer.id,!layer.locked)));
+   const remove=button('×','Delete '+layer.name+' (Ctrl+Z to undo)',()=>st.deleteLayer(layer.id));
+   remove.className='layer-remove';remove.setAttribute('aria-label','Delete '+layer.name);
+   remove.disabled=disabled||layer.locked;row.appendChild(remove);
    rows.appendChild(row);
   }
   if(!items.length)rows.textContent='No graphics yet. Add Text or Callout.';
@@ -129,7 +142,7 @@
     input.disabled=layer.locked||st.exporting();
    }
    el('graphic-preset').value=layer.preset;el('graphic-preset').disabled=layer.locked||st.exporting();
-   el('graphic-duplicate').disabled=st.exporting();el('graphic-delete').disabled=st.exporting();
+   el('graphic-duplicate').disabled=st.exporting();el('graphic-delete').disabled=st.exporting()||layer.locked;
    el('graphic-duration').textContent=`G${layer.track} · In ${fmt(layer.start)} · Out ${fmt(layer.end)} · Duration ${fmt(layer.end-layer.start)}`;
   }
   for(const track of [2,3])el('graphic-track-'+track).replaceChildren();

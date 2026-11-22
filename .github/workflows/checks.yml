@@ -20,3 +20,6 @@ jobs:
           node tests/motion-v067.cjs
           node tests/visual-inspector-v068.cjs
           node tests/premium-v069.cjs
+          node tests/full-capture-v0610.cjs
+          node tests/popup-full-v0610.cjs
+          node tests/ux-v0610.cjs

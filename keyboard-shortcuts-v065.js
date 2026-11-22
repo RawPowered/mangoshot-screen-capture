@@ -5,7 +5,7 @@
  const definitions=[
   ['select','Tools','Select','V'],['razor','Tools','Razor','C'],['range','Tools','Range selection','R'],
   ['split','Timeline','Split at playhead','Ctrl+K'],['markIn','Timeline','Mark In','I'],['markOut','Timeline','Mark Out','O'],
-  ['marker','Timeline','Insert marker','M'],['ripple','Timeline','Ripple Delete','Delete'],
+  ['marker','Timeline','Insert marker','M'],['ripple','Timeline','Delete selected graphic or clip','Delete'],
   ['rippleAlternate','Timeline','Ripple Delete (alternate)','Alt+Backspace'],['trim','Timeline','Trim to range',''],
   ['undo','Timeline','Undo','Ctrl+Z'],['redo','Timeline','Redo','Ctrl+Shift+Z'],
   ['redoAlternate','Timeline','Redo (alternate)','Ctrl+Y'],
@@ -76,7 +76,8 @@
    addText:'add-text',addCallout:'add-callout',toggleSnap:'graphics-snap',playPause:'program-play'
   }[id];
   if(click){const b=element(click);if(b&&!b.disabled){b.click();return true;}return false;}
-  if(id==='ripple'||id==='rippleAlternate'){st.deleteSelected?.();return true;}
+  if(id==='ripple'){st.deleteSelected?.();return true;}
+  if(id==='rippleAlternate'){st.deleteSelection?.();return true;}
   if(id==='jogBackward'){st.video().pause();st.seekOutput(Math.max(0,(st.sequencePosition?.()||0)-2));return true;}
   if(id==='pause'){st.video().pause();return true;}
   if(id==='jogForward'){if(!st.isPlaying?.())element('program-play')?.click();return true;}
