@@ -13,12 +13,14 @@ const call=(fn,...args)=>new Promise((resolve,reject)=>{
 let meta,frames=[],ready=false,drawing=false,active=null,strokes=[],renderPending=false,history=[],redoHistory=[];
 const editorCore=globalThis.MangoImageEditorCore;
 const layerCore=globalThis.MangoImageLayersV0612;
+const typeEffects=globalThis.MangoImageTypeV0613;
 const selectedBox=document.getElementById('text-selection-box'),inline=document.getElementById('text-inline'),
  inlineInput=document.getElementById('text-inline-input'),contextMenu=document.getElementById('image-context-menu');
 const textFontSize=document.getElementById('text-font-size'),textFontFamily=document.getElementById('text-font-family'),
  textContent=document.getElementById('text-content');
 let selectedText=-1,textDraft=null,dragText=null,textPreset='plain';
 let selectedImage=-1,selectedObject=-1,dragImage=null,maskDraw=null,inspectorTab='layers';
+let resizeDrag=null;
 function label(message){status.textContent=message;}
 function activate(){call(api.tabs.getCurrent.bind(api.tabs)).then(tab=>
   tab?.id&&call(api.tabs.update.bind(api.tabs),tab.id,{active:true})).catch(()=>{});}
@@ -118,7 +120,8 @@ function drawStroke(stroke){
     pen.moveTo(finish.x,finish.y);pen.lineTo(finish.x-head*Math.cos(angle-.55),finish.y-head*Math.sin(angle-.55));
     pen.moveTo(finish.x,finish.y);pen.lineTo(finish.x-head*Math.cos(angle+.55),finish.y-head*Math.sin(angle+.55));pen.stroke();
   }else if(stroke.type==='text'){
-    if(editorCore?.drawText)editorCore.drawText(pen,stroke);
+    if(typeEffects?.draw)typeEffects.draw(pen,stroke);
+    else if(editorCore?.drawText)editorCore.drawText(pen,stroke);
     else{pen.globalAlpha=Math.max(0,Math.min(1,stroke.opacity??1));pen.fillStyle=stroke.color;pen.font='bold '+Math.max(14,stroke.size*5)+'px system-ui';
       pen.fillText(stroke.text||'Note',start.x,start.y);}
   }
@@ -163,14 +166,15 @@ function selectImage(index){
 
 function textIndexAt(x,y){
  if(!editorCore?.hitText)return -1;
- for(let i=strokes.length-1;i>=0;i--)if(strokes[i].visible!==false&&editorCore.hitText(pen,strokes[i],x,y,10))return i;
+ for(let i=strokes.length-1;i>=0;i--)if(strokes[i].visible!==false&&
+   (typeEffects?.hit?.(pen,strokes[i],x,y,10)??editorCore.hitText(pen,strokes[i],x,y,10)))return i;
  return -1;
 }
 function updateSelectionBox(){
  if(!selectedBox)return;
  const stroke=selectedStroke();
  if(!ready||!stroke||stroke.visible===false||textDraft||!ink.width||!ink.height||!editorCore?.textMetrics){selectedBox.hidden=true;return;}
- const r=editorCore.textMetrics(pen,stroke);
+ const r=(typeEffects?.bounds?.(pen,stroke))||editorCore.textMetrics(pen,stroke);
  selectedBox.style.left=100*r.x/ink.width+'%';selectedBox.style.top=100*r.y/ink.height+'%';
  selectedBox.style.width=100*r.width/ink.width+'%';selectedBox.style.height=100*r.height/ink.height+'%';
  selectedBox.hidden=false;
@@ -199,7 +203,7 @@ function updateEditorControls(){
  const hint=document.getElementById('image-hint');
  if(hint)hint.textContent=textDraft?'Type here · Enter to place · Shift+Enter new line · Esc cancels':
   tool.value==='text'?'Click on the screenshot to type. Click existing text to edit.':
-  tool.value==='select'?'Click text to select, drag to reposition, or double-click to edit.':
+  tool.value==='select'?'Select an image or text layer. Drag corners to resize proportionally; hold Shift to stretch.':
   'Right-click the screenshot to copy all pixels and annotations.';
  if(textContent){textContent.disabled=!selected;textContent.placeholder=selected?'Edit selected text':'Click screenshot to create text';}
  if(textFontSize)textFontSize.disabled=!ready;
@@ -260,7 +264,8 @@ function commitInline(){
  const pixelSize=Number(textFontSize?.value)||48;
  const stroke=old?{...old,text:value,fontSize:pixelSize,fontFamily:textFontFamily?.value||'sans',styleId:textPreset,color:color.value}:
   {type:'text',points:[{x:draft.x,y:draft.y,p:1}],size:Math.max(3,pixelSize/5),
-   fontSize:pixelSize,fontFamily:textFontFamily?.value||'sans',styleId:textPreset,color:color.value,text:value};
+   fontSize:pixelSize,fontFamily:textFontFamily?.value||'sans',styleId:textPreset,color:color.value,text:value,
+   scaleX:1,scaleY:1,effects:typeEffects?.initial?.()};
  if(old)strokes[draft.index]=stroke;else strokes.push(stroke);
  selectedText=old?draft.index:strokes.length-1;
  textDraft=null;inline.hidden=true;
@@ -337,7 +342,7 @@ function syncLayerProperties(){
  for(const [id,prop] of [['image-layer-x','x'],['image-layer-y','y'],['image-layer-width','width'],['image-layer-height','height']]){
   const el=document.getElementById(id);if(!el)continue;
   const b=l?.type==='image'?layerCore?.bounds(l):
-   l?.type==='text'?editorCore?.textMetrics(pen,l):null;
+   l?.type==='text'?(typeEffects?.bounds?.(pen,l)||editorCore?.textMetrics(pen,l)):null;
   el.value=b?.[prop]==null?'':Math.round(b[prop]);
   el.disabled=!l||!!l.locked||(!b&&['width','height'].includes(prop));
  }
@@ -653,7 +658,7 @@ ink.addEventListener('pointermove',event=>{
   const dx=p.x-drag.start.x,dy=p.y-drag.start.y;
   if(!drag.moved&&Math.hypot(dx,dy)<3)return;
   if(!drag.moved){snapshot();drag.moved=true;}
-  const shape=editorCore?.textMetrics?.(pen,stroke),w=shape?.width||0,h=shape?.height||0;
+  const shape=typeEffects?.bounds?.(pen,stroke)||editorCore?.textMetrics?.(pen,stroke),w=shape?.width||0,h=shape?.height||0;
   stroke.points[0]={...stroke.points[0],x:Math.max(0,Math.min(ink.width-w,drag.origin.x+dx)),
    y:Math.max(0,Math.min(ink.height-h,drag.origin.y+dy))};
   redraw();event.preventDefault();return;
