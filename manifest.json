@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "MangoShot",
-  "version": "0.6.14",
-  "description": "MangoShot quick-copy for visible/full-page/area screenshots, edit clipboard images and live image text preview.",
+  "version": "0.6.15",
+  "description": "MangoShot synced Image Studio tool properties, editable vector shapes and clear persistent Clip Studio active-tool controls.",
   "permissions": [
     "activeTab",
     "scripting",
