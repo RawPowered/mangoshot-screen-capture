@@ -1,11 +1,12 @@
 {
   "manifest_version": 3,
   "name": "MangoShot",
-  "version": "0.6.13",
-  "description": "MangoShot Image Studio: editable text layer effects, visual presets and proportion-locked resize handles with Shift-to-stretch.",
+  "version": "0.6.14",
+  "description": "MangoShot quick-copy for visible/full-page/area screenshots, edit clipboard images and live image text preview.",
   "permissions": [
     "activeTab",
-    "scripting"
+    "scripting",
+    "clipboardWrite"
   ],
   "action": {
     "default_title": "MangoShot",
