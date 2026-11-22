@@ -488,6 +488,7 @@ function duplicateSelectedLayer(){
  redraw();setReady(ready);syncSelectedText();syncLayerProperties();return true;
 }
 function syncLayerProperties(){
+ globalThis.MangoStudioMenusV0617?.updateAvailability?.();
  const l=selectedAnyStroke(),panel=document.getElementById('image-layer-properties');
  if(panel)panel.hidden=!l;
  const name=document.getElementById('image-selected-layer-name');if(name)name.textContent=l?.name||l?.type||'';
@@ -1501,11 +1502,25 @@ function imageCommand(id){
  }
  return false;
 }
-globalThis.MangoImageActions={run:imageCommand,available:id=>{
- if(imageToolActions[id])return true;
- if(['deleteLayer','duplicateLayer','layerForward','layerBackward','layerVisibility','layerLock'].includes(id))
-  return !!selectedAnyStroke();
- if(['undo','redo','redoAlternate'].includes(id))return id==='undo'?history.length>0:redoHistory.length>0;
- return ready;
-}};
+globalThis.MangoImageActions={
+ run:imageCommand,
+ available:id=>{
+  const layer=selectedAnyStroke(),index=selectedAnyIndex();
+  if(['commandPalette','showShortcuts','editClipboard','penDiagnostics','focusCanvas'].includes(id))return true;
+  if(imageToolActions[id])return true;
+  if(id==='undo')return history.length>0;
+  if(id==='redo'||id==='redoAlternate')return redoHistory.length>0;
+  if(id==='deleteLayer'||id==='duplicateLayer')return !!layer&&!layer.locked;
+  if(id==='layerForward')return !!layer&&!layer.locked&&index<strokes.length-1;
+  if(id==='layerBackward')return !!layer&&!layer.locked&&index>0;
+  if(id==='layerVisibility'||id==='layerLock')return !!layer;
+  if(id==='clearAnnotations')return !!strokes.length;
+  return ready;
+ },
+ state:()=>{
+  const layer=selectedAnyStroke();
+  return {ready,layerSelected:!!layer,locked:!!layer?.locked,
+   visible:layer?.visible!==false,layerCount:strokes.length};
+ }
+};
 begin();
