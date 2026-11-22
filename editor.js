@@ -15,12 +15,13 @@ let meta,frames=[],ready=false,drawing=false,active=null,strokes=[],renderPendin
 const editorCore=globalThis.MangoImageEditorCore;
 const layerCore=globalThis.MangoImageLayersV0612;
 const typeEffects=globalThis.MangoImageTypeV0613;
+const vectorCore=globalThis.MangoImageVectorV0615;
 const selectedBox=document.getElementById('text-selection-box'),inline=document.getElementById('text-inline'),
  inlineInput=document.getElementById('text-inline-input'),contextMenu=document.getElementById('image-context-menu');
 const textFontSize=document.getElementById('text-font-size'),textFontFamily=document.getElementById('text-font-family'),
  textContent=document.getElementById('text-content');
 let selectedText=-1,textDraft=null,dragText=null,textPreset='plain';
-let selectedImage=-1,selectedObject=-1,dragImage=null,maskDraw=null,inspectorTab='layers';
+let selectedImage=-1,selectedObject=-1,dragImage=null,maskDraw=null,dragVector=null,inspectorTab='layers';
 let resizeDrag=null;
 function label(message){status.textContent=message;}
 function activate(){call(api.tabs.getCurrent.bind(api.tabs)).then(tab=>
@@ -176,6 +177,7 @@ function point(event){const rect=ink.getBoundingClientRect();return {x:(event.cl
 function drawStroke(stroke){
   if(!stroke||stroke.visible===false)return;
   if(stroke.type==='image'){layerCore?.paint(pen,stroke);return;}
+  if(vectorCore?.isVector?.(stroke)){vectorCore.paint(pen,stroke);return;}
   const [start,...rest]=stroke.points,finish=stroke.points.at(-1)||start;
   if(!start)return;
   pen.save();pen.lineCap='round';pen.lineJoin='round';pen.strokeStyle=stroke.color;
@@ -249,7 +251,10 @@ function selectedAnyIndex(){return selectedImage>=0?selectedImage:selectedText>=
 function selectedAnyStroke(){return strokes[selectedAnyIndex()]||null;}
 function selectObject(index){
  selectedText=-1;selectedImage=-1;
- selectedObject=index>=0&&strokes[index]&& !['text','image'].includes(strokes[index].type)?index:-1;
+ selectedObject=index>=0&&strokes[index]&&!['text','image'].includes(strokes[index].type)?index:-1;
+ if(selectedObject>=0&&vectorCore?.isVector?.(strokes[selectedObject])){
+  tool.value='select';syncTool();switchInspectorTab('tools');
+ }
  syncSelectedText();renderStrokeList();syncLayerProperties();
 }
 function updateImageSelectionBox(){
@@ -482,6 +487,7 @@ function syncLayerProperties(){
  if(feather&&selectedImageLayer)feather.value=selectedImageLayer.mask?.feather||0;
  const featherLabel=document.getElementById('image-mask-feather-readout');
  if(featherLabel&&feather)featherLabel.textContent=feather.value+' px';
+ syncVectorControls();
  const inspectorState=document.getElementById('image-inspector-state');
  if(inspectorState)inspectorState.textContent=l?(l.type==='image'?'IMAGE LAYER':l.type==='text'?'TEXT LAYER':'ANNOTATION'):'IMAGE STUDIO';
  const lock=document.getElementById('image-keep-ratio');if(lock)lock.disabled=!l||l.locked||!['image','text'].includes(l.type);
@@ -857,6 +863,14 @@ document.getElementById('image-keep-ratio')?.addEventListener?.('change',event=>
  if(readout)readout.textContent=event.target.checked?
   'Proportions locked · hold Shift to stretch':'Free stretching enabled';
 });
+function vectorIndexAt(x,y){
+ if(!vectorCore)return -1;
+ for(let i=strokes.length-1;i>=0;i--){
+  const l=strokes[i];
+  if(l.visible!==false&&vectorCore.isVector(l)&&vectorCore.hit(l,x,y,7))return i;
+ }
+ return -1;
+}
 function imageIndexAt(x,y){
  if(!layerCore)return -1;
  for(let i=strokes.length-1;i>=0;i--){
@@ -909,13 +923,28 @@ ink.addEventListener('pointerdown',event=>{
    dragImage={index:imageIndex,start:p,origin:{x:anchor.x,y:anchor.y},moved:false};
    return;
   }
+  const vectorIndex=vectorIndexAt(p.x,p.y);
+  if(vectorIndex>=0){
+   selectObject(vectorIndex);
+   const l=strokes[vectorIndex];
+   if(l.locked)return;
+   event.preventDefault();ink.setPointerCapture?.(event.pointerId);
+   dragVector={index:vectorIndex,start:p,origin:cloneStrokes([l])[0],moved:false};
+   return;
+  }
   selectedText=-1;selectedImage=-1;selectedObject=-1;
-  syncSelectedText();redraw();renderStrokeList();return;
+  syncSelectedText();redraw();renderStrokeList();syncVectorControls();return;
  }
  selectedText=-1;selectedImage=-1;selectedObject=-1;syncSelectedText();
  event.preventDefault();ink.setPointerCapture?.(event.pointerId);
- active={type,points:[p],size:Number(size.value)*(ink.width/ink.getBoundingClientRect().width),
-  color:color.value,text:''};
+ if(vectorCore?.kinds?.includes(type)){
+  const opts=currentVectorSettings();
+  active=vectorCore.make(type,p,p,opts);
+  active.size=opts.strokeWidth;
+ }else{
+  active={type,points:[p],size:Number(size.value)*(ink.width/ink.getBoundingClientRect().width),
+   color:color.value,text:'',opacity:Number(document.getElementById('image-tool-opacity')?.value||100)/100};
+ }
  drawing=true;scheduleRedraw();
 });
 ink.addEventListener('pointermove',event=>{
@@ -949,8 +978,17 @@ ink.addEventListener('pointermove',event=>{
    y:Math.max(0,Math.min(ink.height-h,drag.origin.y+dy))};
   redraw();event.preventDefault();return;
  }
+ if(dragVector){
+  const d=dragVector,l=strokes[d.index];
+  if(!l||l.locked||!vectorCore?.isVector(l))return;
+  const dx=p.x-d.start.x,dy=p.y-d.start.y;
+  if(!d.moved&&Math.hypot(dx,dy)<3)return;
+  if(!d.moved){snapshot();d.moved=true;}
+  strokes[d.index]=vectorCore.translate(d.origin,dx,dy);
+  redraw();event.preventDefault();return;
+ }
  if(!drawing||!active)return;
- if(['rectangle','arrow','redact'].includes(active.type))active.points=[active.points[0],p];
+ if(vectorCore?.isVector?.(active)||['rectangle','arrow','redact'].includes(active.type))active.points=[active.points[0],p];
  else active.points.push(p);
  scheduleRedraw();event.preventDefault();
 });
@@ -958,6 +996,11 @@ function finishStroke(event){
  if(maskDraw){
   maskDraw=null;redraw();setReady(ready);
   label('Mask painted · source image preserved. Ctrl+Z restores mask stroke.');return;
+ }
+ if(dragVector){
+  const drag=dragVector;dragVector=null;
+  if(drag.moved){redraw();setReady(ready);syncVectorControls();label('Vector moved. Ctrl+Z restores its position.');}
+  return;
  }
  if(dragImage){
   const drag=dragImage;dragImage=null;
@@ -971,7 +1014,12 @@ function finishStroke(event){
  }
  if(!drawing)return;
  drawing=false;
- if(active){snapshot();strokes.push(active);selectedObject=strokes.length-1;active=null;redraw();setReady(true);}
+ if(active){
+  const last=active.points?.at(-1)||active.points?.[0],first=active.points?.[0];
+  const valid=!vectorCore?.isVector?.(active)||Math.hypot((last?.x||0)-(first?.x||0),(last?.y||0)-(first?.y||0))>=2;
+  if(valid){snapshot();strokes.push(active);selectedObject=strokes.length-1;}
+  active=null;redraw();setReady(true);syncVectorControls();
+ }
 }
 for(const event of ['pointerup','pointercancel','lostpointercapture'])ink.addEventListener(event,finishStroke);
 ink.addEventListener('dblclick',event=>{
