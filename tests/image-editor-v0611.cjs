@@ -32,7 +32,7 @@ class FakeElement{
 }
 function makeContext(){return {
  save(){},restore(){},clearRect(){},fillRect(){},strokeRect(){},beginPath(){},moveTo(){},lineTo(){},quadraticCurveTo(){},closePath(){},
- stroke(){},fill(){},setLineDash(){},strokeText(){},fillText(v){drawCalls.push('text:'+v);},
+ stroke(){},fill(){drawCalls.push('brush-fill');},arc(){drawCalls.push('brush-arc');},createRadialGradient(){return {addColorStop(){}};},setLineDash(){},strokeText(){},fillText(v){drawCalls.push('text:'+v);},
  measureText(t){return {width:String(t).length*22};},drawImage(){drawCalls.push('image');}
 };}
 const document={
@@ -73,6 +73,7 @@ assert.ok(bounds.width>90&&bounds.height>100);
 assert.equal(core.hitText(ctx,stroke,105,125),true);
 assert.equal(core.hitText(ctx,stroke,10,10),false);
 assert.doesNotThrow(()=>core.drawText(ctx,stroke));
+vm.runInNewContext(read('pen-input-v0616.js'),context,{filename:'pen-input-v0616.js'});
 vm.runInNewContext(read('editor.js'),context,{filename:'editor.js'});
 const get=id=>document.getElementById(id),fire=(id,type,e)=>get(id).fire(type,e);
 async function settle(){await new Promise(resolve=>setTimeout(resolve,15));}
@@ -131,5 +132,36 @@ async function settle(){await new Promise(resolve=>setTimeout(resolve,15));}
  actionItems.find(x=>x.dataset.imageAction==='copy-original').fire('click');
  activeCopy=false;await settle();
  assert.equal(drawCalls.filter(x=>x==='image').length,1);
- console.log('PASS: live inline and inspector text with undo, full-resolution annotated PNG clipboard and context menu');
+
+ // Exercise real canvas pointer paths for pressure strokes and both eraser modes.
+ get('tool').value='pen';fire('tool','change');
+ fire('ink','pointerdown',{button:0,pointerId:71,pointerType:'pen',pressure:.2,clientX:12,clientY:22,preventDefault(){}});
+ fire('ink','pointermove',{pointerId:71,pointerType:'pen',pressure:.9,clientX:125,clientY:22,
+  getCoalescedEvents:()=>[{clientX:55,clientY:22,pointerType:'pen',pressure:.45}],preventDefault(){}});
+ fire('ink','pointerup',{pointerId:71});
+ assert.equal(get('stroke-list').children.length,2);
+ get('tool').value='erase-stroke';fire('tool','change');
+ fire('ink','pointerdown',{button:0,pointerId:72,clientX:75,clientY:22,preventDefault(){}});
+ fire('ink','pointerup',{pointerId:72});
+ assert.equal(get('stroke-list').children.length,1,'Whole Stroke Erase removes touched ink');
+ fire('undo','click');
+ assert.equal(get('stroke-list').children.length,2,'Undo restores a deleted pen stroke');
+ get('tool').value='erase-brush';fire('tool','change');
+ drawCalls.length=0;
+ fire('ink','pointerdown',{button:0,pointerId:73,pointerType:'pen',pressure:.25,clientX:55,clientY:22,preventDefault(){}});
+ fire('ink','pointermove',{pointerId:73,pointerType:'pen',pressure:.85,clientX:90,clientY:22,preventDefault(){}});
+ fire('ink','pointerup',{pointerId:73});
+ assert.ok(drawCalls.includes('brush-arc'),'Brush eraser paints circle stamps');
+ assert.equal(get('stroke-list').children.length,3,'Partial erase stays in Undo history');
+ fire('undo','click');
+ assert.equal(get('stroke-list').children.length,2);
+ get('tool').value='pen';fire('tool','change');
+ fire('ink','pointerdown',{button:5,buttons:32,pointerId:74,pointerType:'pen',pressure:.5,clientX:65,clientY:22,preventDefault(){}});
+ fire('ink','pointerup',{pointerId:74});
+ assert.equal(get('tool').value,'pen','Physical eraser override must be temporary');
+ assert.equal(get('stroke-list').children.length,3);
+ fire('undo','click');
+ assert.equal(get('stroke-list').children.length,2);
+ console.log('PASS: live text, annotated clipboard, Wacom pressure, both eraser modes and Undo');
+
 })().catch(error=>{console.error(error);process.exitCode=1});

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "MangoShot",
-  "version": "0.6.15",
-  "description": "MangoShot synced Image Studio tool properties, editable vector shapes and clear persistent Clip Studio active-tool controls.",
+  "version": "0.6.16",
+  "description": "MangoShot Wacom and browser pen pressure diagnostic, pressure-sensitive brush eraser, whole-stroke eraser and eraser-tip recognition.",
   "permissions": [
     "activeTab",
     "scripting",

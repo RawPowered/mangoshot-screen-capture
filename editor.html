@@ -1,7 +1,7 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MangoShot · Image Studio</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="studio.css"><link rel="stylesheet" href="branding-v069.css"><link rel="stylesheet" href="image-studio-v0611.css"><link rel="stylesheet" href="image-studio-v0612.css"><link rel="stylesheet" href="image-studio-v0613.css"><link rel="stylesheet" href="image-studio-v0614.css"><link rel="stylesheet" href="image-studio-v0615.css"></head>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MangoShot · Image Studio</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="studio.css"><link rel="stylesheet" href="branding-v069.css"><link rel="stylesheet" href="image-studio-v0611.css"><link rel="stylesheet" href="image-studio-v0612.css"><link rel="stylesheet" href="image-studio-v0613.css"><link rel="stylesheet" href="image-studio-v0614.css"><link rel="stylesheet" href="image-studio-v0615.css"><link rel="stylesheet" href="image-studio-v0616.css"></head>
 <body class="studio studio-image"><header class="studio-appbar"><div class="studio-identity"><span class="studio-mark"><img class="v069-app-icon" src="assets/mangoshot-icon.webp" alt=""></span><div><strong>MangoShot</strong><small>IMAGE STUDIO</small></div></div><nav class="studio-tabs" aria-label="Studio workspaces"><a class="studio-tab" href="recorder.html">Record</a><a class="studio-tab" href="clip-studio.html">Edit video</a><span class="studio-tab is-active" aria-current="page">Annotate</span><a class="studio-tab v069-resource-tab" href="resources.html">Resources</a></nav><span class="studio-local"><span class="local-dot"></span>LOCAL · NO CLOUD</span></header>
 <div class="studio-transport"><strong class="stage-label">CAPTURED IMAGE</strong><span class="panel-muted">Non-destructive annotations until export</span><div class="studio-export-actions"><button id="image-import" type="button" title="Import an image as an editable layer">+ Image</button><input id="image-import-file" type="file" accept="image/png,image/jpeg,image/webp" hidden><button id="clipboard-import" title="Open the latest clipboard image in a new Image Studio tab">Edit clipboard</button><button id="copy-image" class="primary" disabled title="Copy the full annotated screenshot as a PNG image">Copy image</button><button id="png" disabled>Export PNG</button><button id="pdf" disabled>Export PDF</button></div><span id="status" class="status studio-live-status" role="status" aria-live="polite">Preparing capture…</span></div>
-<div class="image-layout"><aside class="studio-toolrail image-toolrail" aria-label="Image drawing tools"><span class="toolrail-heading">TOOLS</span><button data-studio-tool="select" aria-pressed="false" title="Select and move text annotations (V)">↖<small>Select</small></button><button data-studio-tool="pen" class="is-active" aria-pressed="true" title="Freehand pen">✎<small>Pen</small></button><button data-studio-tool="highlighter" aria-pressed="false" title="Highlight with pen">▤<small>Highlight</small></button><button data-studio-tool="eraser" aria-pressed="false" title="Erase annotations">⌫<small>Eraser</small></button><button data-studio-tool="arrow" aria-pressed="false" title="Draw an arrow">➜<small>Arrow</small></button><button data-studio-tool="rectangle" aria-pressed="false" title="Draw rectangle · shape options in Tools">▢<small>Shape</small></button>
+<div class="image-layout"><aside class="studio-toolrail image-toolrail" aria-label="Image drawing tools"><span class="toolrail-heading">TOOLS</span><button data-studio-tool="select" aria-pressed="false" title="Select and move text annotations (V)">↖<small>Select</small></button><button data-studio-tool="pen" class="is-active" aria-pressed="true" title="Freehand pen">✎<small>Pen</small></button><button data-studio-tool="highlighter" aria-pressed="false" title="Highlight with pen">▤<small>Highlight</small></button><button data-studio-tool="erase-brush" aria-pressed="false" title="Soft brush eraser for annotations">◌<small>Brush Erase</small></button><button data-studio-tool="erase-stroke" aria-pressed="false" title="Erase entire strokes and shapes">⌫<small>Stroke Erase</small></button><button data-studio-tool="arrow" aria-pressed="false" title="Draw an arrow">➜<small>Arrow</small></button><button data-studio-tool="rectangle" aria-pressed="false" title="Draw rectangle · shape options in Tools">▢<small>Shape</small></button>
 <button data-studio-tool="ellipse" aria-pressed="false" title="Draw editable ellipse">◯<small>Oval</small></button>
 <button data-studio-tool="line" aria-pressed="false" title="Draw a straight line">╱<small>Line</small></button>
 <button data-studio-tool="star" aria-pressed="false" title="Draw editable star">★<small>Star</small></button><button data-studio-tool="redact" aria-pressed="false" title="Solid redaction">▨<small>Redact</small></button><button data-studio-tool="text" aria-pressed="false" title="Add text">T<small>Text</small></button><span class="toolrail-divider"></span><button data-studio-tool="mask-erase" aria-pressed="false" title="Erase imported image mask">◌<small>Mask −</small></button><button data-studio-tool="mask-restore" aria-pressed="false" title="Restore imported image mask">◉<small>Mask +</small></button></aside>
@@ -134,7 +134,7 @@
  <section id="image-panel-tools" class="image-inspector-page" role="tabpanel" aria-label="Drawing tools" hidden>
   <div class="image-pane-title"><strong>Tool properties</strong><span id="image-tool-status">Drawing controls</span></div>
   <div class="image-active-tool"><strong id="image-active-tool-name">Pen</strong><span id="image-active-tool-desc">Draw with mouse or Wacom</span></div>
-  <label>Active tool <select id="tool"><option value="select">Select / Move</option><option value="pen" selected>Pen</option><option value="highlighter">Highlighter</option><option value="eraser">Eraser</option><option value="arrow">Arrow</option><option value="rectangle">Rectangle</option><option value="rounded-rectangle">Rounded rectangle</option><option value="ellipse">Ellipse</option><option value="line">Line</option><option value="triangle">Triangle</option><option value="diamond">Diamond</option><option value="pentagon">Pentagon</option><option value="hexagon">Hexagon</option><option value="star">Star</option><option value="speech-bubble">Speech bubble</option><option value="redact">Redact</option><option value="text">Text</option><option value="mask-erase">Mask Erase</option><option value="mask-restore">Mask Restore</option></select></label>
+  <label>Active tool <select id="tool"><option value="select">Select / Move</option><option value="pen" selected>Pen</option><option value="highlighter">Highlighter</option><option value="erase-brush">Brush Erase</option><option value="erase-stroke">Stroke Erase</option><option value="arrow">Arrow</option><option value="rectangle">Rectangle</option><option value="rounded-rectangle">Rounded rectangle</option><option value="ellipse">Ellipse</option><option value="line">Line</option><option value="triangle">Triangle</option><option value="diamond">Diamond</option><option value="pentagon">Pentagon</option><option value="hexagon">Hexagon</option><option value="star">Star</option><option value="speech-bubble">Speech bubble</option><option value="redact">Redact</option><option value="text">Text</option><option value="mask-erase">Mask Erase</option><option value="mask-restore">Mask Restore</option></select></label>
   <div id="image-vector-library" class="image-vector-library" role="group" aria-label="Vector shape picker">
     <button type="button" data-vector-kind="rectangle" title="Rectangle">▭<small>Box</small></button>
     <button type="button" data-vector-kind="rounded-rectangle" title="Rounded rectangle">▢<small>Round</small></button>
@@ -152,7 +152,19 @@
     <label id="image-stroke-color-label">Stroke color <input id="color" type="color" value="#ffb100"></label>
     <label>Stroke width <input id="size" type="range" min="1" max="48" value="4"><output id="image-size-value">4 px</output></label>
     <label>Opacity <input id="image-tool-opacity" type="range" min="5" max="100" value="100"><output id="image-tool-opacity-value">100%</output></label>
-    <div id="image-shape-style" class="image-shape-style">
+    
+<section id="image-eraser-options" class="image-eraser-options" hidden aria-label="Eraser controls">
+ <div class="image-pane-title"><strong>Eraser mode</strong><span>Original screenshot preserved</span></div>
+ <div class="image-erase-modes" role="group" aria-label="Eraser behavior">
+  <button type="button" data-erase-mode="erase-brush">◌ Brush erase <small>Remove portions of ink</small></button>
+  <button type="button" data-erase-mode="erase-stroke">⌫ Whole stroke <small>Remove touched annotations</small></button>
+ </div>
+ <p id="image-erase-description" class="inspector-hint">Erase portions of visible annotations. Screenshot pixels are unchanged.</p>
+ <label id="image-eraser-hardness-row">Edge hardness <input id="image-eraser-hardness" type="range" min="10" max="100" value="80"><output id="image-eraser-hardness-value">80%</output></label>
+</section>
+<label id="image-pen-pressure-row" class="image-check-row"><input id="image-pen-pressure" type="checkbox" checked> Use pen pressure for brush width</label>
+<label id="image-eraser-tip-row" class="image-check-row"><input id="image-eraser-tip" type="checkbox" checked> Detect the tablet's physical eraser tip</label>
+<div id="image-shape-style" class="image-shape-style">
       <label class="image-check-row"><input id="image-shape-fill-enabled" type="checkbox"> Fill shape</label>
       <label>Fill color <input id="image-shape-fill" type="color" value="#ffb100"></label>
       <label>Outline style <select id="image-shape-line-style"><option value="solid">Solid</option><option value="dashed">Dashed</option><option value="dotted">Dotted</option></select></label>
@@ -161,6 +173,26 @@
       <label data-shape-option="arrow">Arrowheads <select id="image-shape-heads"><option value="end">End</option><option value="both">Both</option><option value="start">Start</option><option value="none">None</option></select></label>
     </div>
   </div>
+
+<details id="pen-diagnostics" class="image-pen-diagnostics">
+ <summary>Wacom / Browser Pen Test <span>Local diagnostic</span></summary>
+ <div class="image-pen-diagnostics-body">
+  <p>Draw with your pen below, vary pressure, then flip to the eraser end. This checks what the browser receives, not the tablet's hardware identity.</p>
+  <canvas id="pen-test-pad" width="320" height="148" aria-label="Draw here to test browser pressure sensitivity and eraser-tip events.">Pen testing requires Canvas.</canvas>
+  <div class="image-pen-stats">
+   <span>Device</span><strong id="pen-test-type">none</strong>
+   <span>Current pressure</span><strong id="pen-test-pressure">0.000</strong>
+   <span>Pressure range</span><strong id="pen-test-range">No pen contact yet</strong>
+   <span>Tilt X / Y</span><strong id="pen-test-tilt">0° / 0°</strong>
+   <span>Twist</span><strong id="pen-test-twist">0°</strong>
+   <span>Eraser tip</span><strong id="pen-test-eraser">Not detected</strong>
+   <span>Events</span><strong id="pen-test-events">0 samples</strong>
+  </div>
+  <p id="pen-test-status" role="status" aria-live="polite">No pen contact observed yet.</p>
+  <div class="image-layer-buttons"><button type="button" id="pen-test-clear">Reset test</button><button type="button" id="pen-test-copy">Copy diagnostic report</button></div>
+  <p class="inspector-hint">If pressure stays constant, check the tablet driver and browser. Automatic erasing requires a pen-eraser event; manual erase tools work without that signal.</p>
+ </div>
+</details>
   <input id="text-value" type="hidden" value="">
   <p class="inspector-hint" id="image-tool-hint">Choose a tool and drag directly on the canvas. Select a vector layer to edit its appearance without flattening it.</p>
  </section>
@@ -191,4 +223,4 @@
 <button role="menuitem" type="button" data-image-action="redo">Redo annotation</button>
 <button role="menuitem" type="button" data-image-action="delete">Delete selected annotation</button>
 </div>
-<script src="pdf-export.js"></script><script src="capture-store.js"></script><script src="capture-output-v0614.js"></script><script src="image-editor-core-v0611.js"></script><script src="image-layers-v0612.js"></script><script src="image-type-effects-v0613.js"></script><script src="image-vector-v0615.js"></script><script src="editor.js"></script></body></html>
+<script src="pdf-export.js"></script><script src="capture-store.js"></script><script src="capture-output-v0614.js"></script><script src="image-editor-core-v0611.js"></script><script src="image-layers-v0612.js"></script><script src="image-type-effects-v0613.js"></script><script src="image-vector-v0615.js"></script><script src="pen-input-v0616.js"></script><script src="editor.js"></script></body></html>

@@ -30,3 +30,4 @@ jobs:
           node tests/area-capture-v0614.cjs
           node tests/image-vector-v0615.cjs
           node tests/clip-tools-v0615.cjs
+          node tests/pen-wacom-v0616.cjs
