@@ -32,7 +32,7 @@ class FakeElement{
 }
 function makeContext(){return {
  save(){},restore(){},clearRect(){},fillRect(){},strokeRect(){},beginPath(){},moveTo(){},lineTo(){},quadraticCurveTo(){},closePath(){},
- stroke(){},fill(){},setLineDash(){},strokeText(){},fillText(v){drawCalls.push('text:'+v);},
+ stroke(){},fill(){drawCalls.push('brush-fill');},arc(){drawCalls.push('brush-arc');},createRadialGradient(){return {addColorStop(){}};},setLineDash(){},strokeText(){},fillText(v){drawCalls.push('text:'+v);},
  measureText(t){return {width:String(t).length*22};},drawImage(){drawCalls.push('image');}
 };}
 const document={
@@ -73,6 +73,7 @@ assert.ok(bounds.width>90&&bounds.height>100);
 assert.equal(core.hitText(ctx,stroke,105,125),true);
 assert.equal(core.hitText(ctx,stroke,10,10),false);
 assert.doesNotThrow(()=>core.drawText(ctx,stroke));
+vm.runInNewContext(read('pen-input-v0616.js'),context,{filename:'pen-input-v0616.js'});
 vm.runInNewContext(read('editor.js'),context,{filename:'editor.js'});
 const get=id=>document.getElementById(id),fire=(id,type,e)=>get(id).fire(type,e);
 async function settle(){await new Promise(resolve=>setTimeout(resolve,15));}
