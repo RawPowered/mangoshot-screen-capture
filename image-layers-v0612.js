@@ -25,10 +25,10 @@
    const width=image.naturalWidth,height=image.naturalHeight;
    if(!width||!height||width>8192||height>8192||width*height>24000000)
     throw Error('Image exceeds the 24 megapixel layer limit; resize before importing.');
-   const assetId=id();assets.set(assetId,{image,width,height,name:String(file.name||'Image').slice(0,120),version:0,quickMask:null});
+   const assetId=id();assets.set(assetId,{image,width,height,name:String(file.name||'Image').slice(0,120),version:0});
    return {type:'image',assetId,id:'layer-'+assetId,name:String(file.name||'Imported image').slice(0,120),
     points:[{x:0,y:0,p:1}],width,height,visible:true,locked:false,opacity:1,
-    mask:{paths:[],feather:0}};
+    mask:{paths:[],feather:0},cutoutKey:null};
   }finally{URL.revokeObjectURL(url);}
  }
  function asset(stroke){return assets.get(stroke?.assetId)||null;}
@@ -51,8 +51,8 @@
   const mask=freshCanvas(w,h),ctx=mask.getContext('2d',{willReadFrequently:true});
   ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);
   // Automatically removed flat-color regions are a separate editable matte.
-  if(item.quickMask){
-   const quick=item.quickMask,off=freshCanvas(quick.width,quick.height),oc=off.getContext('2d');
+  if(stroke.cutoutKey&&masks.has(stroke.cutoutKey)){
+   const quick=masks.get(stroke.cutoutKey),off=freshCanvas(quick.width,quick.height),oc=off.getContext('2d');
    const pixels=oc.createImageData(quick.width,quick.height);
    for(let i=0;i<quick.data.length;i++){const j=i*4;pixels.data[j]=255;pixels.data[j+1]=255;
     pixels.data[j+2]=255;pixels.data[j+3]=quick.data[i];}
@@ -70,11 +70,11 @@
  function composite(stroke){
   const item=asset(stroke);if(!item)return null;
   const b=bounds(stroke),paths=stroke.mask?.paths||[],last=paths.at(-1);
-  if(!paths.length&&!item.quickMask)return item.image;
+  if(!paths.length&&!stroke.cutoutKey)return item.image;
   // Import stays source-resolution for clean edges; max 16MP temporary canvas to avoid huge allocations.
   const factor=Math.min(1,4096/item.width,4096/item.height,Math.sqrt(16000000/(item.width*item.height)));
   const w=Math.max(1,Math.round(item.width*factor)),h=Math.max(1,Math.round(item.height*factor));
-  const key=[item.version,w,h,paths.length,last?.points?.length||0,
+  const key=[item.version,stroke.cutoutKey||'',w,h,paths.length,last?.points?.length||0,
    last?.points?.at(-1)?.x||0,last?.points?.at(-1)?.y||0,stroke.mask?.feather||0].join(':');
   const prior=maskedCache.get(stroke);if(prior?.key===key)return prior.canvas;
   const output=freshCanvas(w,h),ctx=output.getContext('2d');
@@ -120,11 +120,10 @@
    const candidates=[x>0?i-1:-1,x<w-1?i+1:-1,y>0?i-w:-1,y<h-1?i+w:-1];
    for(const next of candidates)if(next>=0&&!visit[next]){visit[next]=1;queue[end++]=next;}
   }
-  item.quickMask={width:w,height:h,data:alpha};
-  item.version++;
-  return {width:w,height:h,removed:alpha.reduce((n,a)=>n+(a===0),0)};
+  const cutoutKey='matte-'+id();masks.set(cutoutKey,{width:w,height:h,data:alpha});
+  return {cutoutKey,width:w,height:h,removed:alpha.reduce((n,a)=>n+(a===0),0)};
  }
- function clearCutout(stroke){const item=asset(stroke);if(item){item.quickMask=null;item.version++;}}
+ function clearCutout(stroke){return {...stroke,cutoutKey:null};}
  root.MangoImageLayersV0612={assets,importFile,asset,bounds,hit,normalize,paint,composite,quickCutout,clearCutout,
   clamp};
 })(typeof globalThis!=='undefined'?globalThis:this);
