@@ -43,6 +43,6 @@
  const info=document.createElement('span');info.className='v066-resize-hint';
  info.textContent='Drag dividers to resize · Double-click to reset';
  info.title='Panel sizes are saved separately for Edit, Graphics and Timeline workspaces';
- const menu=document.querySelector('.v066-layout-menu');
+ const menu=document.querySelector('.v066-layout-menu .v066-layout-options');
  menu?.append(info);
 })(typeof globalThis!=='undefined'?globalThis:this);
