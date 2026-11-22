@@ -16,7 +16,37 @@
   const left=clamp(point.x-offset.x,0,1-rect.width),top=clamp(point.y-offset.y,0,1-rect.height);
   return toFocus(left,top,rect.scale);
  };
- root.MangoZoomHUDMath={compute,toFocus,drag};
+ // Corner resize uses a square viewport in normalized source coordinates, so
+ // the selection preserves the video's aspect ratio at every zoom scale.
+ function resize(rect,corner,dx,dy){
+  if(!['nw','ne','sw','se'].includes(corner))throw Error('Invalid resize corner');
+  const sx=corner.includes('e')?1:-1,sy=corner.includes('s')?1:-1;
+  const anchorX=sx===1?rect.left:rect.left+rect.width;
+  const anchorY=sy===1?rect.top:rect.top+rect.height;
+  const availableX=sx===1?1-anchorX:anchorX,availableY=sy===1?1-anchorY:anchorY;
+  const maxFraction=Math.min(1,availableX,availableY);
+  const fraction=clamp(rect.width+(dx*sx+dy*sy)/2,Math.min(.2,maxFraction),maxFraction);
+  const left=sx===1?anchorX:anchorX-fraction,top=sy===1?anchorY:anchorY-fraction;
+  return {scale:1/fraction,...toFocus(left,top,1/fraction),left,top,width:fraction,height:fraction};
+ }
+ function paintFrame(media,canvas){
+  if(!media||!media.videoWidth||!media.videoHeight||media.readyState<2)
+   return {ok:false,reason:'Frame loading · play or seek to display the current video'};
+  const width=320,height=Math.max(80,Math.round(width*media.videoHeight/media.videoWidth));
+  // Canvas dimension assignment clears its bitmap. Resize only on a change,
+  // BEFORE drawing. Never change canvas dimensions in the UI refresh function.
+  if(canvas.width!==width)canvas.width=width;
+  if(canvas.height!==height)canvas.height=height;
+  try{
+   const ctx=canvas.getContext('2d',{alpha:false});
+   if(!ctx)return {ok:false,reason:'Canvas preview unavailable in this browser'};
+   ctx.drawImage(media,0,0,width,height);
+   return {ok:true,width,height};
+  }catch(error){
+   return {ok:false,reason:'Could not draw this frame: '+(error?.message||'unknown video decoding error')};
+  }
+ }
+ root.MangoZoomHUDMath={compute,toFocus,drag,resize,paintFrame};
  if(typeof document==='undefined')return;
  const el=id=>document.getElementById(id),view=()=>root.MangoClipView;
  const cameraPanel=el('v062-camera-panel'),controlPanel=el('v061-camera-panel'),video=el('video');
@@ -31,8 +61,17 @@
  active.setAttribute('role','slider');active.setAttribute('aria-label','Drag zoom region to position frame');
  active.setAttribute('aria-valuemin','0');active.setAttribute('aria-valuemax','100');
  const playing=document.createElement('div');playing.className='v063-hud-live';playing.setAttribute('aria-hidden','true');
+ const fallback=document.createElement('div');fallback.className='v064-frame-status';fallback.setAttribute('role','status');
+ fallback.textContent='Import a recording to preview its current frame';
  const cross=document.createElement('span');cross.className='v063-hud-cross';cross.textContent='+';
- active.append(cross);frame.append(canvas,playing,active);
+ active.append(cross);
+ for(const corner of ['nw','ne','sw','se']){
+  const handle=document.createElement('span');
+  handle.className='v064-resize-handle v064-handle-'+corner;
+  handle.dataset.corner=corner;handle.title='Drag to zoom in or out';
+  handle.setAttribute('aria-hidden','true');active.append(handle);
+ }
+ frame.append(canvas,fallback,playing,active);
  const legend=document.createElement('div');legend.className='v063-hud-legend';
  const hint=document.createElement('span');hint.textContent='Lime = draft zoom · dashed = playing view';
  const percent=document.createElement('output');percent.id='v063-focus-readout';percent.textContent='X 50% · Y 50%';
@@ -50,11 +89,21 @@
  selected.append(selectedLabel,save);
  box.append(heading,frame,legend,timing,selected);
  const first=controlPanel.querySelector('.v061-creative-row');if(first)controlPanel.insertBefore(box,first);else controlPanel.append(box);
- let selectedId=null,dragOffset=null,dragging=false,animation=null,lastFrame=0,initialized=false;
+ let selectedId=null,dragOffset=null,dragging=false,animation=null,lastFrame=0,initialized=false,resizeState=null;
  const number=(id,div=1)=>Number(el(id)?.value)/div;
  const mode=()=>({scale:clamp(number('v061-zoom-scale'),1,5),
    x:clamp(number('v061-zoom-x',100),0,1),y:clamp(number('v061-zoom-y',100),0,1)});
  const pos=()=>view()?.sequencePosition?.()||0;
+ function setScale(value){
+  const select=el('v061-zoom-scale'),rounded=Math.max(1,Math.min(5,Math.round(value*100)/100));
+  let option=[...select.options].find(o=>Math.abs(Number(o.value)-rounded)<.0001);
+  if(!option){
+   for(const old of [...select.options].filter(o=>o.dataset.dynamic==='true'))old.remove();
+   option=document.createElement('option');option.value=String(rounded);
+   option.textContent=Math.round(rounded*100)+'%';option.dataset.dynamic='true';select.append(option);
+  }
+  select.value=option.value;
+ }
  const setNumeric=(x,y)=>{el('v061-zoom-x').value=String(Math.round(clamp(x,0,1)*100));
    el('v061-zoom-y').value=String(Math.round(clamp(y,0,1)*100));refresh();};
  function place(box,rect){box.style.left=(rect.left*100)+'%';box.style.top=(rect.top*100)+'%';
@@ -71,18 +120,30 @@
   save.disabled=!selectedId||!!view()?.exporting?.();
   selectedLabel.textContent=selectedId?'Editing keyframe '+(key?.start.toFixed(2)||'')+'s':'Select a keyframe below to edit its framing';
   const ratio=video.videoWidth&&video.videoHeight?video.videoWidth/video.videoHeight:16/9;
-  frame.style.aspectRatio=String(ratio);canvas.height=Math.max(80,Math.round(canvas.width/ratio));
+  frame.style.aspectRatio=String(ratio);
+  // IMPORTANT: don't assign canvas.width/height here — it erases the image.
+  active.dataset.scale=Math.round(draft.scale*100)+'%';
  }
- function frameDraw(){if(cameraPanel.hidden||!video.videoWidth||video.readyState<2)return;
-  try{canvas.getContext('2d',{alpha:false})?.drawImage(video,0,0,canvas.width,canvas.height);}
-  catch{}refresh();
+ function frameDraw(){
+  if(cameraPanel.hidden)return;
+  const result=paintFrame(video,canvas);
+  fallback.hidden=!!result.ok;
+  fallback.textContent=result.reason||'';
+  refresh();
  }
  function sample(t){if(!cameraPanel.hidden&&t-lastFrame>=110){lastFrame=t;frameDraw();}
   if(!video.paused&&!cameraPanel.hidden)animation=root.requestAnimationFrame(sample);else animation=null;
  }
  function schedule(){if(!animation&&!video.paused&&!cameraPanel.hidden&&root.requestAnimationFrame)animation=root.requestAnimationFrame(sample);}
  video.addEventListener('loadedmetadata',()=>{initialized=false;frameDraw();});
- for(const event of ['seeked','timeupdate','loadeddata','pause'])video.addEventListener(event,frameDraw);
+ for(const event of ['seeked','timeupdate','loadeddata','canplay','pause'])video.addEventListener(event,frameDraw);
+ if(typeof video.requestVideoFrameCallback==='function'){
+  let waiting=false;
+  const nextFrame=()=>{waiting=false;if(!cameraPanel.hidden)frameDraw();
+   if(!video.paused)queue();};
+  const queue=()=>{if(!waiting&&!video.paused){waiting=true;video.requestVideoFrameCallback(nextFrame);}};
+  video.addEventListener('play',queue);
+ }
  video.addEventListener('play',schedule);
  document.querySelector('[data-v062-tab="camera"]')?.addEventListener('click',()=>{frameDraw();schedule();});
  for(const id of ['v061-zoom-x','v061-zoom-y','v061-zoom-scale']){
@@ -93,15 +154,26 @@
    y:clamp((e.clientY-bounds.top)/Math.max(1,bounds.height),0,1)};};
  const onDown=e=>{if(e.button!==0||!view()?.original?.()||view()?.exporting?.())return;
   e.preventDefault();const p=point(e),r=compute(mode().scale,mode().x,mode().y);
-  const inside=p.x>=r.left&&p.x<=r.left+r.width&&p.y>=r.top&&p.y<=r.top+r.height;
-  dragOffset=inside?{x:p.x-r.left,y:p.y-r.top}:{x:r.width/2,y:r.height/2};
+  const corner=e.target?.dataset?.corner;
+  resizeState=corner?{corner,point:p,rect:r}:null;
+  if(!corner){
+   const inside=p.x>=r.left&&p.x<=r.left+r.width&&p.y>=r.top&&p.y<=r.top+r.height;
+   dragOffset=inside?{x:p.x-r.left,y:p.y-r.top}:{x:r.width/2,y:r.height/2};
+  }
   dragging=true;frame.setPointerCapture?.(e.pointerId);move(e);
  };
- const move=e=>{if(!dragging)return;const r=compute(mode().scale,mode().x,mode().y);
-  const next=drag(r,point(e),dragOffset);setNumeric(next.x,next.y);};
+ const move=e=>{if(!dragging)return;
+  if(resizeState){
+   const p=point(e),d=resizeState;
+   const next=resize(d.rect,d.corner,p.x-d.point.x,p.y-d.point.y);
+   setScale(next.scale);setNumeric(next.x,next.y);return;
+  }
+  const r=compute(mode().scale,mode().x,mode().y);
+  const next=drag(r,point(e),dragOffset);setNumeric(next.x,next.y);
+ };
  frame.addEventListener('pointerdown',onDown);
  frame.addEventListener('pointermove',move);
- const stop=()=>{dragging=false;dragOffset=null;};
+ const stop=()=>{dragging=false;dragOffset=null;resizeState=null;};
  for(const e of ['pointerup','pointercancel','lostpointercapture'])frame.addEventListener(e,stop);
  active.addEventListener('keydown',e=>{
   const d=e.shiftKey?.05:.01;let m=mode();
@@ -139,6 +211,6 @@
   try{view().updateZoomKeyframe(selectedId,{start:at,duration,scale:m.scale,x:m.x,y:m.y});refresh();}
   catch(e){const s=el('status');if(s)s.textContent=e.message;}
  });
- root.MangoZoomHUD={refresh,frameDraw,math:root.MangoZoomHUDMath};
+ root.MangoZoomHUD={refresh,frameDraw,setScale,math:root.MangoZoomHUDMath};
  refresh();
 })(typeof globalThis!=='undefined'?globalThis:this);

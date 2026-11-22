@@ -2,13 +2,13 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const root=path.join(__dirname,'..'),read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const html=read('clip-studio.html'),zoom=read('zoom-hud-v063.js'),type=read('type-hud-v063.js'),css=read('studio-v063.css');
 const core=read('clip-studio.js'),graphic=read('clip-graphics.js'),graphicsUI=read('clip-graphics-ui.js'),creative=read('creative-studio-ui.js');
-assert.equal(JSON.parse(read('manifest.json')).version,'0.6.3');
+assert.equal(JSON.parse(read('manifest.json')).version,'0.6.4');
 for(const src of ['studio-v063.css','zoom-hud-v063.js','type-hud-v063.js'])assert.ok(html.includes(src),'Missing component: '+src);
 assert.ok(html.indexOf('clip-workspace-v062.js')<html.indexOf('zoom-hud-v063.js'),'HUD must initialize after Properties tabs move');
 for(const id of ['graphic-font','graphic-weight','graphic-size','graphic-preset','graphic-x','graphic-y','graphic-in','graphic-out','graphic-fade-in','graphic-fade-out','v061-zoom-x','v061-zoom-y','v061-zoom-add','v061-zoom-reset'])assert.ok(html.includes('id="'+id+'"'),'Removed legacy input '+id);
 for(const font of ['rounded','condensed','display','handwritten'])assert.ok(html.includes('value="'+font+'"')&&graphic.includes(font+':'),'Font preview must have matching canvas-rendered font '+font);
 assert.ok(zoom.includes("frame.setPointerCapture")&&zoom.includes("pointermove")&&zoom.includes("getBoundingClientRect"),'HUD drag missing');
-assert.ok(zoom.includes("for(const event of ['seeked','timeupdate'")&&zoom.includes("drawImage(video"),'HUD must draw current local video frame');
+assert.ok(zoom.includes("for(const event of ['seeked','timeupdate'")&&zoom.includes("paintFrame(video,canvas)")&&zoom.includes("ctx.drawImage(media,0,0,width,height)"),'HUD must draw current local video frame');
 assert.ok(zoom.includes("view().addZoomRange")&&core.includes('addZoomRange(')&&core.includes('updateZoomKeyframe('),'Camera In/Out/editor update must be wired');
 assert.ok(type.includes("el('graphic-preset')")&&type.includes("fire('graphic-preset')")||type.includes("input('graphic-preset')")&&type.includes("fire('graphic-preset')"),'Preset cards must target original change handler');
 assert.ok(type.includes("input('graphic-font').value=name;fire('graphic-font')"),'Font cards must update real graphic font');
