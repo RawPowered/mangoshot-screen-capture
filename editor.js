@@ -1035,11 +1035,65 @@ function imageIndexAt(x,y){
  }
  return -1;
 }
+/* Whole Stroke Erase deletes editable annotation objects, not screenshot pixels.
+ * A drag removes all touched, unlocked annotation strokes as ONE undo step.
+ * Imported images retain their dedicated non-destructive image mask controls.
+ */
+function eraseEntireAt(p){
+ if(!entireErase||!penInput)return;
+ const previous=entireErase.last;
+ const samples=[p];
+ const rect=ink.getBoundingClientRect();
+ const zoom=ink.width/Math.max(1,rect.width);
+ const diameter=Number(size.value||28)*zoom;
+ const radius=Math.max(3,diameter*.5*(.25+.75*(p.p??1)));
+ if(previous){
+  const dx=p.x-previous.x,dy=p.y-previous.y;
+  const count=Math.min(320,Math.ceil(Math.hypot(dx,dy)/Math.max(2,radius*.5)));
+  for(let i=1;i<count;i++){
+   const t=i/count;samples.push({x:previous.x+dx*t,y:previous.y+dy*t,p:previous.p});
+  }
+ }
+ let removed=0;
+ for(const sample of samples){
+  const matches=penInput.intersectIndices(strokes,sample,radius,vectorCore,
+   (stroke,x,y,pad)=>typeEffects?.hit?.(pen,stroke,x,y,pad)||
+    editorCore?.hitText?.(pen,stroke,x,y,pad));
+  if(!matches.length)continue;
+  if(!entireErase.changed){snapshot();entireErase.changed=true;}
+  for(const i of matches){strokes.splice(i,1);removed++;}
+ }
+ entireErase.last=p;
+ if(removed){
+  entireErase.removed+=removed;
+  selectedText=-1;selectedImage=-1;selectedObject=-1;
+  redraw();updateEditorControls();
+ }
+}
 ink.addEventListener('pointerdown',event=>{
- if(!ready||event.button!==0)return;
+ const hardwareErase=penInput?.eraserTip?.(event)===true&&
+  document.getElementById('image-eraser-tip')?.checked!==false;
+ if(!ready||(event.button!==0&&!hardwareErase))return;
  const p=point(event);
  if(textDraft)commitInline();
- const type=tool.value;
+ const type=hardwareErase?lastEraserMode:tool.value;
+ if(type==='erase-stroke'){
+  event.preventDefault();ink.setPointerCapture?.(event.pointerId);
+  entireErase={pointerId:event.pointerId,last:null,changed:false,removed:0,hardware:hardwareErase};
+  eraseEntireAt(p);
+  return;
+ }
+ if(type==='erase-brush'){
+  event.preventDefault();ink.setPointerCapture?.(event.pointerId);
+  active={type:'erase-brush',points:[p],
+   size:Number(size.value||28)*(ink.width/Math.max(1,ink.getBoundingClientRect().width)),
+   hardness:Number(document.getElementById('image-eraser-hardness')?.value||80)/100,
+   opacity:Number(document.getElementById('image-tool-opacity')?.value||100)/100,
+   usePressure:document.getElementById('image-pen-pressure')?.checked!==false};
+  drawing=true;scheduleRedraw();
+  if(hardwareErase)label('Wacom eraser tip detected · brushing annotations');
+  return;
+ }
  if(type==='text'){
   event.preventDefault();
   const index=textIndexAt(p.x,p.y);
@@ -1106,6 +1160,11 @@ ink.addEventListener('pointerdown',event=>{
 });
 ink.addEventListener('pointermove',event=>{
  const p=point(event);
+ if(entireErase){
+  if(entireErase.pointerId!=null&&event.pointerId!==entireErase.pointerId)return;
+  for(const sample of pointerSamples(event))eraseEntireAt(sample);
+  event.preventDefault();return;
+ }
  if(maskDraw){
   const target=strokes[maskDraw.index];
   if(!target||target.locked||target.type!=='image')return;
@@ -1146,10 +1205,23 @@ ink.addEventListener('pointermove',event=>{
  }
  if(!drawing||!active)return;
  if(vectorCore?.isVector?.(active)||['rectangle','arrow','redact'].includes(active.type))active.points=[active.points[0],p];
- else active.points.push(p);
+ else if(['pen','highlighter','eraser','erase-brush'].includes(active.type)){
+  for(const sample of pointerSamples(event)){
+   if(active.points.length<25000)active.points.push(sample);
+  }
+ }else active.points.push(p);
  scheduleRedraw();event.preventDefault();
 });
 function finishStroke(event){
+ if(entireErase){
+  const d=entireErase;
+  if(d.pointerId!=null&&event.pointerId!=null&&d.pointerId!==event.pointerId)return;
+  entireErase=null;redraw();
+  if(d.changed){setReady(ready);syncLayerProperties();
+   label(d.removed+' whole annotation'+(d.removed===1?'':'s')+' erased · Ctrl+Z to restore.');}
+  else label('Whole Stroke Eraser · no unlocked annotation was touched.');
+  return;
+ }
  if(maskDraw){
   maskDraw=null;redraw();setReady(ready);
   label('Mask painted · source image preserved. Ctrl+Z restores mask stroke.');return;
