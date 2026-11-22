@@ -355,6 +355,19 @@ globalThis.MangoClipView={
   return deleteSelection();
  },setRange,clearSelection,range:()=>({active:rangeSelected,start:Number(byId('in').value),end:Number(byId('out').value)}),
  selectedClip:()=>selectedClipIndex,selectClip(index){if(!Number.isInteger(index)||index<0||index>=segments.length)return;selectedClipIndex=index;rangeSelected=false;render();globalThis.MangoVisualClip?.refresh?.();},
+ addPremiumComposition(presetId){
+   if(!original||exporting||!globalThis.MangoPremium?.byId?.[presetId])return false;
+   const at=MangoEditOps.toOutput(segments,video.currentTime)??0;
+   const left=Math.max(0,MangoEditOps.length(segments)-at);
+   if(left<.12){label('Move the playhead earlier to insert a premium composition.');return false;}
+   const span=Math.min(4,left),primary=globalThis.MangoPremium.make('text',presetId,at,span);
+   const second=globalThis.MangoPremium.secondary(primary);
+   const groupId='premium-'+primary.id;
+   primary.premium.groupId=groupId;
+   if(second)second.premium.groupId=groupId;
+   remember();layers.push(primary);if(second)layers.push(second);
+   selectedLayerId=primary.id;refreshed();label('Premium composition inserted: '+primary.name);return true;
+ },
  addLayer(kind,preset='none'){
    if(!original||exporting)return;
    const at=MangoEditOps.toOutput(segments,video.currentTime)??0;
