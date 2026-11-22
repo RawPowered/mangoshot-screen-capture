@@ -172,7 +172,7 @@
   if(!st||now===null)return;
   const p=canvasPoint(e),w=canvas.width,h=canvas.height;
   const visible=MangoGraphics.at(st.layers(),now).reverse();
-  const clicked=visible.find(l=>{if(l.locked)return false;const r=MangoGraphics.bounds(l,w,h,canvas.getContext('2d'));
+  const clicked=visible.find(l=>{if(l.locked)return false;const r=MangoGraphics.bounds(l,w,h,canvas.getContext?.('2d'));
    return p.x>=r.x/w-.018&&p.x<=(r.x+r.w)/w+.018&&p.y>=r.y/h-.025&&p.y<=(r.y+r.h)/h+.025;});
   if(!clicked){return;}e.preventDefault();canvas.setPointerCapture?.(e.pointerId);
   select(clicked.id,true);
