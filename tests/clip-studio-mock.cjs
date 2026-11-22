@@ -21,7 +21,7 @@ const ctx={document:doc,window:{addEventListener(){}},Blob,URL:{createObjectURL:
   MediaRecorder:class {static isTypeSupported(type){return type.includes('webm')||(mimeMp4&&type.includes('mp4'));}},
   URLSearchParams,location:{search:''},setTimeout:(fn,ms)=>setTimeout(fn,Math.min(ms||0,30)),clearTimeout,requestAnimationFrame:cb=>setTimeout(cb,1),cancelAnimationFrame:clearTimeout};
 ctx.globalThis=ctx;const run=filename=>vm.runInNewContext(fs.readFileSync(path.join(root,filename),'utf8'),ctx);
-run('clip-timeline.js');run('sequence-media.js');run('sequence-preview.js');run('clip-edit-ops.js');run('clip-graphics.js');run('creative-zoom.js');run('sequence-operations.js');run('auto-cut.js');run('layer-timeline-ops.js');run('media-format.js');ctx.MangoClips={load:async()=>null,clear:async()=>null};
+run('clip-timeline.js');run('sequence-media.js');run('sequence-preview.js');run('clip-edit-ops.js');run('motion-core-v067.js');run('clip-graphics.js');run('creative-zoom.js');run('sequence-operations.js');run('auto-cut.js');run('layer-timeline-ops.js');run('media-format.js');ctx.MangoClips={load:async()=>null,clear:async()=>null};
 let markerCache=[];ctx.MangoClipTimeline={markers:()=>markerCache.map(x=>({...x})),loadMarkers:next=>{markerCache=next.map(x=>({...x}));},render(){},reset(){markerCache=[];}};
 run('clip-studio.js');
 (async()=>{
