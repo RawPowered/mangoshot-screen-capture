@@ -10,4 +10,9 @@ assert.equal(loaded.segments.length,2);assert.equal(loaded.layers[0].kind,'callo
 assert.throws(()=>P.check(original,{...source,size:2}),/matching source/);
 assert.throws(()=>P.check({...original,layers:[{...layers[0],background:'url(javascript:alert(1))'}]},source),/background/);
 assert.throws(()=>P.check({...original,layers:[{...layers[0],text:'x'.repeat(401)}]},source),/text/);
+for(const font of ['rounded','condensed','display','handwritten']){
+ const draft=G.create('text','minimal',2,{id:'font-'+font,font,end:5});
+ const project=P.pack(source,segments,[draft],[]);
+ assert.equal(P.check(project,source).layers[0].font,font,'Font must survive JSON project validation');
+}
 console.log('PASS: non-destructive project round-trip, source guard, input validation');
