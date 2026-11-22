@@ -28,7 +28,7 @@ def package(output):
   try:prev=git('show',BASE+':'+path)
   except subprocess.CalledProcessError:prev=None
   entries.append({'path':path,'bytes':len(body),'sha256':hashdata(body),'previous_sha256':hashdata(prev) if prev is not None else None})
- if json.loads(data['manifest.json'])['version']!='0.6.6':raise RuntimeError('Unexpected manifest version')
+ if json.loads(data['manifest.json'])['version']!='0.6.7':raise RuntimeError('Unexpected manifest version')
  for name in ['studio-v067.css','motion-core-v067.js','motion-ui-v067.js']:
   if name.encode() not in data['clip-studio.html']:raise RuntimeError('HTML missing '+name)
  if data['clip-studio.html'].find(b'motion-core-v067.js')>data['clip-studio.html'].find(b'clip-graphics.js'):raise RuntimeError('Wrong motion initialization order')
