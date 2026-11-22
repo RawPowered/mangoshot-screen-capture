@@ -14,10 +14,17 @@
    const menu=button.closest('details');if(menu)menu.open=false;
   }
  });
+ // Rail buttons dispatch into the existing clip/timeline command controllers.
+ // Only Select / Razor / Range are persistent modes. Text/Callout/AutoCut are
+ // one-shot actions and must never overwrite the mode's highlighted state.
  for(const button of document.querySelectorAll('[data-v06-tool]'))button.addEventListener('click',()=>{
-  const target=button.dataset.v06Tool;if(doCommand(target)){
-   for(const tool of document.querySelectorAll('[data-v06-tool]'))tool.setAttribute('aria-pressed',String(tool===button));
-  }
+  const target=button.dataset.v06Tool;
+  const mapping={'tool-select':'tool-select','tool-razor':'tool-razor',
+   'range-tool':'range-tool','add-text':'add-text',
+   'add-callout':'add-callout','autocut-toggle':'autocut-toggle'};
+  const source=mapping[target];
+  if(!source)return;
+  doCommand(source);
  });
  for(const side of ['left','right']){
   const handle=q(`[data-resizer="${side}"]`);if(!handle)continue;
