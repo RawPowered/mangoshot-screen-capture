@@ -1,0 +1,58 @@
+/* MangoShot v0.6.9 — unified brand tokens: the brand lives in the UI, never in user exports. */
+:root{
+ --mango-canvas:#090e10;--mango-surface:#151e21;--mango-surface-raised:#1c292b;
+ --mango-silver:#d5e1e3;--mango-silver-dim:#9baeb4;--mango-lime:#9fe63c;
+ --mango-lime-strong:#c7f776;--mango-orange:#f76b19;--mango-line:#426056;
+ --mango-focus:#d7ff9d;
+ --bg:var(--mango-canvas);--surface:var(--mango-surface);--surface2:var(--mango-surface-raised);
+ --fg:#f3f7f4;--muted:#b3c4c2;--accent:var(--mango-lime);
+ --stroke:var(--mango-line);
+ --studio-bg:var(--mango-canvas);--studio-panel:var(--mango-surface);
+ --studio-panel2:var(--mango-surface-raised);--studio-line:var(--mango-line);
+ --studio-text:#f2f7f3;--studio-muted:#b4c3c5;--studio-accent:var(--mango-lime);
+}
+body.studio{background:var(--mango-canvas)}
+body.studio .studio-appbar{
+ background:linear-gradient(105deg,#151d20 0%,#1b2a29 60%,#17201d 100%);
+ border-bottom:1px solid #425b51;box-shadow:inset 0 1px 0 #83998d2e,0 5px 20px #02080785;
+ min-height:61px;
+}
+body.studio .studio-identity{gap:9px;min-width:170px}
+body.studio .studio-mark{background:#21332c;color:#baf866;border:1px solid #658b65}
+body.studio .v069-app-icon{height:35px;width:35px;object-fit:contain;flex:0 0 auto;filter:drop-shadow(0 1px 3px #050905)}
+body.studio .v069-app-wordmark{height:31px;width:auto;max-width:185px;object-fit:contain;object-position:left center}
+body.studio .studio-identity strong{color:#f2f7f3}
+body.studio .studio-identity small{color:#b4d28c;letter-spacing:1.25px}
+body.studio .studio-tab{font-weight:700;font-size:12px;letter-spacing:.02em;transition:background .15s,border-color .15s}
+body.studio .studio-tab:is(:hover,.is-active){border-bottom-color:var(--mango-lime);background:#2b4034}
+body.studio .studio-local{color:#b4d0bb}
+body.studio .local-dot{background:#a7ed42;box-shadow:0 0 8px #a5fc7c9c}
+body.studio .panel-heading{background:#1e2a2b;border-color:#40574d;letter-spacing:.055em}
+body.studio .studio-transport{background:#182322;border-color:#3d554a}
+body.studio .studio-toolrail,body.studio .v06-rail{background:#152120;border-color:#405a4c}
+body.studio .studio-toolrail button.is-active,body.studio .v06-rail button[aria-pressed=true]{background:#334a32;border-color:#a3e766;color:#ebffe3}
+body.studio .primary,body.studio .v068-preview{
+ background:linear-gradient(180deg,#c5f378 0%,#95d848 100%);
+ color:#162312;border:1px solid #d8fca4;text-shadow:none;
+ box-shadow:inset 0 1px 0 #f3ffe6a6,0 2px 8px #0003;
+}
+body.studio .primary:is(:hover,:focus-visible){background:linear-gradient(180deg,#d2fa91,#a9ea5b)}
+body.studio :is(button,input,select,summary,a):focus-visible{outline:2px solid var(--mango-focus);outline-offset:2px}
+body.studio .action-record{background:linear-gradient(180deg,#ff9a33,#ef5818);color:#191508;border-color:#ffb273}
+body.studio .studio-state[data-state=recording]{background:#48261b;color:#ffd29b;border-color:#fa8c37}
+body.studio .v069-resource-tab{color:#d6f9b2}
+body.studio .v062-property-tabs button[aria-pressed=true],
+body.studio .v068-subtab[aria-selected=true]{background:#b7ed60;color:#172218;border-color:#e4ffb1}
+body.studio .v069-premium-grid button[aria-pressed=true]{border-color:#baf68b}
+body.popup{width:340px}
+body.popup header{background:linear-gradient(130deg,#121d20,#213029);border-bottom:1px solid #47634e;padding:12px 16px;gap:8px}
+body.popup header .brand{display:flex;align-items:center;gap:8px}
+body.popup header .brand img{max-width:165px;max-height:50px;object-fit:contain}
+body.popup header small{color:#bce98d;letter-spacing:1px}
+body.popup main{background:#101a1b;padding:13px;gap:8px}
+body.popup .primary{background:linear-gradient(180deg,#bbf16c,#98dc49);color:#152219}
+body.popup #record{border-color:#b8774b;background:linear-gradient(180deg,#383025,#2b2823)}
+body.popup #resources{border-color:#52775a;background:#25342b}
+body.popup button:hover{border-color:#b7f279}
+@media(max-width:830px){body.studio .v069-app-wordmark{height:24px;max-width:126px}body.studio .studio-identity{min-width:0}}
+@media(prefers-reduced-motion:reduce){body.studio *{scroll-behavior:auto!important}}
