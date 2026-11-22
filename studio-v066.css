@@ -1,0 +1,80 @@
+/* MangoShot v0.6.6 — user-adjustable, polished workspaces */
+@media(min-width:901px) and (min-height:601px){
+ body.studio-clip.v065-viewport .clip-layout,
+ body.studio-clip.v065-viewport[data-workspace="edit"] .clip-layout,
+ body.studio-clip.v065-viewport[data-workspace="graphics"] .clip-layout,
+ body.studio-clip.v065-viewport[data-workspace="timeline"] .clip-layout{
+  position:relative;
+  grid-template-columns:52px minmax(0,1fr) minmax(260px,var(--v066-side,320px));
+  grid-template-rows:minmax(155px,var(--v066-top,45%)) minmax(175px,1fr) minmax(32px,var(--v066-dock,119px));
+ }
+ body.studio-clip.v065-viewport.v065-bin-collapsed .clip-layout,
+ body.studio-clip.v065-viewport.v065-bin-collapsed[data-workspace="edit"] .clip-layout,
+ body.studio-clip.v065-viewport.v065-bin-collapsed[data-workspace="graphics"] .clip-layout,
+ body.studio-clip.v065-viewport.v065-bin-collapsed[data-workspace="timeline"] .clip-layout{
+  grid-template-rows:minmax(155px,var(--v066-top,45%)) minmax(175px,1fr) 32px;
+ }
+ body.studio-clip.v065-viewport .v066-splitter{position:absolute;z-index:12;display:block;touch-action:none;user-select:none;background:transparent;outline-offset:-1px}
+ body.studio-clip.v065-viewport .v066-splitter-side{width:12px;transform:translateX(-50%);cursor:col-resize}
+ body.studio-clip.v065-viewport .v066-splitter-top,
+ body.studio-clip.v065-viewport .v066-splitter-dock{height:12px;transform:translateY(-50%);cursor:row-resize}
+ body.studio-clip.v065-viewport .v066-splitter:before{content:'';position:absolute;background:#72877978;border-radius:4px;transition:background .1s,box-shadow .1s}
+ body.studio-clip.v065-viewport .v066-splitter-side:before{left:5px;top:30%;bottom:30%;width:3px}
+ body.studio-clip.v065-viewport .v066-splitter-top:before,
+ body.studio-clip.v065-viewport .v066-splitter-dock:before{left:46%;right:46%;height:3px;top:5px}
+ body.studio-clip.v065-viewport .v066-splitter:hover:before,
+ body.studio-clip.v065-viewport .v066-splitter:focus-visible:before,
+ body.studio-clip.v065-viewport.v066-resizing .v066-splitter:before{background:#c6fc80;box-shadow:0 0 8px #b6ed60b9}
+ body.studio-clip.v065-viewport .v066-splitter[hidden]{display:none!important}
+ body.studio-clip.v065-viewport .clip-program .clip-preview-frame{max-width:min(100%,1250px);width:auto;min-width:0}
+ body.studio-clip.v065-viewport .clip-program .clip-preview{padding:8px;background:#0a0f12}
+ body.studio-clip.v065-viewport .clip-timeline-panel .panel-heading,
+ body.studio-clip.v065-viewport .clip-properties .panel-heading,
+ body.studio-clip.v065-viewport .clip-program .panel-heading{background:#21302e}
+ body.studio-clip.v065-viewport .v062-properties-body{scrollbar-width:thin;scrollbar-color:#53795d #14221f}
+ body.studio-clip.v065-viewport .timeline-scroll{scrollbar-width:thin;scrollbar-color:#557768 #14201e}
+}
+/* Layout menu sits next to the native Edit / Graphics / Timeline switcher. */
+body.studio-clip .studio-transport{gap:10px}
+body.studio-clip .v066-layout-menu{position:relative;display:flex;align-items:center;min-width:0;z-index:18;flex:0 0 auto}
+body.studio-clip .v066-layout-menu>summary{list-style:none;display:flex;align-items:center;gap:5px;white-space:nowrap;font-size:11px;font-weight:720;line-height:1.2;cursor:pointer;color:#d5efcb;border:1px solid #576e5d;border-radius:5px;padding:6px 10px;background:#263731;min-height:27px}
+body.studio-clip .v066-layout-menu>summary::-webkit-details-marker{display:none}
+body.studio-clip .v066-layout-menu[open]>summary,
+body.studio-clip .v066-layout-menu>summary:hover{background:#405a38;color:#dfffbc}
+body.studio-clip .v066-layout-options{position:absolute;top:calc(100% + 5px);right:0;z-index:40;min-width:202px;display:grid;gap:2px;border:1px solid #688167;background:#172625;box-shadow:0 10px 20px #0009;padding:5px;border-radius:8px}
+body.studio-clip .v066-layout-menu:not([open]) .v066-layout-options{display:none}
+body.studio-clip .v066-layout-options button{display:block;text-align:left;width:100%;color:#e1f4e5;background:transparent;border:0;padding:6px 9px!important;min-height:30px;font-size:11px}
+body.studio-clip .v066-layout-options button:hover{background:#344e3b}
+body.studio-clip .v066-layout-options button:last-child{border-top:1px solid #4b6655;color:#caff90;margin-top:3px}
+/* Higher readability, compact controls and consistent keyboard focus. */
+body.studio-clip .v06-rail .v065-icon-tool{min-height:35px}
+body.studio-clip .studio-panel{border-color:#3c524d}
+body.studio-clip .panel-heading{letter-spacing:.3px}
+body.studio-clip .v062-property-tabs button{font-size:11px}
+body.studio-clip .studio-transport .studio-live-status{font-size:11px}
+body.studio-clip .v065-dock-tools button{border-radius:4px}
+body.studio-clip .v066-icon-label{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+body.studio-clip .v066-icon-label>svg{width:15px;height:15px;flex:0 0 auto}
+body.studio-clip .v066-icon-command{display:inline-flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap}
+body.studio-clip .v066-icon-command svg{width:14px;height:14px;flex:0 0 auto}
+body.studio-clip button:focus-visible,
+body.studio-clip .v066-splitter:focus-visible,
+body.studio-clip summary:focus-visible{outline:2px solid #d6ff8e;outline-offset:1px}
+body.studio-clip .v063-style-gallery [hidden],
+body.studio-clip .v066-preset-panel[hidden]{display:none!important}
+body.studio-clip .v066-preset-tabs{display:flex;gap:5px;align-items:center;min-width:0;flex-wrap:wrap}
+body.studio-clip .v066-preset-tabs button{min-height:27px!important;border:1px solid #4b6659;background:#273731;color:#d7ebd4;padding:4px 9px!important;border-radius:4px;font-size:10px;font-weight:780}
+body.studio-clip .v066-preset-tabs button[aria-pressed=true]{background:#bced79;color:#1c321a;border-color:#d9ff9f}
+body.studio-clip .v066-preset-actions{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+body.studio-clip .v066-preset-actions button{background:#2d4337;border:1px solid #5e8265;color:#dff8d1;min-height:29px;padding:4px!important;font-size:11px;border-radius:4px}
+body.studio-clip .v066-preset-actions button:hover{background:#405e44}
+body.studio-clip .v066-preset-hint{font-size:10px;color:#aabeb0;line-height:1.3}
+body.studio-clip .v063-style-gallery .v063-style-card{content-visibility:auto;contain-intrinsic-size:120px 83px}
+body.studio-clip .v063-style-gallery .v063-style-card[data-pack=studio]{border-color:#6a8570}
+body.studio-clip .v063-style-gallery .v063-style-card[data-pack=studio][aria-pressed=true]{border-color:#cbfb8b}
+@media(max-width:900px){
+ body.studio-clip .v066-layout-menu{margin-left:0}
+ body.studio-clip .v066-splitter{display:none!important}
+}
+
+body.studio-clip .v066-layout-options .v066-resize-hint{display:block;border-top:1px solid #3d584b;padding:7px 10px;font-size:10px;color:#a9c9b1;line-height:1.45;white-space:normal;}

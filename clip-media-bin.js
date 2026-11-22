@@ -37,8 +37,18 @@
   });}
   container.append(media);
  }
- function draw(){const list=el('v06-asset-list');clean(list);
-  for(const a of registry.snapshot()){
+ // Editing decisions change often, but imported assets rarely do. Avoid
+ // reconstructing the asset DOM on every timeline refresh or playhead change.
+ let lastAssetSignature=null;
+ function draw(){
+  const assets=registry.snapshot();
+  const stamp=assets.map(a=>[a.id,a.name,a.kind,a.size,a.missing,a.duration,a.width,a.height].join('|')).join('~')+
+   '::'+selected+'::'+staged.map(c=>[c.id,c.assetId,c.track,c.start,c.end].join('|')).join('~');
+  updateControls();
+  if(stamp===lastAssetSignature)return;
+  lastAssetSignature=stamp;
+  const list=el('v06-asset-list');clean(list);
+  for(const a of assets){
    const item=button('',()=>{selected=a.id;preview(registry.get(a.id));draw();});
    item.className='v06-asset'+(a.id===selected?' is-selected':'');item.setAttribute('aria-pressed',String(a.id===selected));
    item.title=a.name;item.append(span(kindMark[a.kind]||'□','v06-kind'),span(a.name,'v06-filename'),span(a.missing?'Relink':filesize(a.size),'v06-small'));
@@ -52,8 +62,7 @@
    row.append(button('Remove',()=>{staged=staged.filter(x=>x.id!==c.id);draw();}));drafts.append(row);
   }
   if(!staged.length)drafts.append(span('No secondary clips staged.','v06-hint'));
-  el('v06-count').textContent=registry.count()+' assets · '+staged.length+' staged';
-  updateControls();
+  el('v06-count').textContent=assets.length+' assets · '+staged.length+' staged';
  }
  registry.subscribe(()=>{draw();const a=registry.get(selected);if(a){const target=el('v06-asset-preview');
   if(target?.querySelector('strong')?.textContent!==a.name)preview(a);} });

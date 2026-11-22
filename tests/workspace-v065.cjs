@@ -2,7 +2,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const root=path.join(__dirname,'..'),read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const html=read('clip-studio.html'),css=read('studio-v065.css'),dock=read('media-dock-v065.js'),
  icons=read('tool-icons-v065.js'),keys=read('keyboard-shortcuts-v065.js');
-const manifest=JSON.parse(read('manifest.json'));assert.equal(manifest.version,'0.6.5');
+const manifest=JSON.parse(read('manifest.json'));assert.equal(manifest.version,'0.6.6');
 for(const p of ['studio-v065.css','media-dock-v065.js','tool-icons-v065.js','keyboard-shortcuts-v065.js'])assert.ok(html.includes(p),'Missing v0.6.5 dependency '+p);
 assert.ok(html.indexOf('media-dock-v065.js')<html.indexOf('keyboard-shortcuts-v065.js'),'Shortcut manager initializes after dock and menus');
 assert.ok(css.includes('height:100dvh;min-height:0;max-height:100dvh'),'Desktop root must be pinned to viewport');
