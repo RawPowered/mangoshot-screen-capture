@@ -50,8 +50,8 @@
    for(const frame of frames.slice().sort((a,b)=>a.index-b.index)){
     const bitmap=frame.index===frames[0].index?first:await decode(frame.dataUrl);
     const top=Math.round((meta.full?frame.scrollY:0)*ratio);
-    const available=Math.min(bitmap.height,h-top);
-    if(available>0)ctx.drawImage(bitmap,0,0,bitmap.width,available,0,top,w,available);
+    const available=Math.min(bitmap.naturalHeight||bitmap.height,h-top);
+    if(available>0)ctx.drawImage(bitmap,0,0,bitmap.naturalWidth||bitmap.width,available,0,top,w,available);
    }
   }
   return out;
