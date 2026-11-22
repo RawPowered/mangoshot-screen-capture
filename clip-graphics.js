@@ -93,7 +93,9 @@
    ctx.rotate(motion.angle||0);ctx.scale(motion.scale||1,(motion.scale||1));
    ctx.scale(motion.scaleX||1,1);ctx.translate(-centerX,-centerY);
   }
-  const hasBackground=l.background&&l.background!=='transparent';
+  const premium=!!l.premium&&!!root.MangoPremium?.byId?.[l.premium.id];
+  if(premium)root.MangoPremium.paint(ctx,l,{x,y,width,height:boxH,scale,seconds:sec});
+  const hasBackground=!premium&&l.background&&l.background!=='transparent';
   if(hasBackground){ctx.shadowColor='rgba(0,0,0,.55)';ctx.shadowBlur=(Number(l.shadow)||0)*scale;
    ctx.fillStyle=l.background;rounded(ctx,x,y,width,boxH,14*scale);ctx.fill();
    ctx.shadowBlur=0;
@@ -102,7 +104,8 @@
      ctx.beginPath();ctx.moveTo(tailX-20*scale,tailY-1);ctx.lineTo(tailX+38*scale,tailY-1);
      ctx.lineTo(tailX+14*scale,tailY+clamp(Number(l.tailLength??32),0,200)*scale);ctx.closePath();ctx.fill();}
   }
-  ctx.fillStyle=l.color;ctx.textBaseline='top';ctx.textAlign=l.align||'left';
+  ctx.fillStyle=(premium&&root.MangoPremium.textFill(ctx,l,{x,y,width,height:boxH}))||l.color;
+  ctx.textBaseline='top';ctx.textAlign=l.align||'left';
   ctx.shadowColor='rgba(0,0,0,.65)';ctx.shadowBlur=hasBackground?0:(Number(l.shadow)||0)*scale;
   if(!hasBackground&&(Number(l.outlineWidth)||0)>0){ctx.strokeStyle=l.outline;ctx.lineJoin='round';ctx.lineWidth=l.outlineWidth*scale*2;}
   const tx=l.align==='center'?x+width/2:l.align==='right'?x+width-pad:x+pad;
