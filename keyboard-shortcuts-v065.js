@@ -38,14 +38,15 @@
  const allowedKey=k=>!k||(!blocked.has(k)&&!/^Meta\+(?!Shift\+\/)/.test(k)&&!['Escape','Tab','Enter'].includes(k));
  let keys={...defaults};
  function validate(candidate){
-  const next={...defaults};
-  const used=new Map();
+  if(!candidate||typeof candidate!=='object')return {...defaults};
+  const next={...defaults},used=new Set();
   for(const def of definitions){
-   const value=candidate&&Object.hasOwn(candidate,def.id)?candidate[def.id]:def.key;
-   if(typeof value!=='string'||value.length>35||!allowedKey(value))continue;
-   if(value&&used.has(value))continue;
-   next[def.id]=value;
-   if(value)used.set(value,def.id);
+   const value=Object.hasOwn(candidate,def.id)?candidate[def.id]:def.key;
+   // If persisted bindings are corrupted or collide, restore the safe known
+   // defaults rather than silently installing overlapping editor actions.
+   if(typeof value!=='string'||value.length>35||!allowedKey(value)||(value&&used.has(value)))
+    return {...defaults};
+   next[def.id]=value;if(value)used.add(value);
   }
   return next;
  }
