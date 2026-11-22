@@ -366,14 +366,14 @@ globalThis.MangoClipView={
    primary.premium.groupId=groupId;
    if(second)second.premium.groupId=groupId;
    remember();layers.push(primary);if(second)layers.push(second);
-   selectedLayerId=primary.id;refreshed();label('Premium composition inserted: '+primary.name);return true;
+   selectedLayerId=primary.id;selectedClipIndex=null;rangeSelected=false;refreshed();label('Premium composition inserted: '+primary.name);return true;
  },
  addLayer(kind,preset='none'){
    if(!original||exporting)return;
    const at=MangoEditOps.toOutput(segments,video.currentTime)??0;
    const layer=MangoGraphics.create(kind,preset,Math.min(at,Math.max(0,MangoEditOps.length(segments)-.1)));
    layer.end=Math.min(layer.end,MangoEditOps.length(segments));
-   remember();layers.push(layer);selectedLayerId=layer.id;refreshed();label(layer.name+' layer added.');
+   remember();layers.push(layer);selectedLayerId=layer.id;selectedClipIndex=null;rangeSelected=false;refreshed();label(layer.name+' layer added.');
  },
  selectLayer(id,quiet=false){selectedLayerId=id;
    if(id){selectedClipIndex=null;rangeSelected=false;}
@@ -396,7 +396,7 @@ globalThis.MangoClipView={
  },
  duplicateLayer(id){const source=layers.find(l=>l.id===id);if(!source||exporting)return;
    remember();const dup={...clone(source),id:(globalThis.crypto?.randomUUID?.()||String(Date.now())),name:source.name+' copy'};
-   layers.push(dup);selectedLayerId=dup.id;refreshed();},
+   layers.push(dup);selectedLayerId=dup.id;selectedClipIndex=null;rangeSelected=false;refreshed();},
  beginLayerMove(id){if(exporting)return;const l=layers.find(x=>x.id===id);if(l&&!l.locked)remember();},
  moveLayer(id,x,y){const l=layers.find(x=>x.id===id);if(!l||l.locked)return;l.x=x;l.y=y;paintPreview();},
  resizeLayer(id,width,fontSize){const l=layers.find(x=>x.id===id);if(!l||l.locked)return;
