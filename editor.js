@@ -132,6 +132,115 @@ function undo(){if(!history.length)return;redoHistory.push(cloneStrokes(strokes)
  selectedText=Math.min(selectedText,strokes.length-1);redraw();setReady(ready);syncSelectedText();}
 function redo(){if(!redoHistory.length)return;history.push(cloneStrokes(strokes));strokes=redoHistory.pop();
  selectedText=Math.min(selectedText,strokes.length-1);redraw();setReady(ready);syncSelectedText();}
+function selectedStroke(){return selectedText>=0&&strokes[selectedText]?.type==='text'?strokes[selectedText]:null;}
+function textIndexAt(x,y){
+ if(!editorCore?.hitText)return -1;
+ for(let i=strokes.length-1;i>=0;i--)if(editorCore.hitText(pen,strokes[i],x,y,10))return i;
+ return -1;
+}
+function updateSelectionBox(){
+ if(!selectedBox)return;
+ const stroke=selectedStroke();
+ if(!ready||!stroke||textDraft||!ink.width||!ink.height||!editorCore?.textMetrics){selectedBox.hidden=true;return;}
+ const r=editorCore.textMetrics(pen,stroke);
+ selectedBox.style.left=100*r.x/ink.width+'%';selectedBox.style.top=100*r.y/ink.height+'%';
+ selectedBox.style.width=100*r.width/ink.width+'%';selectedBox.style.height=100*r.height/ink.height+'%';
+ selectedBox.hidden=false;
+}
+function syncSelectedText(){
+ const stroke=selectedStroke();
+ if(stroke){
+  if(textContent)textContent.value=stroke.text||'';
+  if(textFontSize)textFontSize.value=String(Math.round(stroke.fontSize||48));
+  if(textFontFamily)textFontFamily.value=stroke.fontFamily||'sans';
+  textPreset=stroke.styleId||'plain';
+  color.value=stroke.color||color.value;
+ }
+ for(const button of document.querySelectorAll?.('[data-text-preset]')||[])
+  button.setAttribute('aria-pressed',String(button.dataset.textPreset===textPreset));
+ const out=document.getElementById('text-size-readout');
+ if(out&&textFontSize)out.textContent=textFontSize.value+' px';
+ updateEditorControls();updateSelectionBox();
+}
+function updateEditorControls(){
+ const selected=selectedStroke(),textMode=tool.value==='text'||!!selected;
+ const drawSettings=document.getElementById('draw-properties'),textSettings=document.getElementById('text-properties');
+ if(drawSettings)drawSettings.hidden=textMode||tool.value==='select';
+ if(textSettings)textSettings.hidden=!textMode;
+ const hint=document.getElementById('image-hint');
+ if(hint)hint.textContent=textDraft?'Type here · Enter to place · Shift+Enter new line · Esc cancels':
+  tool.value==='text'?'Click on the screenshot to type. Click existing text to edit.':
+  tool.value==='select'?'Click text to select, drag to reposition, or double-click to edit.':
+  'Right-click the screenshot to copy all pixels and annotations.';
+ if(textContent){textContent.disabled=!selected;textContent.placeholder=selected?'Edit selected text':'Click screenshot to create text';}
+ if(textFontSize)textFontSize.disabled=!ready;
+ if(textFontFamily)textFontFamily.disabled=!ready;
+ for(const button of document.querySelectorAll?.('[data-text-preset]')||[])button.disabled=!ready;
+ const remove=document.querySelector?.('[data-image-action="delete"]');
+ if(remove)remove.disabled=!selected;
+}
+function selectText(index){
+ selectedText=index>=0&&strokes[index]?.type==='text'?index:-1;
+ syncSelectedText();renderStrokeList();
+}
+function updateSelectedText(patch){
+ const current=selectedStroke();if(!current)return false;
+ const changed=Object.entries(patch).some(([key,value])=>current[key]!==value);
+ if(!changed)return false;
+ snapshot();strokes[selectedText]={...current,...patch};
+ redraw();setReady(ready);syncSelectedText();return true;
+}
+function deleteSelectedText(){
+ if(!selectedStroke())return false;
+ snapshot();strokes.splice(selectedText,1);selectedText=-1;
+ redraw();setReady(ready);label('Text annotation removed. Ctrl+Z restores it.');return true;
+}
+function cancelInline(){
+ textDraft=null;if(inline)inline.hidden=true;
+ updateEditorControls();updateSelectionBox();
+}
+function positionInline(pointValue){
+ if(!inline||!ink.width||!ink.height)return;
+ inline.style.left=100*Math.max(0,Math.min(ink.width,pointValue.x))/ink.width+'%';
+ inline.style.top=100*Math.max(0,Math.min(ink.height,pointValue.y))/ink.height+'%';
+ const screenScale=ink.getBoundingClientRect?.().width/ink.width||1;
+ const textPx=Math.max(16,Number(textFontSize?.value||48)*screenScale);
+ inlineInput.style.fontSize=textPx+'px';
+}
+function beginInline(pos,index=-1){
+ if(!ready||!inline||!inlineInput)return;
+ if(textDraft)cancelInline();
+ const existing=index>=0?strokes[index]:null;
+ textDraft={index,x:pos.x,y:pos.y};
+ selectedText=existing?index:-1;
+ if(existing){
+  textPreset=existing.styleId||'plain';
+  if(textFontSize)textFontSize.value=Math.round(existing.fontSize||48);
+  if(textFontFamily)textFontFamily.value=existing.fontFamily||'sans';
+  color.value=existing.color||color.value;
+ }
+ inlineInput.value=existing?.text||'';
+ positionInline(pos);inline.hidden=false;updateEditorControls();updateSelectionBox();
+ inlineInput.focus?.({preventScroll:true});
+ if(existing)inlineInput.select?.();
+}
+function commitInline(){
+ if(!textDraft)return false;
+ const value=(inlineInput?.value||'').trim(),draft=textDraft;
+ if(!value){cancelInline();label('Empty text was not added.');return false;}
+ const old=draft.index>=0?strokes[draft.index]:null;
+ snapshot();
+ const pixelSize=Number(textFontSize?.value)||48;
+ const stroke=old?{...old,text:value,fontSize:pixelSize,fontFamily:textFontFamily?.value||'sans',styleId:textPreset,color:color.value}:
+  {type:'text',points:[{x:draft.x,y:draft.y,p:1}],size:Math.max(3,pixelSize/5),
+   fontSize:pixelSize,fontFamily:textFontFamily?.value||'sans',styleId:textPreset,color:color.value,text:value};
+ if(old)strokes[draft.index]=stroke;else strokes.push(stroke);
+ selectedText=old?draft.index:strokes.length-1;
+ textDraft=null;inline.hidden=true;
+ tool.value='select';syncTool();redraw();setReady(true);syncSelectedText();
+ label(old?'Text updated. Drag to reposition; double-click to edit.':'Text placed. Drag to move; double-click to edit.');
+ return true;
+}
 function renderStrokeList(){const list=document.getElementById('stroke-list');if(!list||typeof document.createElement!=='function'||typeof list.replaceChildren!=='function')return;list.replaceChildren();if(!strokes.length){list.textContent='No annotations yet';return;}
   strokes.forEach((stroke,i)=>{const row=document.createElement('div');row.className='stroke-entry';const title=document.createElement('span');title.textContent=String(i+1).padStart(2,'0')+' · '+stroke.type;const remove=document.createElement('button');remove.textContent='Remove';remove.title='Remove annotation '+(i+1);remove.onclick=()=>{snapshot();strokes.splice(i,1);redraw();setReady(ready);};row.append(title,remove);list.appendChild(row);});}
 const toolButtons=[...(document.querySelectorAll?.('[data-studio-tool]')||[])];function syncTool(){for(const button of toolButtons){const selected=button.dataset.studioTool===tool.value;button.classList.toggle('is-active',selected);button.setAttribute('aria-pressed',String(selected));}}
