@@ -26,9 +26,9 @@
     if(typeof l.background!=='string'||!(/^transparent$/i.test(l.background)||/^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(l.background)))fail('background');
     if(typeof l.color!=='string'||!/^#[0-9a-f]{6}$/i.test(l.color))fail('text color');
     if(typeof l.outline!=='string'||!/^#[0-9a-f]{6}$/i.test(l.outline))fail('outline color');
-    if(!['400','600','700','800'].includes(String(l.weight))||l.fadeIn<0||l.fadeIn>10||l.fadeOut<0||l.fadeOut>10)fail('weight/fade');
+    if(!['400','500','600','700','800'].includes(String(l.weight))||l.fadeIn<0||l.fadeIn>10||l.fadeOut<0||l.fadeOut>10)fail('weight/fade');
     if(typeof l.visible!=='boolean'||typeof l.locked!=='boolean')fail('layer toggles');
-    if(!['sans','mono','serif'].includes(l.font)||!['left','right','center'].includes(l.align))fail('font/alignment');
+    if(!['sans','mono','serif','rounded','condensed','display','handwritten'].includes(l.font)||!['left','right','center'].includes(l.align))fail('font/alignment');
     return {...l};
   });
   const markers=Array.isArray(data.markers)?data.markers:[];
