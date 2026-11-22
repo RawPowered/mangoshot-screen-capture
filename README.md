@@ -110,3 +110,19 @@ Clip Studio now includes **⚡ AutoCut**: detect quiet audio passages or low-mot
 Modes: **Silence (audio)** uses browser-native decoding with a local accelerated-playback fallback (codec/browser restrictions apply); **Still screen** samples video frames and is opt-in because motionless content can be intentional. Editable threshold, minimum duration, preserved edge padding, optional overlay protection, progress and cancellation. Automatic suggestions are capped at 70% removed and never applied without the user's action.
 
 See [AutoCut design, limitations and test gates](docs/V0.5.5-AUTOCUT.md). This is a test-drive candidate, not yet cross-browser certified.
+
+## v0.5.6 — Synchronized edited timeline and export options
+
+- **Edited Program Monitor:** normal Play and the *Play edited sequence* action now follow V1 retained segments, jumping across removed source intervals. The audio heard is the audio in those retained intervals (browser decoder seek latency can cause small edit-boundary differences; exact offline cuts use the FFmpeg helper below).
+- **Sequence-aligned thumbnails:** each thumbnail slot is sampled from the time actually retained in the edited output. After an edit, cached frames remap immediately and missing cells re-sample in the background. Deleted footage does **not** appear in the thumbnail strip.
+- **Sequence-aligned waveform:** locally decoded audio peaks are cached in source time, then projected through V1 cuts onto A1, with matching clip-boundary guides. A source with no decodable audio cannot display a waveform. Reuse cached peaks after cuts, including AutoCut and Undo.
+- **Performance profile:** Balanced uses up to 36 thumbnail samples, 130 MB waveform analysis, 30 fps / 4.5 Mbps browser export, and a 16 megapixel export limit. High-performance permits up to 80 thumbnails, 700 MB waveform analysis, 60 fps / 10 Mbps, and up to 33 megapixels. High-performance raises resource limits and quality; it **does not** make MediaRecorder export faster than real time.
+- **Optional local fast renderer for cuts-only projects:** if you have FFmpeg and Node.js installed on your Windows PC, save your MangoShot project JSON (from Clip Studio), keep the exact original video and run:
+
+```powershell
+node tools/fast-render.mjs --source "C:\Videos\source.mp4" --project "C:\Videos\MangoShot-Project.json" --output "C:\Videos\edited.mp4" --encoder auto
+```
+
+The helper attempts GPU H.264 encoders where installed, falling back to CPU libx264. It validates source size/duration, won't overwrite an existing output, and refuses visible text/callout layers rather than silently dropping them. Browser export is still required for graphics. An optional FFmpeg installation is **not** required for the extension to work.
+
+This v0.5.6 branch is a test-drive preview; cross-browser audio decode, cut playback, video export and Wacom QA remain release gates. See `docs/V0.5.6-SEQUENCE-SYNC.md`.

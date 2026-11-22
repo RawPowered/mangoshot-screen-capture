@@ -9,8 +9,8 @@ const state={duration:()=>120,outputDuration:()=>120,outputAt:x=>x,seekOutput:x=
  setRange:(a,b)=>{selectedRange={a,b};},range:()=>selectedRange?{active:true,start:selectedRange.a,end:selectedRange.b}:{active:false},
  deleteSelection:()=>{deleteCalls++;return true;}};
 const ctx={requestAnimationFrame:fn=>fn(),document:{getElementById:node,createElement:type=>({type,style:{},textContent:'',className:'',title:''}),addEventListener(k,fn){events[k]=fn;}},
- globalThis:{MangoClipView:state},Math,Number,Promise,setTimeout};
-vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..','clip-edit-ops.js'),'utf8'),ctx);ctx.MangoEditOps=ctx.globalThis.MangoEditOps;vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..','clip-timeline-ui.js'),'utf8'),ctx);
+ globalThis:{MangoClipView:state},Math,Number,Promise,setTimeout,clearTimeout};
+vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..','clip-edit-ops.js'),'utf8'),ctx);ctx.MangoEditOps=ctx.globalThis.MangoEditOps;vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..','sequence-media.js'),'utf8'),ctx);vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..','clip-timeline-ui.js'),'utf8'),ctx);
 const ui=ctx.globalThis.MangoClipTimeline;
 ui.reset();assert.ok(node('timeline-ruler').children.length>=5,'Timeline ruler ticks');
 node('add-marker').listeners.click();assert.equal(node('marker-list').children.length,1,'Marker should be represented in project bin');

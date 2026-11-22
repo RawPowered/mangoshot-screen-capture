@@ -14,6 +14,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for test in auto-cut auto-cut-ui sequence-operations static routing editor-protocol timeline-camera sequence-operations recorder-controls stop-safety clip-studio-mock clip-timeline-ui clip-store-handoff repeat-recording ui-structure media-format layered-editing graphic-layer-gestures project-format studio-workspaces pdf; do
+          for test in auto-cut auto-cut-ui sequence-media sequence-preview timeline-media-ui native-fast-render sequence-operations static routing editor-protocol timeline-camera sequence-operations recorder-controls stop-safety clip-studio-mock clip-timeline-ui clip-store-handoff repeat-recording ui-structure media-format layered-editing graphic-layer-gestures project-format studio-workspaces pdf; do
             node "tests/${test}.cjs"
           done
