@@ -26,6 +26,7 @@
    if(asset.duration!=null&&clip.sourceOut>asset.duration+.2)throw new Error('Clip extends beyond source duration.');
    if(typeof clip.staged!=='boolean')throw new Error('Staging state is required.');
   }
+  if(project.creative?.zoomFrames!=null){if(!root.MangoCreativeZoom)throw new Error('Camera schema unavailable');root.MangoCreativeZoom.check(project.creative.zoomFrames);}
   if(project.legacyV1!=null){if(!project.legacyV1||project.legacyV1.schema!=='mangoshot.project.v1'||!project.legacyV1.source||
     !Array.isArray(project.legacyV1.segments)||!Array.isArray(project.legacyV1.layers))throw new Error('Invalid legacy editing decisions.');}
   return copy(project);
