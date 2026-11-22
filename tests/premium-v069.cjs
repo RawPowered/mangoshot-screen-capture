@@ -68,5 +68,5 @@ for(const size of [16,32,48,128]){
  assert.equal(bytes.subarray(0,8).toString('hex'),'89504e470d0a1a0a');
 }
 assert.equal(JSON.parse(read('manifest.json')).version,'0.6.14');
-assert.deepEqual(JSON.parse(read('manifest.json')).permissions,['activeTab','scripting']);
+assert.deepEqual(JSON.parse(read('manifest.json')).permissions,['activeTab','scripting','clipboardWrite']);
 console.log('PASS: 24 premium treatments, deterministic Canvas rendering, editable paired layers, persistence, brand binary integrity and no-iframe Resources');
