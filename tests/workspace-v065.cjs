@@ -1,0 +1,25 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const root=path.join(__dirname,'..'),read=p=>fs.readFileSync(path.join(root,p),'utf8');
+const html=read('clip-studio.html'),css=read('studio-v065.css'),dock=read('media-dock-v065.js'),
+ icons=read('tool-icons-v065.js'),keys=read('keyboard-shortcuts-v065.js');
+const manifest=JSON.parse(read('manifest.json'));assert.equal(manifest.version,'0.6.5');
+for(const p of ['studio-v065.css','media-dock-v065.js','tool-icons-v065.js','keyboard-shortcuts-v065.js'])assert.ok(html.includes(p),'Missing v0.6.5 dependency '+p);
+assert.ok(html.indexOf('media-dock-v065.js')<html.indexOf('keyboard-shortcuts-v065.js'),'Shortcut manager initializes after dock and menus');
+assert.ok(css.includes('height:100dvh;min-height:0;max-height:100dvh'),'Desktop root must be pinned to viewport');
+assert.ok(css.includes('grid-template-rows:minmax(195px,1.14fr) minmax(218px,1fr) clamp(95px,12vh,137px)'),'Bounded monitor/timeline/dock grid missing');
+assert.ok(css.includes('grid-column:2/4;grid-row:3')&&css.includes('.v062-media-dock'),'Media dock must always occupy the final grid row');
+assert.ok(css.includes('.timeline-scroll')&&css.includes('overscroll-behavior:contain'),'Timeline overflow must remain local');
+assert.ok(css.includes('.v062-properties-body{overflow:auto'),'Properties scrolling must remain local');
+assert.ok(dock.includes("const importButton=action('Import'")&&dock.includes("()=>assetInput.click()"),'Pinned Media Bin must import through original file input');
+assert.ok(dock.includes("root.MangoMediaDock={toggle:")&&dock.includes("setCollapsed(collapsed)"),'Media Bin must support local expand/collapse');
+assert.ok(dock.includes("heading.append(tools)")&&dock.includes("heading.append(num)"),'Import and asset count must be visible in dock heading');
+assert.ok(!read('clip-workspace-v062.js').includes('bin.scrollIntoView'),'Media navigation must not scroll outer editor');
+assert.ok(icons.includes("make('svg')")&&icons.includes("setAttribute('aria-label'"),'Accessible SVG icon tools missing');
+assert.ok(keys.includes("const storeKey='MangoShot.ClipStudio.Keymap.v1'"),'Local shortcut persistence missing');
+assert.ok(keys.includes("const blocked=new Set(")&&keys.includes("const conflict=Object.keys(keys)"),'Shortcut conflict/reserved binding checks missing');
+assert.ok(keys.includes("categories.onchange=")&&keys.includes("filter.oninput="),'Search and category shortcut manager missing');
+assert.ok(keys.includes('Reset all to defaults')&&keys.includes('Export bindings')&&keys.includes('Import bindings'),'Shortcut backup/reset management missing');
+assert.ok(read('clip-timeline-ui.js').includes('if(globalThis.MangoShortcuts?.active)return'),'Legacy timeline keyboard listener not gated');
+assert.ok(read('clip-studio.js').includes("if(globalThis.MangoShortcuts?.active)return;if(e.key!==' '"),'Legacy Space listener not gated');
+assert.ok(read('studio-workspaces.js').includes('if(globalThis.MangoShortcuts?.active)return'),'Legacy workspace hotkeys not gated');
+console.log('PASS: visible Media Bin in viewport, internal overflow, accessible icons and unified editable shortcut manager');
