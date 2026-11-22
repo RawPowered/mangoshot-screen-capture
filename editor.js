@@ -326,26 +326,68 @@ document.getElementById('text-inline-place')?.addEventListener?.('click',commitI
 document.getElementById('text-inline-cancel')?.addEventListener?.('click',cancelInline);
 function scheduleRedraw(){if(renderPending)return;renderPending=true;requestAnimationFrame(()=>{renderPending=false;redraw();});}
 ink.addEventListener('pointerdown',event=>{
-  if(!ready||event.button!==0)return;
-  event.preventDefault();ink.setPointerCapture(event.pointerId);
-  const p=point(event),type=tool.value;
-  active={type,points:[p],size:Number(size.value)*(ink.width/ink.getBoundingClientRect().width),color:color.value,
-    text:document.querySelector('#text-value').value};
-  drawing=true;
-  if(type==='text'){snapshot();strokes.push(active);active=null;drawing=false;redraw();setReady(true);}
-  else scheduleRedraw();
+ if(!ready||event.button!==0)return;
+ const p=point(event);
+ if(textDraft)commitInline();
+ const type=tool.value;
+ if(type==='text'){
+  event.preventDefault();
+  const index=textIndexAt(p.x,p.y);
+  beginInline(index>=0?strokes[index].points[0]:p,index);
+  return;
+ }
+ if(type==='select'){
+  const index=textIndexAt(p.x,p.y);
+  selectText(index);
+  if(index<0)return;
+  event.preventDefault();
+  ink.setPointerCapture?.(event.pointerId);
+  const anchor=strokes[index].points[0];
+  dragText={index,start:p,origin:{x:anchor.x,y:anchor.y},moved:false};
+  return;
+ }
+ selectedText=-1;syncSelectedText();
+ event.preventDefault();ink.setPointerCapture?.(event.pointerId);
+ active={type,points:[p],size:Number(size.value)*(ink.width/ink.getBoundingClientRect().width),
+  color:color.value,text:''};
+ drawing=true;scheduleRedraw();
 });
 ink.addEventListener('pointermove',event=>{
-  if(!drawing||!active)return;
-  const p=point(event);
-  if(['rectangle','arrow','redact'].includes(active.type))active.points=[active.points[0],p];
-  else active.points.push(p);
-  scheduleRedraw();event.preventDefault();
+ const p=point(event);
+ if(dragText){
+  const drag=dragText,stroke=strokes[drag.index];
+  if(!stroke||stroke.type!=='text')return;
+  const dx=p.x-drag.start.x,dy=p.y-drag.start.y;
+  if(!drag.moved&&Math.hypot(dx,dy)<3)return;
+  if(!drag.moved){snapshot();drag.moved=true;}
+  const shape=editorCore?.textMetrics?.(pen,stroke),w=shape?.width||0,h=shape?.height||0;
+  stroke.points[0]={...stroke.points[0],x:Math.max(0,Math.min(ink.width-w,drag.origin.x+dx)),
+   y:Math.max(0,Math.min(ink.height-h,drag.origin.y+dy))};
+  redraw();event.preventDefault();return;
+ }
+ if(!drawing||!active)return;
+ if(['rectangle','arrow','redact'].includes(active.type))active.points=[active.points[0],p];
+ else active.points.push(p);
+ scheduleRedraw();event.preventDefault();
 });
-function finishStroke(){if(!drawing)return;drawing=false;
-  if(active){snapshot();strokes.push(active);active=null;redraw();setReady(true);}
+function finishStroke(event){
+ if(dragText){
+  const drag=dragText;dragText=null;
+  if(drag.moved){redraw();setReady(ready);label('Text moved. Ctrl+Z restores its position.');}
+  return;
+ }
+ if(!drawing)return;
+ drawing=false;
+ if(active){
+  snapshot();strokes.push(active);active=null;redraw();setReady(true);
+ }
 }
 for(const event of ['pointerup','pointercancel','lostpointercapture'])ink.addEventListener(event,finishStroke);
+ink.addEventListener('dblclick',event=>{
+ if(!ready||event.button!==0||textDraft)return;
+ const p=point(event),index=textIndexAt(p.x,p.y);
+ if(index>=0){event.preventDefault();beginInline(strokes[index].points[0],index);}
+});
 document.querySelector('#undo').addEventListener('click',undo);document.getElementById('redo')?.addEventListener('click',redo);
 document.querySelector('#clear').addEventListener('click',()=>{if(strokes.length){snapshot();strokes=[];redraw();setReady(true);}});
 window.addEventListener('keydown',event=>{if(!ready||!event.ctrlKey||event.target?.matches?.('input,textarea,select,[contenteditable]'))return;
