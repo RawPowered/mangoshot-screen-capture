@@ -255,7 +255,7 @@ function selectObject(index){
  if(selectedObject>=0&&vectorCore?.isVector?.(strokes[selectedObject])){
   tool.value='select';syncTool();switchInspectorTab('tools');
  }
- syncSelectedText();renderStrokeList();syncLayerProperties();
+ syncSelectedText();redraw();renderStrokeList();syncLayerProperties();
 }
 function updateVectorSelectionBox(){
  const box=document.getElementById('vector-selection-box'),l=strokes[selectedObject];
@@ -846,8 +846,8 @@ function syncTool(){
 }
 function chooseImageTool(name){
  if(textDraft)commitInline();
- const previous=tool.value;tool.value=name;
- if(previous!==name&&name!=='select'){selectedText=-1;selectedImage=-1;selectedObject=-1;}
+ tool.value=name;
+ if(name!=='select'&&name!=='text'){selectedText=-1;selectedImage=-1;selectedObject=-1;}
  syncTool();syncSelectedText();redraw();
 }
 tool.addEventListener('change',()=>chooseImageTool(tool.value));
@@ -1001,6 +1001,15 @@ function vectorIndexAt(x,y){
  }
  return -1;
 }
+function topLayerAt(x,y){
+ for(let i=strokes.length-1;i>=0;i--){
+  const l=strokes[i];if(l.visible===false)continue;
+  if(l.type==='text'&&(typeEffects?.hit?.(pen,l,x,y,8)??editorCore?.hitText?.(pen,l,x,y,8)))return i;
+  if(l.type==='image'&&layerCore?.hit?.(l,x,y,0))return i;
+  if(vectorCore?.isVector?.(l)&&vectorCore.hit(l,x,y,8))return i;
+ }
+ return -1;
+}
 function imageIndexAt(x,y){
  if(!layerCore)return -1;
  for(let i=strokes.length-1;i>=0;i--){
@@ -1036,7 +1045,8 @@ ink.addEventListener('pointerdown',event=>{
   scheduleRedraw();return;
  }
  if(type==='select'){
-  const index=textIndexAt(p.x,p.y);
+  const topIndex=topLayerAt(p.x,p.y);
+  const index=strokes[topIndex]?.type==='text'?topIndex:-1;
   if(index>=0){
    selectText(index);if(strokes[index].locked)return;
    event.preventDefault();ink.setPointerCapture?.(event.pointerId);
@@ -1044,7 +1054,7 @@ ink.addEventListener('pointerdown',event=>{
    dragText={index,start:p,origin:{x:anchor.x,y:anchor.y},moved:false};
    return;
   }
-  const imageIndex=imageIndexAt(p.x,p.y);
+  const imageIndex=strokes[topIndex]?.type==='image'?topIndex:-1;
   if(imageIndex>=0){
    selectImage(imageIndex);
    if(strokes[imageIndex].locked)return;
@@ -1053,7 +1063,7 @@ ink.addEventListener('pointerdown',event=>{
    dragImage={index:imageIndex,start:p,origin:{x:anchor.x,y:anchor.y},moved:false};
    return;
   }
-  const vectorIndex=vectorIndexAt(p.x,p.y);
+  const vectorIndex=vectorCore?.isVector?.(strokes[topIndex])?topIndex:-1;
   if(vectorIndex>=0){
    selectObject(vectorIndex);
    const l=strokes[vectorIndex];
