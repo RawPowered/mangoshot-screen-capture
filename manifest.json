@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "MangoShot",
-  "version": "0.6.10",
-  "description": "MangoShot: easier premium insertion, direct layer deletion and resilient full-page screenshot capture.",
+  "version": "0.6.11",
+  "description": "MangoShot: full annotated screenshot clipboard copy, custom context menu and professional inline text editing.",
   "permissions": [
     "activeTab",
     "scripting"

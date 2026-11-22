@@ -30,7 +30,7 @@ def build(out,release_tag):
         if actual['version']!=version:raise ValueError('Invalid archive manifest')
         for html in ('popup.html','editor.html'):
             if b'capture-store.js' not in z.read(html):raise ValueError(f'Capture library missing from {html}')
-        if version == '0.6.9':
+        if version in ('0.6.9','0.6.10','0.6.11'):
             for icon in ('16','32','48','128'):
                 if not z.read(f'icons/icon-{icon}.png').startswith(b'\x89PNG\r\n\x1a\n'):
                     raise ValueError(f'Brand icon-{icon} must be PNG')
@@ -38,6 +38,12 @@ def build(out,release_tag):
                 data=z.read('assets/'+asset)
                 if not (data.startswith(b'RIFF') and data[8:12]==b'WEBP'):
                     raise ValueError(f'Brand asset missing or invalid: {asset}')
+            if version == '0.6.11':
+                editor=z.read('editor.html')
+                for dep in (b'image-editor-core-v0611.js',b'image-studio-v0611.css',b'image-context-menu',b'text-inline-input'):
+                    if dep not in editor:raise ValueError('Image Studio UI missing '+dep.decode())
+                if b'ClipboardItem' not in z.read('editor.js'):
+                    raise ValueError('Clipboard image write implementation missing')
             if b'<iframe' in z.read('resources.html').lower():
                 raise ValueError('Resource directory must not embed provider frames')
     print(f'OK {target.name}: {len(files)} files; SHA-256 {hashlib.sha256(target.read_bytes()).hexdigest()}')

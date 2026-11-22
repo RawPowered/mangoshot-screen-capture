@@ -30,5 +30,5 @@ assert.ok(keyboard.includes("if(id==='rippleAlternate'){st.deleteSelection?.();r
 for(const cls of ['.v0610-card-add','.v0610-quick-add','.layer-remove','.v0610-delete-selected'])
  assert.ok(css.includes(cls),cls+' style not registered');
 assert.ok(read('clip-studio.html').includes('studio-v0610.css'),'New style not included in Clip Studio');
-assert.equal(JSON.parse(read('manifest.json')).version,'0.6.10');
+assert.equal(JSON.parse(read('manifest.json')).version,'0.6.11');
 console.log('PASS: premium one-click insertion, delete controls, selection-aware shortcuts, synchronous full-page capture protocol');
