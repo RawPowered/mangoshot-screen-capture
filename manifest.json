@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "MangoShot",
-  "version": "0.6.9",
-  "description": "MangoShot Premium Studio: branded capture and editing, 24 motion-graphic compositions and Creative Resources.",
+  "version": "0.6.10",
+  "description": "MangoShot: easier premium insertion, direct layer deletion and resilient full-page screenshot capture.",
   "permissions": [
     "activeTab",
     "scripting"
