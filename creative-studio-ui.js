@@ -13,7 +13,7 @@
  function renderZoom(){const list=el('v061-zoom-events'),track=el('v061-zoom-track');list?.replaceChildren();track?.replaceChildren();
   const total=Math.max(.01,view()?.outputDuration?.()||0);
   for(const e of currentZoom()){
-   const row=document.createElement('div');row.className='v061-zoom-row';
+   const row=document.createElement('div');row.className='v061-zoom-row';row.dataset.zoomId=e.id;row.tabIndex=0;row.setAttribute('role','button');row.setAttribute('aria-label','Edit camera keyframe at '+e.start.toFixed(2)+' seconds');
    const label=document.createElement('span');label.textContent=e.start.toFixed(2)+'s · '+Math.round(e.scale*100)+'% · focus '+Math.round(e.x*100)+'% / '+Math.round(e.y*100)+'%';
    const remove=document.createElement('button');remove.type='button';remove.textContent='Remove';
    remove.disabled=!!view()?.exporting?.();remove.addEventListener('click',()=>view().removeZoomKeyframe(e.id));
@@ -21,6 +21,7 @@
    const pin=document.createElement('span');pin.className='v061-zoom-marker';pin.style.left=Math.min(100,100*e.start/total)+'%';pin.title=label.textContent;track?.append(pin);
   }
   if(list&&!currentZoom().length)list.textContent='No camera animations yet.';
+  root.MangoZoomHUD?.refresh?.();
  }
  function addZoom(scale,x,y){const st=view();if(!st?.original?.()||st.exporting())return notify('Import a video first.');
   try{st.addZoomKeyframe(st.sequencePosition?.()||0,scale,x,y,Number(el('v061-zoom-duration').value));}

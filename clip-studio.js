@@ -296,6 +296,23 @@ globalThis.MangoClipView={
   zoomFrames:()=>clone(zoomEvents),setZoomFrames(items){zoomEvents=MangoCreativeZoom.check(items);refreshed();},
   addZoomKeyframe(at,scale,x,y,ease){if(!original||exporting)throw Error('Load a video first');remember();zoomEvents=MangoCreativeZoom.add(zoomEvents,at,scale,x,y,ease);refreshed();},
   removeZoomKeyframe(id){if(exporting)return;remember();zoomEvents=MangoCreativeZoom.remove(zoomEvents,id);refreshed();},
+  updateZoomKeyframe(id,patch){
+   if(!original||exporting)throw Error('Load video and stop export to edit camera');
+   if(!zoomEvents.some(e=>e.id===id))throw Error('Camera keyframe no longer exists');
+   const next=zoomEvents.map(e=>e.id===id?{...e,...patch,id:e.id}:e);
+   const checked=MangoCreativeZoom.check(next);
+   if(checked.some(e=>e.start>=MangoEditOps.length(segments)))throw Error('Camera keyframe must start inside the edited sequence');
+   remember();zoomEvents=checked;refreshed();
+  },
+  addZoomRange(start,end,scale,x,y,duration=.4){
+   if(!original||exporting)throw Error('Load a video first');
+   const length=MangoEditOps.length(segments);
+   if(!Number.isFinite(start)||!Number.isFinite(end)||start<0||end>=length-.005||end<=start+duration)
+    throw Error('Zoom In/Out must be within the edited sequence and separated by the transition time');
+   let next=MangoCreativeZoom.add(zoomEvents,start,scale,x,y,duration);
+   next=MangoCreativeZoom.add(next,end,1,.5,.5,duration);
+   remember();zoomEvents=next;refreshed();
+  },
   sourceFormat:()=>originalFormat,
  restoreLegacyProject(data){
   if(!original||exporting)throw new Error('Load the matching source video before restoring a project.');

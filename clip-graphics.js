@@ -2,7 +2,7 @@
    Coordinates are normalized to the video dimensions; no HTML or remote assets. */
 (function(root){
  const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
- const fontFamilies={sans:'Arial, Helvetica, sans-serif',serif:'Georgia, serif',mono:'Consolas, monospace'};
+ const fontFamilies={sans:'Arial, Helvetica, sans-serif',serif:'Georgia, serif',mono:'Consolas, monospace',rounded:'Trebuchet MS, Arial, sans-serif',condensed:'Arial Narrow, Impact, sans-serif',display:'Impact, Haettenschweiler, Arial Narrow Bold, sans-serif',handwritten:'Segoe Print, Comic Sans MS, cursive'};
  const styles={
   none:{fontSize:52,font:'sans',weight:'600',color:'#ffffff',background:'transparent',outline:'#000000',outlineWidth:0,shadow:0,align:'left',opacity:1},
   title:{fontSize:74,font:'sans',weight:'800',color:'#ffffff',background:'transparent',outline:'#101010',outlineWidth:2,shadow:12,align:'center',opacity:1},
