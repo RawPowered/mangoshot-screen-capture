@@ -202,7 +202,11 @@
  .studio-clip .v06-menu-bar>.v0617-menu-quick kbd{display:none}
 }
 @media(max-width:740px){
- .studio-image .v06-menu-bar,.studio-clip .v06-menu-bar{overflow-x:auto;overflow-y:visible;scrollbar-width:thin}
+ .studio-image .v06-menu-bar,.studio-clip .v06-menu-bar{overflow:visible;gap:0;padding:0 3px}
+ .studio-image .v06-menu-bar .v06-menu>summary,
+ .studio-clip .v06-menu-bar .v06-menu>summary{padding:8px 6px;font-size:10px}
+ .studio-image .v06-menu-bar .v06-menu:nth-of-type(n+4) .v06-menu-pop,
+ .studio-clip .v06-menu-bar .v06-menu:nth-of-type(n+4) .v06-menu-pop{left:auto;right:0}
  .studio-image .v06-menu-bar>.v0617-menu-quick,.studio-clip .v06-menu-bar>.v0617-menu-quick{display:none}
  .studio-image .v0617-shortcut-top,.studio-clip .v0617-shortcut-top{grid-template-columns:1fr}
  .studio-image .v0617-shortcut-row,.studio-clip .v0617-shortcut-row{
