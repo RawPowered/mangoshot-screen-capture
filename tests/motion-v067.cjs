@@ -1,0 +1,43 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+const root=path.resolve(__dirname,'..'),read=f=>fs.readFileSync(path.join(root,f),'utf8');
+const ctx={JSON,Date,Math,Number,String,Array,Intl};ctx.globalThis=ctx;
+for(const f of ['motion-core-v067.js','clip-graphics.js','clip-project.js'])vm.runInNewContext(read(f),ctx,{filename:f});
+const M=ctx.MangoMotion,G=ctx.MangoGraphics,P=ctx.MangoProject;
+const source={size:1200,format:'mp4',duration:8},parts=[{start:0,end:4},{start:5,end:9}];
+const layer=G.create('text','title',.5,{id:'one',text:'VIRAL TITLE',start:.5,end:3.5});
+assert.equal(layer.motion.enter.type,'none');
+for(const type of M.motionTypes){
+ const item={...layer,motion:M.defaults()};item.motion.enter={type,duration:1,ease:'easeOut'};
+ const f=M.textFrame(item,.7);assert.ok(Number.isFinite(f.alpha),type);assert.ok(Number.isFinite(f.scale),type);
+}
+const motion=M.defaults();
+motion.enter={type:'typeIn',duration:1,ease:'linear'};
+motion.exit={type:'spinLetters',duration:.5,ease:'easeOut'};
+motion.numeric={type:'countDown',from:100,to:0,duration:2,decimals:0,prefix:'',suffix:'%'};
+const animated={...layer,motion};
+assert.equal(M.textFrame(animated,.5).text,'100%');
+assert.equal(M.textFrame(animated,2.5).text,'0%');
+assert.equal(M.clock(125),'02:05');
+assert.equal(M.clock(3665),'01:01:05');
+assert.ok(M.letterProgress(0,10,.7)>M.letterProgress(9,10,.7));
+const calls=[];
+const painter={save(){},restore(){},beginPath(){},moveTo(){},lineTo(){},quadraticCurveTo(){},closePath(){},fill(){},stroke(){},translate(){},rotate(){},scale(){},
+ measureText(s){return {width:Array.from(String(s)).length*14}},fillText(v){calls.push(String(v));},strokeText(){},setLineDash(){}};
+G.render(painter,[animated],1.5,1920,1080);assert.ok(calls.length,'Animated text must paint');
+const transitions=M.setTransition([],parts,1,{type:'flash',duration:.5,ease:'easeInOut'});
+assert.equal(transitions.length,1);
+assert.equal(M.transitionAt(parts,transitions,3.9).type,'flash');
+assert.equal(M.transitionAt(parts,transitions,2.0),null);
+const project=P.pack(source,parts,[animated],[],transitions);
+const checked=P.check(project,source);
+assert.equal(checked.layers[0].motion.exit.type,'spinLetters');
+assert.equal(checked.transitions[0].type,'flash');
+assert.throws(()=>P.check({...project,layers:[{...animated,motion:{enter:{type:'javascript',duration:1,ease:'linear'}}}]},source),/Invalid/);
+assert.throws(()=>M.checkTransitions([{type:'flash',fromEnd:1,toStart:2,duration:999,ease:'linear'}]),/Invalid/);
+const html=read('clip-studio.html');
+for(const name of ['motion-core-v067.js','motion-ui-v067.js','studio-v067.css'])assert.ok(html.includes(name));
+assert.ok(html.indexOf('motion-core-v067.js')<html.indexOf('clip-graphics.js'));
+const editor=read('clip-studio.js');
+assert.ok(editor.includes('MangoMotion.paintTransition'),'Transition renderer must serve preview/export');
+assert.ok(editor.includes('transitions:clone(transitions)'),'Transition state must be undoable');
+console.log('PASS: keyframed entry/exit, numeric displays, transition boundary checks and project roundtrip');
