@@ -18,3 +18,4 @@ jobs:
             node "tests/${test}.cjs"
           done
           node tests/motion-v067.cjs
+          node tests/visual-inspector-v068.cjs
