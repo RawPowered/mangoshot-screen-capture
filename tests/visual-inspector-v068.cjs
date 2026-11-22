@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const root=path.resolve(__dirname,'..'),read=f=>fs.readFileSync(path.join(root,f),'utf8');
 const html=read('clip-studio.html'),js=read('visual-inspector-v068.js'),css=read('studio-v068.css'),motion=read('motion-ui-v067.js');
-assert.equal(JSON.parse(read('manifest.json')).version,'0.6.13');
+assert.equal(JSON.parse(read('manifest.json')).version,'0.6.14');
 assert.ok(html.includes('studio-v068.css'),'New stylesheet missing');
 assert.ok(html.indexOf('motion-ui-v067.js')>=0&&html.indexOf('motion-ui-v067.js')<html.indexOf('visual-inspector-v068.js'),
  'Compact controls must initialize AFTER native motion event bindings');

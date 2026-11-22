@@ -12,7 +12,7 @@ assert.ok(background.includes("if(message.type==='MANGO_POPUP_INIT'){"),'Startup
 assert.ok(background.includes("return false;"),'Startup must not rely on asynchronous response port');
 assert.ok(background.includes("existing.id===message.captureId"),'Uncertain startup response must be idempotent');
 assert.ok(popup.includes("windowId:tab.windowId"),'Capture must bind the source browser window');
-assert.ok(popup.includes("initializeFullPage(tab,id)"),'Popup must use retriable startup handshake');
+assert.ok(popup.includes("initializeCapture(tab,id,mode,intent)"),'Popup must use retriable startup handshake');
 assert.ok(premium.includes("v0610-quick-add"),'Sticky selected preset actions missing');
 assert.ok(premium.includes("v0610-card-add"),'Direct add affordance missing');
 assert.ok(premium.includes("button.addEventListener('dblclick'"),'Double-click insertion missing');
@@ -30,5 +30,5 @@ assert.ok(keyboard.includes("if(id==='rippleAlternate'){st.deleteSelection?.();r
 for(const cls of ['.v0610-card-add','.v0610-quick-add','.layer-remove','.v0610-delete-selected'])
  assert.ok(css.includes(cls),cls+' style not registered');
 assert.ok(read('clip-studio.html').includes('studio-v0610.css'),'New style not included in Clip Studio');
-assert.equal(JSON.parse(read('manifest.json')).version,'0.6.13');
+assert.equal(JSON.parse(read('manifest.json')).version,'0.6.14');
 console.log('PASS: premium one-click insertion, delete controls, selection-aware shortcuts, synchronous full-page capture protocol');

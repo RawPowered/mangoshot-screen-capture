@@ -26,3 +26,5 @@ jobs:
           node tests/image-editor-v0611.cjs
           node tests/image-layers-v0612.cjs
           node tests/image-typefx-v0613.cjs
+          node tests/capture-output-v0614.cjs
+          node tests/area-capture-v0614.cjs

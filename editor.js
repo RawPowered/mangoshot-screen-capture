@@ -6,6 +6,7 @@ const tool=document.querySelector('#tool'),size=document.querySelector('#size'),
 const params=new URLSearchParams(location.search),source=Number(params.get('source'));
 const mode=params.get('mode')==='full'?'full':'visible',captureId=crypto.randomUUID();
 const stored=params.get('stored'),captureError=params.get('capture_error');
+const clipboardMode=params.get('clipboard')==='1',captureOutput=globalThis.MangoCaptureOutputV0614;
 const call=(fn,...args)=>new Promise((resolve,reject)=>{
   try{fn(...args,value=>{const error=api.runtime.lastError;error?reject(new Error(error.message)):resolve(value);});}
   catch(error){reject(error);}
@@ -40,6 +41,16 @@ document.querySelector('#zoom').addEventListener('change',zoom);
 window.addEventListener('resize',()=>{if(document.querySelector('#zoom').value==='fit')zoom();});
 async function assemble(){
   if(!meta || frames.length!==meta.frames || frames.some(f=>!f?.dataUrl))throw new Error('Missing screenshot frames.');
+  if(meta.selection){
+    if(!captureOutput?.compose)throw Error('Selected-area compositor is not available.');
+    await captureOutput.compose(meta,frames,base);
+    ink.width=base.width;ink.height=base.height;
+    frames=[];setReady(true);zoom();
+    label('Selected screenshot ready · '+base.width+' × '+base.height+' px');
+    const info=document.getElementById('image-meta');
+    if(info)info.textContent=base.width+' × '+base.height+' px · original preserved';
+    activate();return;
+  }
   const first=await image(frames[0].dataUrl),scale=first.naturalWidth/meta.width;
   const width=first.naturalWidth,height=Math.round(meta.pageHeight*scale);
   if(width>16384||height>30000||width*height>48000000)throw new Error('Screenshot is too large to edit safely.');
@@ -73,6 +84,13 @@ api.runtime.onMessage.addListener((message,sender,reply)=>{
 });
 async function begin(){
   try{
+    if(clipboardMode){
+      const landing=document.getElementById('image-clipboard-landing');
+      if(landing)landing.hidden=false;
+      label('Open an image from your clipboard. Select Paste image or press Ctrl+V.');
+      document.getElementById('clipboard-paste-zone')?.focus?.({preventScroll:true});
+      return;
+    }
     if(captureError){label('Capture failed: '+captureError);return;}
     if(!stored)throw new Error('No completed capture was provided. Open MangoShot from a webpage.');
     label('Loading screenshot from private local storage…');
@@ -86,6 +104,72 @@ async function begin(){
     await globalThis.MangoCaptureStore.remove(stored).catch(()=>{});
   }catch(error){label('Capture failed: '+error.message);}
 }
+
+/* Explicit clipboard import: never read in the background or on page load.
+ * User click and Ctrl+V event are both permitted; no blanket clipboardRead permission. */
+async function loadClipboardImage(blob){
+ if(!captureOutput?.blobImage)throw Error('Image clipboard module is unavailable.');
+ if(ready&&strokes.length)throw Error('Finish or export the current annotated image before replacing it.');
+ const next=await captureOutput.blobImage(blob);
+ if(next.width*next.height>48000000)throw Error('The clipboard image is too large.');
+ base.width=next.width;base.height=next.height;
+ ink.width=next.width;ink.height=next.height;
+ ctx.clearRect(0,0,next.width,next.height);ctx.drawImage(next,0,0);
+ meta={width:next.width,height:next.height,pageHeight:next.height,dpr:1,frames:1,full:false};
+ strokes=[];history=[];redoHistory=[];selectedText=-1;selectedImage=-1;selectedObject=-1;
+ const landing=document.getElementById('image-clipboard-landing');
+ if(landing)landing.hidden=true;
+ setReady(true);zoom();redraw();
+ const info=document.getElementById('image-meta');
+ if(info)info.textContent=next.width+' × '+next.height+' px · clipboard image';
+ label('Clipboard image imported · '+next.width+' × '+next.height+' px. Start annotating.');
+}
+async function clipboardAction(action){
+ const message=document.getElementById('clipboard-status');
+ if(message)message.textContent='Reading image…';
+ try{
+  const blob=await action();
+  await loadClipboardImage(blob);
+ }catch(error){
+  if(message)message.textContent=error.message+' You can also paste with Ctrl+V.';
+  label('Clipboard import: '+error.message);
+ }
+}
+document.getElementById('clipboard-read')?.addEventListener?.('click',()=>{
+ void clipboardAction(()=>captureOutput.read());
+});
+document.getElementById('clipboard-focus')?.addEventListener?.('click',()=>{
+ document.getElementById('clipboard-paste-zone')?.focus?.();
+ const message=document.getElementById('clipboard-status');
+ if(message)message.textContent='Press Ctrl+V to paste an image.';
+});
+document.getElementById('clipboard-open-file')?.addEventListener?.('click',()=>{
+ document.getElementById('clipboard-file')?.click?.();
+});
+document.getElementById('clipboard-file')?.addEventListener?.('change',event=>{
+ const blob=event.target.files?.[0];
+ if(blob)void clipboardAction(()=>Promise.resolve(blob));
+ event.target.value='';
+});
+document.addEventListener?.('paste',event=>{
+ const landing=document.getElementById('image-clipboard-landing');
+ if(!landing||landing.hidden||ready)return;
+ const items=Array.from(event.clipboardData?.items||[]);
+ const match=items.find(x=>['image/png','image/jpeg','image/webp'].includes(x.type));
+ if(!match){
+  const msg=document.getElementById('clipboard-status');
+  if(msg)msg.textContent='Clipboard has no image. Copy an image and press Ctrl+V.';
+  return;
+ }
+ event.preventDefault();
+ const blob=match.getAsFile?.();
+ if(blob)void clipboardAction(()=>Promise.resolve(blob));
+});
+document.getElementById('clipboard-import')?.addEventListener?.('click',()=>{
+ const url=api.runtime.getURL('editor.html')+'?clipboard=1';
+ void call(api.tabs.create.bind(api.tabs),{url,active:true})
+   .catch(error=>label('Could not open clipboard editor: '+error.message));
+});
 
 function point(event){const rect=ink.getBoundingClientRect();return {x:(event.clientX-rect.left)*ink.width/rect.width,
   y:(event.clientY-rect.top)*ink.height/rect.height,p:event.pointerType==='pen'?Math.max(.2,event.pressure||.5):1};}
@@ -127,9 +211,28 @@ function drawStroke(stroke){
   }
   pen.restore();
 }
+function draftTextLayer(){
+ if(!textDraft||!inlineInput)return null;
+ const existing=textDraft.index>=0?strokes[textDraft.index]:null;
+ const value=String(inlineInput.value||'');
+ if(!value)return null;
+ const visibleSize=Math.max(12,Number(textFontSize?.value||48));
+ const scale=existing?.scaleY||1;
+ return existing?{...existing,text:value,fontSize:visibleSize/scale,fontFamily:textFontFamily?.value||'sans',
+   styleId:textPreset,color:color.value}:
+  {type:'text',text:value,points:[{x:textDraft.x,y:textDraft.y,p:1}],
+   fontSize:visibleSize,scaleX:1,scaleY:1,styleId:textPreset,
+   fontFamily:textFontFamily?.value||'sans',color:color.value,effects:typeEffects?.initial?.()};
+}
 function redraw(){
  pen.clearRect(0,0,ink.width,ink.height);
- for(const stroke of strokes)drawStroke(stroke);
+ const preview=draftTextLayer();
+ for(let i=0;i<strokes.length;i++){
+  // Replacing the existing text in-place preserves its layer order as the user types.
+  if(textDraft?.index===i){if(preview)drawStroke(preview);}
+  else drawStroke(strokes[i]);
+ }
+ if(textDraft?.index===-1&&preview)drawStroke(preview);
  drawStroke(active);updateSelectionBox();updateImageSelectionBox();
 }
 function cloneStrokes(value){return JSON.parse(JSON.stringify(value));}
@@ -240,15 +343,22 @@ function updateSelectedText(patch){
 function deleteSelectedText(){return selectedStroke()?removeLayerAt(selectedText):false;}
 function cancelInline(){
  textDraft=null;if(inline)inline.hidden=true;
- updateEditorControls();updateSelectionBox();
+ redraw();updateEditorControls();updateSelectionBox();
 }
 function positionInline(pointValue){
  if(!inline||!ink.width||!ink.height)return;
- inline.style.left=100*Math.max(0,Math.min(ink.width,pointValue.x))/ink.width+'%';
- inline.style.top=100*Math.max(0,Math.min(ink.height,pointValue.y))/ink.height+'%';
+ // Keep the edit field NEXT to the rendered text instead of hiding its live preview.
  const screenScale=ink.getBoundingClientRect?.().width/ink.width||1;
- const textPx=Math.max(16,Number(textFontSize?.value||48)*screenScale);
- inlineInput.style.fontSize=textPx+'px';
+ const nativePanelWidth=350/Math.max(.05,screenScale);
+ const draft=draftTextLayer();
+ const box=draft?(typeEffects?.bounds?.(pen,draft)||editorCore?.textMetrics?.(pen,draft)):null;
+ const right=pointValue.x+(box?.width||80)+24/Math.max(.05,screenScale);
+ const left=pointValue.x-nativePanelWidth-20/Math.max(.05,screenScale);
+ let x=right+nativePanelWidth<=ink.width?right:left>=0?left:Math.max(0,pointValue.x);
+ if(x+nativePanelWidth>ink.width&&ink.width>nativePanelWidth)x=ink.width-nativePanelWidth;
+ inline.style.left=100*Math.max(0,x)/ink.width+'%';
+ inline.style.top=100*Math.max(0,Math.min(ink.height-1,pointValue.y))/ink.height+'%';
+ inlineInput.style.fontSize=Math.max(14,Math.min(24,Number(textFontSize?.value||48)*screenScale))+'px';
 }
 function beginInline(pos,index=-1){
  if(!ready||!inline||!inlineInput)return;
@@ -265,13 +375,13 @@ function beginInline(pos,index=-1){
   color.value=existing.color||color.value;
  }
  inlineInput.value=existing?.text||'';
- positionInline(pos);inline.hidden=false;updateEditorControls();updateSelectionBox();
+ positionInline(pos);inline.hidden=false;updateEditorControls();redraw();
  inlineInput.focus?.({preventScroll:true});
  if(existing)inlineInput.select?.();
 }
 function commitInline(){
  if(!textDraft)return false;
- const value=(inlineInput?.value||'').trim(),draft=textDraft;
+ const value=String(inlineInput?.value||'').replace(/\r\n/g,'\n').trim(),draft=textDraft;
  if(!value){cancelInline();label('Empty text was not added.');return false;}
  const old=draft.index>=0?strokes[draft.index]:null;
  snapshot();
@@ -453,18 +563,37 @@ document.getElementById('text-fill-color')?.addEventListener?.('change',event=>{
  if(selectedStroke())updateSelectedText({color:event.target.value});
 });
 
+// Layer FX sliders, offsets and colors paint while being adjusted.
+const fxGestures=new WeakMap();
+function fxValue(input){
+ return input.type==='checkbox'?input.checked:
+  input.type==='color'?input.value:
+  input.dataset.fxPercent!==undefined?Number(input.value)/100:Number(input.value);
+}
 for(const input of document.querySelectorAll?.('[data-fx-group]')||[]){
- input.addEventListener('change',()=>{
+ function paintFx(live){
   const current=selectedStroke();
   if(!current||current.locked||!typeEffects)return;
   const group=input.dataset.fxGroup,field=input.dataset.fxField;
   const fx=typeEffects.merged(current.effects);
   if(!fx[group]||!(field in fx[group]))return;
-  fx[group][field]=input.type==='checkbox'?input.checked:
-   input.type==='color'?input.value:
-   input.dataset.fxPercent!==undefined?Number(input.value)/100:Number(input.value);
-  updateSelectedText({effects:typeEffects.merged(fx)});
- });
+  const next=fxValue(input);
+  if(fx[group][field]===next){
+   if(!live&&fxGestures.has(input)){fxGestures.delete(input);setReady(ready);syncTextEffects();}
+   return;
+  }
+  fx[group][field]=next;const edited=typeEffects.merged(fx);
+  if(live){
+   if(!fxGestures.has(input)){snapshot();fxGestures.set(input,selectedText);}
+   strokes[selectedText]={...current,effects:edited};
+   scheduleRedraw();
+  }else if(fxGestures.has(input)){
+   fxGestures.delete(input);strokes[selectedText]={...current,effects:edited};
+   redraw();setReady(ready);syncTextEffects();
+  }else updateSelectedText({effects:edited});
+ }
+ input.addEventListener('input',()=>paintFx(true));
+ input.addEventListener('change',()=>paintFx(false));
 }
 for(const button of document.querySelectorAll?.('[data-fx-preset]')||[]){
  button.addEventListener('click',()=>{
@@ -595,10 +724,22 @@ for(const button of document.querySelectorAll?.('[data-text-preset]')||[]){
   syncSelectedText();
  });
 }
+let sizeGesture=null;
 textFontSize?.addEventListener?.('input',()=>{
  const output=document.getElementById('text-size-readout');
  if(output)output.textContent=textFontSize.value+' px';
- if(textDraft)positionInline(textDraft);
+ if(textDraft){positionInline(textDraft);scheduleRedraw();return;}
+ const selected=selectedStroke();
+ if(!selected||selected.locked)return;
+ if(!sizeGesture||sizeGesture.index!==selectedText){
+  snapshot();
+  sizeGesture={index:selectedText,base:cloneStrokes([selected])[0]};
+ }
+ const initial=sizeGesture.base,originalSize=Math.max(1,(initial.fontSize||48)*(initial.scaleY??1));
+ const ratio=Math.max(.05,Math.min(25,Number(textFontSize.value)/originalSize));
+ strokes[selectedText]={...selected,scaleX:Math.max(.08,Math.min(25,(initial.scaleX??1)*ratio)),
+  scaleY:Math.max(.08,Math.min(25,(initial.scaleY??1)*ratio))};
+ scheduleRedraw();
 });
 function updateVisualFontSize(value){
  const layer=selectedStroke();if(!layer)return false;
@@ -608,17 +749,45 @@ function updateVisualFontSize(value){
   scaleY:Math.max(.08,Math.min(25,(layer.scaleY??1)*ratio))});
 }
 textFontSize?.addEventListener?.('change',()=>{
- if(selectedStroke())updateVisualFontSize(Number(textFontSize.value));
+ if(textDraft){scheduleRedraw();return;}
+ if(sizeGesture){sizeGesture=null;setReady(ready);syncSelectedText();}
+ else if(selectedStroke())updateVisualFontSize(Number(textFontSize.value));
 });
 textFontFamily?.addEventListener?.('change',()=>{
  if(selectedStroke())updateSelectedText({fontFamily:textFontFamily.value});
 });
+// The inspector editor is live. One continuous typing session = one Undo step.
+let textTyping=null;
+textContent?.addEventListener?.('focus',()=>{textTyping=null;});
+textContent?.addEventListener?.('input',()=>{
+ const selected=selectedStroke();if(!selected||selected.locked||textDraft)return;
+ if(selected.text===textContent.value)return;
+ if(!textTyping||textTyping.index!==selectedText){
+  snapshot();textTyping={index:selectedText,original:selected.text};
+ }
+ strokes[selectedText]={...selected,text:String(textContent.value).slice(0,1000)};
+ scheduleRedraw();
+});
+textContent?.addEventListener?.('blur',()=>{
+ if(!textTyping)return;
+ if(textTyping.index===selectedText&&!String(textContent.value||'').trim()){
+  strokes[selectedText]={...strokes[selectedText],text:textTyping.original};
+  history.pop();redraw();
+  label('Blank text was not saved. Use Delete to remove the text layer.');
+ }
+ textTyping=null;setReady(ready);syncSelectedText();
+});
 textContent?.addEventListener?.('change',()=>{
- if(selectedStroke()&&textContent.value.trim())updateSelectedText({text:textContent.value.trim()});
+ // Legacy scripted change events still update content, without duplicating typed history.
+ if(textTyping)return;
+ const selected=selectedStroke();
+ if(selected&&!selected.locked&&textContent.value.trim()&&selected.text!==textContent.value)
+  updateSelectedText({text:textContent.value});
 });
 color.addEventListener('change',()=>{
  if(selectedStroke())updateSelectedText({color:color.value});
 });
+inlineInput?.addEventListener?.('input',()=>{if(textDraft){scheduleRedraw();}});
 inlineInput?.addEventListener?.('keydown',event=>{
  if(event.key==='Escape'){event.preventDefault();event.stopPropagation();cancelInline();return;}
  if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){

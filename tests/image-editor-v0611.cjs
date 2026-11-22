@@ -83,7 +83,13 @@ async function settle(){await new Promise(resolve=>setTimeout(resolve,15));}
  get('tool').value='text';fire('tool','change');
  fire('ink','pointerdown',{button:0,pointerId:1,clientX:100,clientY:120,preventDefault(){}});
  assert.equal(get('text-inline').hidden,false);
+ get('text-inline-input').value='LIVE BEFORE COMMIT';
+ drawCalls.length=0;
+ fire('text-inline-input','input');
+ assert.ok(drawCalls.some(x=>x==='text:LIVE BEFORE COMMIT'),
+  'Typing must update screenshot Canvas before the user presses Place');
  get('text-inline-input').value='Hello MangoShot';
+ fire('text-inline-input','input');
  fire('text-inline-input','keydown',{key:'Enter',shiftKey:false,isComposing:false,preventDefault(){},stopPropagation(){}});
  assert.equal(get('text-inline').hidden,true);
  assert.equal(get('tool').value,'select','Placed text must remain movable');
@@ -97,6 +103,17 @@ async function settle(){await new Promise(resolve=>setTimeout(resolve,15));}
  const moved=box.style.left;
  assert.notEqual(moved,before,'Dragging a text object must update its position');
  fire('undo','click');assert.equal(box.style.left,before,'Undo restores original text geometry');
+ // Inspector text editing updates immediately with one history step per typing session.
+ get('text-content').value='Live inspector typing';
+ drawCalls.length=0;
+ fire('text-content','focus');
+ fire('text-content','input');
+ assert.ok(drawCalls.some(x=>x==='text:Live inspector typing'),
+  'Type inspector text must immediately paint on screenshot');
+ fire('text-content','blur');
+ fire('undo','click');
+ assert.ok(drawCalls.some(x=>x==='text:Hello MangoShot'),
+  'Undo restores the text before the continuous typing session');
  // Right-click menu must use FULL native screenshot, with both base + ink.
  const menu=get('image-context-menu');
  fire('canvas-wrap','contextmenu',{clientX:200,clientY:140,preventDefault(){},stopPropagation(){}});
@@ -114,5 +131,5 @@ async function settle(){await new Promise(resolve=>setTimeout(resolve,15));}
  actionItems.find(x=>x.dataset.imageAction==='copy-original').fire('click');
  activeCopy=false;await settle();
  assert.equal(drawCalls.filter(x=>x==='image').length,1);
- console.log('PASS: inline text, move/undo, full-resolution annotated PNG clipboard and context menu');
+ console.log('PASS: live inline and inspector text with undo, full-resolution annotated PNG clipboard and context menu');
 })().catch(error=>{console.error(error);process.exitCode=1});

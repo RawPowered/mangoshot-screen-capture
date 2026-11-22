@@ -22,6 +22,11 @@ function editorURL(id,error){
   if(error)params.set('capture_error',String(error).slice(0,400));
   return api.runtime.getURL('editor.html')+'?'+params.toString();
 }
+function resultURL(id,error){
+ const params=new URLSearchParams();params.set('stored',id);
+ if(error)params.set('capture_error',String(error).slice(0,400));
+ return api.runtime.getURL('capture-result.html')+'?'+params.toString();
+}
 async function complete(entry,error){
   if(sessions.get(entry.source)!==entry)return;
   sessions.delete(entry.source);
@@ -34,7 +39,7 @@ async function complete(entry,error){
       catch(e){error='Could not save screenshot locally: '+e.message;}
     }
   }
-  await exec(api.tabs.create.bind(api.tabs),{url:editorURL(entry.id,error),active:true});
+  await exec(api.tabs.create.bind(api.tabs),{url:entry.intent==='copy'?resultURL(entry.id,error):editorURL(entry.id,error),active:true});
 }
 api.runtime.onMessage.addListener((message,sender,respond)=>{
   if(!message||typeof message.type!=='string')return;
@@ -42,9 +47,10 @@ api.runtime.onMessage.addListener((message,sender,respond)=>{
     // Reply synchronously: startup must not depend on a transient MV3 async port.
     // The trusted popup supplies the tab it just queried under the activeTab gesture.
     if(!fromPopup(sender))respond({ok:false,error:'Start capture with the MangoShot toolbar.'});
-    else if(message.mode!=='full'||!globalThis.MangoCaptureStore.valid(message.captureId)||
+    else if(!['full','area'].includes(message.mode)||!globalThis.MangoCaptureStore.valid(message.captureId)||
        !Number.isInteger(message.source)||message.source<1||
-       !Number.isInteger(message.windowId)||message.windowId<0)
+       !Number.isInteger(message.windowId)||message.windowId<0||
+       (message.intent!=null&&!['copy','edit'].includes(message.intent)))
       respond({ok:false,error:'Invalid capture session.'});
     else if(sessions.has(message.source)){
       const existing=sessions.get(message.source);
@@ -54,6 +60,7 @@ api.runtime.onMessage.addListener((message,sender,respond)=>{
     }
     else{
       sessions.set(message.source,{id:message.captureId,source:message.source,windowId:message.windowId,
+        mode:message.mode,intent:message.intent==='copy'?'copy':'edit',
         started:Date.now(),nextIndex:0,meta:null,frames:[],lastFrame:0});
       respond({ok:true,captureId:message.captureId});
     }
@@ -66,7 +73,7 @@ api.runtime.onMessage.addListener((message,sender,respond)=>{
   })(),respond);
   if(message.type==='MANGO_SETUP'){
     const entry=sessions.get(sender.tab?.id);
-    respond(validSource(sender,entry)?{ok:true,captureId:entry.id,mode:'full'}:
+    respond(validSource(sender,entry)?{ok:true,captureId:entry.id,mode:entry.mode||'full'}:
       {ok:false,error:'Capture session expired. Try starting again from the toolbar.'});
     return false;
   }
@@ -76,7 +83,7 @@ api.runtime.onMessage.addListener((message,sender,respond)=>{
       respond({ok:false,error:'Capture session expired. Restart from the MangoShot toolbar.'});
     else if(Date.now()-entry.started>180000)
       respond({ok:false,error:'Screenshot capture timed out. Start again.'});
-    else if(entry.meta||!m||!Number.isFinite(m.width)||!Number.isFinite(m.height)||
+    else if(entry.mode==='area'||entry.meta||!m||!Number.isFinite(m.width)||!Number.isFinite(m.height)||
         !Number.isFinite(m.dpr)||m.dpr<=0||!Number.isInteger(m.frames)||
         m.width<1||m.height<1||m.frames<1||m.frames>40||
         !Number.isFinite(m.pageHeight)||m.pageHeight<1||m.pageHeight>30000||m.width*m.pageHeight*m.dpr*m.dpr>48000000)
@@ -84,6 +91,40 @@ api.runtime.onMessage.addListener((message,sender,respond)=>{
     else {entry.meta=m;respond({ok:true,frames:m.frames});}
     return false;
   }
+  if(message.type==='MANGO_AREA_CANCEL'){
+    const entry=sessions.get(sender.tab?.id);
+    if(validSource(sender,entry)&&entry.id===message.captureId&&entry.mode==='area'){
+      sessions.delete(entry.source);respond({ok:true});
+    }else respond({ok:false,error:'Selection capture session expired.'});
+    return false;
+  }
+  if(message.type==='MANGO_AREA_COMMIT')return reply((async()=>{
+    const entry=sessions.get(sender.tab?.id),r=message.rect,v=message.viewport;
+    try{
+    if(!validSource(sender,entry)||entry.id!==message.captureId||entry.mode!=='area'||entry.meta)
+      throw Error('Selection session expired or was already completed.');
+    if(Date.now()-entry.started>120000)throw Error('Area selection timed out.');
+    if(!r||!v||[r.x,r.y,r.width,r.height,v.width,v.height,v.dpr].some(x=>!Number.isFinite(x))||
+      v.width<1||v.height<1||v.dpr<=0||v.width>16000||v.height>16000||
+      r.x<0||r.y<0||r.width<6||r.height<6||
+      r.x+r.width>v.width+1||r.y+r.height>v.height+1||
+      r.width*r.height*v.dpr*v.dpr>48000000)
+      throw Error('The selection is invalid or too large.');
+    const tab=await exec(api.tabs.get.bind(api.tabs),entry.source);
+    if(!tab.active||tab.windowId!==entry.windowId)
+      throw Error('Keep the source page active until selection capture completes.');
+    const dataUrl=await exec(api.tabs.captureVisibleTab.bind(api.tabs),entry.windowId,{format:'png'});
+    if(!globalThis.MangoCaptureStore.png(dataUrl))throw Error('Browser returned an invalid selection screenshot.');
+    entry.meta={width:v.width,height:v.height,pageHeight:v.height,dpr:v.dpr,frames:1,full:false,
+      selection:{x:r.x,y:r.y,width:r.width,height:r.height}};
+    entry.frames=[{index:0,scrollY:0,dataUrl}];entry.nextIndex=1;
+    await complete(entry);return {captured:true};
+    }catch(error){
+      if(entry&&sessions.get(entry.source)===entry)
+        await complete(entry,error.message).catch(()=>{});
+      throw error;
+    }
+  })(),respond);
   if(['MANGO_SOURCE_FRAME','MANGO_SOURCE_DONE','MANGO_SOURCE_ERROR'].includes(message.type)){
     return reply((async()=>{
       const entry=sessions.get(sender.tab?.id);
