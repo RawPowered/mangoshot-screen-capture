@@ -193,7 +193,21 @@ function syncSelectedText(){
   button.setAttribute('aria-pressed',String(button.dataset.textPreset===textPreset));
  const out=document.getElementById('text-size-readout');
  if(out&&textFontSize)out.textContent=textFontSize.value+' px';
- updateEditorControls();updateSelectionBox();
+ syncTextEffects();updateEditorControls();updateSelectionBox();
+}
+function syncTextEffects(){
+ const layer=selectedStroke(),fx=typeEffects?.merged?.(layer?.effects);
+ for(const input of document.querySelectorAll?.('[data-fx-group]')||[]){
+  const group=input.dataset.fxGroup,field=input.dataset.fxField,value=fx?.[group]?.[field];
+  input.disabled=!layer||!!layer.locked;
+  if(value==null)continue;
+  if(input.type==='checkbox')input.checked=value===true;
+  else if(input.dataset.fxPercent!==undefined)input.value=String(Math.round(value*100));
+  else input.value=String(value);
+ }
+ for(const button of document.querySelectorAll?.('[data-fx-preset]')||[]){
+  button.disabled=!layer||!!layer.locked;
+ }
 }
 function updateEditorControls(){
  const selected=selectedStroke(),textMode=tool.value==='text'||!!selected;
@@ -360,6 +374,9 @@ function syncLayerProperties(){
  if(featherLabel&&feather)featherLabel.textContent=feather.value+' px';
  const inspectorState=document.getElementById('image-inspector-state');
  if(inspectorState)inspectorState.textContent=l?(l.type==='image'?'IMAGE LAYER':l.type==='text'?'TEXT LAYER':'ANNOTATION'):'IMAGE STUDIO';
+ const lock=document.getElementById('image-keep-ratio');if(lock)lock.disabled=!l||l.locked||!['image','text'].includes(l.type);
+ const ratioHint=document.getElementById('image-transform-readout');
+ if(ratioHint&&!resizeDrag)ratioHint.textContent='Drag corners to resize · hold Shift to stretch';
 }
 async function importImages(files){
  if(!ready||!layerCore){label('Open a screenshot before importing an image.');return;}
@@ -407,7 +424,16 @@ for(const [id,prop] of [['image-layer-x','x'],['image-layer-y','y'],['image-laye
  document.getElementById(id)?.addEventListener?.('change',event=>{
   const index=selectedAnyIndex(),layer=strokes[index],v=Number(event.target.value);
   if(!layer||!Number.isFinite(v)||layer.locked)return;
-  if(['width','height'].includes(prop)&&layer.type==='image')replaceLayer(index,{[prop]:Math.max(1,Math.round(v))});
+  if(['width','height'].includes(prop)&&['image','text'].includes(layer.type)&&typeEffects?.applyResize){
+   const b=layer.type==='image'?layerCore.bounds(layer):typeEffects.bounds(pen,layer);
+   const target={...b},k=Math.max(.05,v)/b[prop],ratioLocked=
+     document.getElementById('image-keep-ratio')?.checked!==false&&!event.shiftKey;
+   target[prop]=Math.max(1,v);
+   if(ratioLocked)target[prop==='width'?'height':'width']=
+     b[prop==='width'?'height':'width']*k;
+   replaceLayer(index,typeEffects.applyResize(layer,b,target));
+  }
+  else if(['width','height'].includes(prop)&&layer.type==='image')replaceLayer(index,{[prop]:Math.max(1,Math.round(v))});
   else if(['x','y'].includes(prop)){
    snapshot();layer.points[0]={...layer.points[0],[prop]:Math.round(v)};
    redraw();setReady(ready);syncLayerProperties();
@@ -426,6 +452,30 @@ document.getElementById('text-fill-color')?.addEventListener?.('change',event=>{
  color.value=event.target.value;
  if(selectedStroke())updateSelectedText({color:event.target.value});
 });
+
+for(const input of document.querySelectorAll?.('[data-fx-group]')||[]){
+ input.addEventListener('change',()=>{
+  const current=selectedStroke();
+  if(!current||current.locked||!typeEffects)return;
+  const group=input.dataset.fxGroup,field=input.dataset.fxField;
+  const fx=typeEffects.merged(current.effects);
+  if(!fx[group]||!(field in fx[group]))return;
+  fx[group][field]=input.type==='checkbox'?input.checked:
+   input.type==='color'?input.value:
+   input.dataset.fxPercent!==undefined?Number(input.value)/100:Number(input.value);
+  updateSelectedText({effects:typeEffects.merged(fx)});
+ });
+}
+for(const button of document.querySelectorAll?.('[data-fx-preset]')||[]){
+ button.addEventListener('click',()=>{
+  const current=selectedStroke();if(!current||current.locked||!typeEffects)return;
+  const p=typeEffects.preset(button.dataset.fxPreset);
+  updateSelectedText({effects:p.effects,color:p.color});
+  switchInspectorTab('type');
+  label('Applied '+button.textContent+' text style. All effects remain editable.');
+ });
+}
+
 function beginMaskTool(mode){
  if(!selectedImageStroke()){label('Select an imported image layer before masking.');switchInspectorTab('layers');return;}
  tool.value=mode;syncTool();switchInspectorTab('mask');
