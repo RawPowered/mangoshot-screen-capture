@@ -119,12 +119,16 @@ function commitSequence(next,message,newLayers=layers){
  byId('in').value='0';byId('out').value=out.toFixed(2);
  refreshed();label(message);return true;
 }
-function applyTransaction(transaction,message){
+function applyTransaction(transaction,message,removedRanges=null){
  if(!transaction||!original||exporting)return false;
  const same=JSON.stringify(segments)===JSON.stringify(transaction.segments)&&JSON.stringify(layers)===JSON.stringify(transaction.layers)
   &&JSON.stringify(globalThis.MangoClipTimeline?.markers?.()||[])===JSON.stringify(transaction.markers);
  if(same){label('Nothing changed. Choose a different range or clip.');return false;}
- remember();segments=clone(transaction.segments);layers=clone(transaction.layers);
+ remember();
+ if(Array.isArray(removedRanges)&&removedRanges.length){
+  for(const range of [...removedRanges].sort((a,b)=>b.start-a.start))zoomEvents=MangoCreativeZoom.ripple(zoomEvents,range.start,range.end);
+ }
+ segments=clone(transaction.segments);layers=clone(transaction.layers);
  selectedClipIndex=null;rangeSelected=false;
  const length=MangoEditOps.length(segments);
  byId('in').max=byId('out').max=length.toFixed(2);
@@ -137,7 +141,7 @@ function applyTransaction(transaction,message){
 function rippleDelete(a,b){
  if(!original||exporting)return false;
  try{const transaction=MangoSequenceOps.range(segments,layers,globalThis.MangoClipTimeline?.markers?.()||[],a,b);
-  return applyTransaction(transaction,'Ripple deleted '+time(transaction.removed)+' and closed the gap. Undo restores video, graphics and markers.');
+  return applyTransaction(transaction,'Ripple deleted '+time(transaction.removed)+' and closed the gap. Undo restores video, graphics and markers.',[{start:a,end:b}]);
  }catch(e){label('Ripple delete failed: '+e.message);return false;}
 }
 function deleteSelection(){if(!original||exporting)return false;
@@ -145,7 +149,8 @@ function deleteSelection(){if(!original||exporting)return false;
   const transaction=rangeSelected?
    MangoSequenceOps.range(segments,layers,globalThis.MangoClipTimeline?.markers?.()||[],Number(byId('in').value),Number(byId('out').value)):
    MangoSequenceOps.clip(segments,layers,globalThis.MangoClipTimeline?.markers?.()||[],selectedClipIndex);
-  return applyTransaction(transaction,'Ripple deleted '+time(transaction.removed)+' and closed the gap. Undo restores everything.');
+  const range=rangeSelected?{start:Number(byId('in').value),end:Number(byId('out').value)}:MangoSequenceOps.bounds(segments,selectedClipIndex);
+   return applyTransaction(transaction,'Ripple deleted '+time(transaction.removed)+' and closed the gap. Undo restores everything.',[range]);
  }catch(e){label('Ripple Delete: '+e.message);return false;}
 }
 function setRange(a,b){if(!original||exporting)return;
@@ -168,7 +173,8 @@ function edit(kind){if(!original||exporting)return;
  try{const selection=readRange();
   if(kind==='cut'){rippleDelete(selection.start,selection.end);return;}
   const tx=MangoSequenceOps.trim(segments,layers,globalThis.MangoClipTimeline?.markers?.()||[],selection.start,selection.end);
-  applyTransaction(tx,'Trimmed sequence to the selected range.');
+  const zoomTrim=zoomEvents.filter(e=>e.start>=selection.start&&e.start<selection.end).map(e=>({...e,start:e.start-selection.start}));
+   if(applyTransaction(tx,'Trimmed sequence to the selected range.')){zoomEvents=MangoCreativeZoom.check(zoomTrim);refreshed();}
  }catch(error){label('Edit not applied: '+error.message);}}
 
 byId('mark-in').onclick=()=>setRange(MangoEditOps.toOutput(segments,video.currentTime)??0,Number(byId('out').value));
@@ -313,7 +319,7 @@ globalThis.MangoClipView={
  commitAutoCut(ranges){
    if(!original||exporting)return false;
    try{const tx=MangoAutoCut.apply(segments,layers,globalThis.MangoClipTimeline?.markers?.()||[],ranges);
-    return applyTransaction(tx,'AutoCut removed '+tx.applied+' inactive sections ('+time(tx.removed)+') with zero gaps. Ctrl+Z restores everything.');
+    return applyTransaction(tx,'AutoCut removed '+tx.applied+' inactive sections ('+time(tx.removed)+') with zero gaps. Ctrl+Z restores everything.',ranges);
    }catch(error){label('AutoCut not applied: '+error.message);return false;}
  },
  rippleDelete,deleteSelection,deleteSelected(){
