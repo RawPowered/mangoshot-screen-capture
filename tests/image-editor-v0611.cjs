@@ -61,7 +61,8 @@ const context={
 };
 const chrome={runtime:{lastError:null,onMessage:{addListener(){}}},
  tabs:{getCurrent(cb){cb({id:55})},update(id,data,cb){cb({id:55})}}};
-context.globalThis={chrome,crypto:context.crypto};
+context.globalThis={chrome,crypto:context.crypto,MangoCaptureStore:context.MangoCaptureStore};
+for(const id of ['png','pdf','copy-image','clear'])document.getElementById(id).disabled=true;
 vm.runInNewContext(read('image-editor-core-v0611.js'),context,{filename:'image-editor-core-v0611.js'});
 const core=context.globalThis.MangoImageEditorCore;
 assert.ok(core);
