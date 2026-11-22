@@ -28,6 +28,7 @@
     controls[id].tabIndex=active?0:-1;
    }
    if(focus)controls[name].focus();
+   const scroll=document.querySelector('.v062-properties-body');if(scroll)scroll.scrollTop=0;
    try{root.localStorage?.setItem('MangoShot.VisualTab.v068.'+key,name);}catch{}
   };
   for(const [id,name] of items){
@@ -94,14 +95,17 @@
   const st=view(),layer=selectLayer();if(!st?.original?.()||st.exporting())return;
   let point=0;
   if(mode==='transition'){const selected=selectedTransition();if(!selected)return;
-   point=selected.parts.slice(0,selected.index).reduce((n,p)=>n+p.end-p.start,0)-.3;
+   const boundary=selected.parts.slice(0,selected.index).reduce((n,p)=>n+p.end-p.start,0);
+   const prior=selected.parts[selected.index-1],next=selected.parts[selected.index];
+   const current=st.transitions?.().find(t=>Math.abs(t.fromEnd-prior.end)<.00001&&Math.abs(t.toStart-next.start)<.00001);
+   point=boundary-(current?.duration||.45)/2-.16;
   }else if(layer){const spec=M.checkLayer(layer.motion),duration=spec[mode]?.duration||.45;
    point=mode==='exit'?Math.max(layer.start,layer.end-Math.min(duration,(layer.end-layer.start)/2)-.16):layer.start-.08;
   }else return;
   st.seekOutput(Math.max(0,point));
   if(!st.isPlaying?.())el('program-play')?.click();
  };
- function sectionTabs(labels,handler){const container=create('div','v068-segments');
+ function sectionTabs(labels,handler){const container=create('div','v068-segments');container.setAttribute('role','group');
   for(const [key,label] of labels){const b=btn(label,'v068-segment','Show '+label,()=>handler(key));
    b.dataset.key=key;container.append(b);
   }return container;
@@ -251,7 +255,6 @@
   clipEmpty.hidden=!!selected;
   const type=el('v067-transition-type')?.value||'none';
   const duration=Number(el('v067-transition-duration')?.value)||.45;
-  const activeChoice=transitionChoices.find(x=>x[0]===type);if(activeChoice&&activeChoice[3]!==transitionGroup)transitionGroup=activeChoice[3];
   for(const b of transitionFilters.children)b.setAttribute('aria-pressed',String(b.dataset.key===transitionGroup));
   for(const b of transitionsGrid.children){b.hidden=b.dataset.group!==transitionGroup;b.disabled=!ok;
    b.setAttribute('aria-pressed',String(b.dataset.effect===type));}
@@ -261,6 +264,8 @@
  }
  function sync(){
   const l=selectLayer();layerSummary.textContent='Layers · '+(view()?.layers?.()?.length||0)+(l?' · '+l.name:' · Select a layer');
+  drawers.hidden=!l;
+  transitionAdvanced.hidden=!selectedTransition();
   const current=el('v067-'+currentPhase+'-type')?.value||'none';
   const match=effects.find(x=>x[0]===current);
   if(match&&match[3]!==effectGroup)effectGroup=match[3];
@@ -270,6 +275,7 @@
  root.MangoMotionUI.sync=function(){const result=old.apply(root.MangoMotionUI,arguments);sync();return result;};
  // Make the top-level inspector navigation one row and preserve its existing IDs/listeners.
  const mainTabs=document.querySelector('.v062-property-tabs');mainTabs?.classList.add('v068-main-tabs');
+ mainTabs?.addEventListener('click',()=>{const scroll=document.querySelector('.v062-properties-body');if(scroll)scroll.scrollTop=0;});
  root.MangoVisualInspectorV068={sync,graphicTabs,clipTabs,activateMotion:()=>{root.MangoWorkspaceV062?.activate?.('graphics');graphicTabs.activate('motion');},
   activateTransitions:()=>{root.MangoWorkspaceV062?.activate?.('clip');clipTabs.activate('transitions');}};
  root.MangoMotionUI.sync();
