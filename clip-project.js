@@ -29,12 +29,17 @@
     if(!['400','500','600','700','800'].includes(String(l.weight))||l.fadeIn<0||l.fadeIn>10||l.fadeOut<0||l.fadeOut>10)fail('weight/fade');
     if(typeof l.visible!=='boolean'||typeof l.locked!=='boolean')fail('layer toggles');
     if(!['sans','mono','serif','rounded','condensed','display','handwritten'].includes(l.font)||!['left','right','center'].includes(l.align))fail('font/alignment');
+    if(l.motion!=null){if(!root.MangoMotion)fail('motion schema unavailable');root.MangoMotion.checkLayer(l.motion);}
     return {...l};
   });
   const markers=Array.isArray(data.markers)?data.markers:[];
   if(markers.length>500||markers.some(m=>!valid(m.time)||m.time<0||m.time>length||typeof m.label!=='string'||m.label.length>120))fail('markers');
-  return {segments,layers,markers};
+  if(data.transitions?.length&&!root.MangoMotion)fail('motion schema unavailable');
+  const transitions=root.MangoMotion?.checkTransitions?.(data.transitions||[])||[];
+  const boundaries=new Set(segments.slice(1).map((p,i)=>segments[i].end.toFixed(5)+':'+p.start.toFixed(5)));
+  if(transitions.some(t=>!boundaries.has(t.fromEnd.toFixed(5)+':'+t.toStart.toFixed(5))))fail('transition boundary');
+  return {segments,layers,markers,transitions};
  }
- function pack(source,segments,layers,markers=[]){return {schema:'mangoshot.project.v1',created:new Date().toISOString(),source,segments,layers,markers};}
+ function pack(source,segments,layers,markers=[],transitions=[]){return {schema:'mangoshot.project.v1',created:new Date().toISOString(),source,segments,layers,markers,transitions};}
  root.MangoProject={check,pack};
 })(typeof globalThis!=='undefined'?globalThis:this);

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "MangoShot",
-  "version": "0.6.6",
-  "description": "MangoShot Clip Studio: resizable saved workspaces, eight Studio II graphics presets and faster local media interactions.",
+  "version": "0.6.7",
+  "description": "MangoShot Clip Studio: animated text and callouts, numeric timers, cut transitions and editable motion properties.",
   "permissions": [
     "activeTab",
     "scripting"

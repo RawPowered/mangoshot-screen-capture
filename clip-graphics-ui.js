@@ -134,7 +134,7 @@
   }
   for(const track of [2,3])el('graphic-track-'+track).replaceChildren();
   const total=st.outputDuration();if(total){for(const item of items)el('graphic-track-'+item.track).appendChild(graphicChip(item,total));}
-  globalThis.MangoTypeHUD?.sync?.();
+  globalThis.MangoTypeHUD?.sync?.();globalThis.MangoMotionUI?.sync?.();
  }
  function selectionOutline(ctx,seconds,w,h){const selected=activeLayer();
   if(!selected||selected.locked||!selected.visible||seconds===null||seconds<selected.start||seconds>=selected.end)return;

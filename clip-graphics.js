@@ -32,7 +32,7 @@
    x:.15,y:isCallout?.32:.72,width:isCallout?.48:.7,text:isCallout?'Highlight this area':'Add title',
    preset,fontSize:style.fontSize,font:style.font,weight:style.weight,color:style.color,
    background:style.background,outline:style.outline,outlineWidth:style.outlineWidth,shadow:style.shadow,
-   align:style.align,opacity:style.opacity,fadeIn:0,fadeOut:0,tailX:.68,tailLength:32,visible:true,locked:false};
+   align:style.align,opacity:style.opacity,fadeIn:0,fadeOut:0,tailX:.68,tailLength:32,visible:true,locked:false,motion:root.MangoMotion?.defaults?.()};
   if(preset==='title'){layer.y=.24;layer.x=.07;layer.width=.86;}
   if(preset==='lowerThird'){layer.y=.78;layer.x=.06;layer.width=.63;}
   if(['glass','step','warning'].includes(preset)){layer.y=.30;layer.x=.25;layer.width=.5;}
@@ -78,9 +78,20 @@
   ctx.save();ctx.globalAlpha=clamp(l.opacity,0,1)*fade(l,sec);
   for(let i=0;i<16;i++){
    ctx.font=`${l.weight||'600'} ${fontsize}px ${fontFamilies[l.font]||fontFamilies.sans}`;
-   pad=Math.max(5,fontsize*.32);rendered=lines(ctx,l.text,width-pad*2,7);
+   pad=Math.max(5,fontsize*.32);rendered=lines(ctx,root.MangoMotion?.textFrame?.(l,sec)?.text??l.text,width-pad*2,7);
    lineH=fontsize*1.22;boxH=rendered.length*lineH+2*pad;
    if(boxH<=h-y-4||fontsize<=10)break;fontsize=Math.max(10,fontsize*.87);
+  }
+  const motion=root.MangoMotion?.textFrame?.(l,sec);
+  const fullText=motion?.text??l.text;
+  // Preserve the complete glyph layout while a typing reveal advances.
+  const drawRows=lines(ctx,fullText,width-pad*2,7);
+  if(motion){
+   ctx.globalAlpha*=motion.alpha;
+   const centerX=x+width/2,centerY=y+boxH/2;
+   ctx.translate(centerX+(motion.dx||0)*width,centerY+(motion.dy||0)*boxH);
+   ctx.rotate(motion.angle||0);ctx.scale(motion.scale||1,(motion.scale||1));
+   ctx.scale(motion.scaleX||1,1);ctx.translate(-centerX,-centerY);
   }
   const hasBackground=l.background&&l.background!=='transparent';
   if(hasBackground){ctx.shadowColor='rgba(0,0,0,.55)';ctx.shadowBlur=(Number(l.shadow)||0)*scale;
@@ -95,10 +106,37 @@
   ctx.shadowColor='rgba(0,0,0,.65)';ctx.shadowBlur=hasBackground?0:(Number(l.shadow)||0)*scale;
   if(!hasBackground&&(Number(l.outlineWidth)||0)>0){ctx.strokeStyle=l.outline;ctx.lineJoin='round';ctx.lineWidth=l.outlineWidth*scale*2;}
   const tx=l.align==='center'?x+width/2:l.align==='right'?x+width-pad:x+pad;
-  for(let i=0;i<rendered.length;i++){
+  // Typewriter reveals glyphs without reflowing the full text box.
+  const enter=l.motion?.enter,enterLimit=Math.min(Number(enter?.duration)||.45,Math.max(.08,(l.end-l.start)*.5));
+  const typing=enter?.type==='typeIn'&&sec-l.start<enterLimit;
+  const exiting=l.motion?.exit,exitLimit=Math.min(Number(exiting?.duration)||.35,Math.max(.08,(l.end-l.start)*.5));
+  const reverseType=exiting?.type==='typeIn'&&l.end-sec<exitLimit;
+  const typeFraction=typing?Math.min(1,Math.max(0,(sec-l.start)/enterLimit)):reverseType?Math.min(1,Math.max(0,(l.end-sec)/exitLimit)):1;
+  const spinLetters=enter?.type==='spinLetters'&&sec-l.start<enterLimit;
+  const spinOut=exiting?.type==='spinLetters'&&l.end-sec<exitLimit;
+  const spinFraction=spinLetters?Math.min(1,Math.max(0,(sec-l.start)/enterLimit)):spinOut?Math.min(1,Math.max(0,(l.end-sec)/exitLimit)):1;
+  const totalGlyphs=drawRows.reduce((count,row)=>count+Array.from(row).length,0);
+  const visibleCount=Math.round(totalGlyphs*typeFraction);let drawn=0;
+  for(let i=0;i<drawRows.length;i++){
    const ty=y+pad+i*lineH;
-   if(!hasBackground&&(Number(l.outlineWidth)||0)>0)ctx.strokeText(rendered[i],tx,ty);
-   ctx.fillText(rendered[i],tx,ty);
+   const chars=Array.from(drawRows[i]);const visible=chars.slice(0,Math.max(0,visibleCount-drawn)).join('');
+   if(spinLetters||spinOut){
+    const startX=l.align==='center'?tx-ctx.measureText(drawRows[i]).width/2:l.align==='right'?tx-ctx.measureText(drawRows[i]).width:tx;
+    let cursor=startX;
+    for(let j=0;j<chars.length;j++){
+     const ch=chars[j],cw=ctx.measureText(ch).width;
+     const local=root.MangoMotion.letterProgress(drawn+j,totalGlyphs,spinFraction);
+     if(local>0){ctx.save();ctx.globalAlpha*=local;ctx.translate(cursor+cw/2,ty+lineH/2);
+      ctx.rotate((1-local)*-Math.PI*1.5);ctx.scale(Math.max(.08,local),Math.max(.08,local));
+      if(!hasBackground&&(Number(l.outlineWidth)||0)>0)ctx.strokeText(ch,-cw/2,-lineH/2);
+      ctx.fillText(ch,-cw/2,-lineH/2);ctx.restore();}
+     cursor+=cw;
+    }
+   }else{
+    if(!hasBackground&&(Number(l.outlineWidth)||0)>0)ctx.strokeText(visible,tx,ty);
+    ctx.fillText(visible,tx,ty);
+   }
+   drawn+=chars.length;
   }
   ctx.restore();return {x,y,width,height:boxH};
  }
