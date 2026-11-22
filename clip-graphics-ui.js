@@ -137,7 +137,7 @@
  }
  function selectionOutline(ctx,seconds,w,h){const selected=activeLayer();
   if(!selected||selected.locked||!selected.visible||seconds===null||seconds<selected.start||seconds>=selected.end)return;
-  const r=MangoGraphics.bounds(selected,w,h);ctx.save();ctx.globalAlpha=1;ctx.setLineDash([9,5]);
+  const r=MangoGraphics.bounds(selected,w,h,ctx);ctx.save();ctx.globalAlpha=1;ctx.setLineDash([9,5]);
   ctx.lineWidth=Math.max(2,h/450);ctx.strokeStyle='#aee3fa';ctx.strokeRect(r.x,r.y,r.w,r.h);
   ctx.setLineDash([]);ctx.fillStyle='#aee3fa';ctx.fillRect(r.x+r.w-9,r.y+r.h-9,16,16);ctx.restore();
  }
@@ -172,7 +172,7 @@
   if(!st||now===null)return;
   const p=canvasPoint(e),w=canvas.width,h=canvas.height;
   const visible=MangoGraphics.at(st.layers(),now).reverse();
-  const clicked=visible.find(l=>{if(l.locked)return false;const r=MangoGraphics.bounds(l,w,h);
+  const clicked=visible.find(l=>{if(l.locked)return false;const r=MangoGraphics.bounds(l,w,h,canvas.getContext('2d'));
    return p.x>=r.x/w-.018&&p.x<=(r.x+r.w)/w+.018&&p.y>=r.y/h-.025&&p.y<=(r.y+r.h)/h+.025;});
   if(!clicked){return;}e.preventDefault();canvas.setPointerCapture?.(e.pointerId);
   select(clicked.id,true);
@@ -186,7 +186,7 @@
   const p=canvasPoint(e),dx=p.x-movingCanvas.startX,dy=p.y-movingCanvas.startY;
   if(movingCanvas.mode==='resize'){
    const width=Math.max(.1,Math.min(1-l.x,movingCanvas.width+dx));
-   const fontSize=Math.max(12,Math.min(220,movingCanvas.size*(1+dy*2)));
+   const fontSize=e.shiftKey?Math.max(12,Math.min(220,movingCanvas.size*(1+dy*2))):movingCanvas.size;
    if(Math.abs(width-l.width)+Math.abs(fontSize-l.fontSize)/200<.0005)return;
    if(!movingCanvas.moved){st.beginLayerMove(l.id);movingCanvas.moved=true;}
    st.resizeLayer(l.id,width,fontSize);
