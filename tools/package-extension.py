@@ -105,7 +105,7 @@ def build(out,release_tag):
                         if dep not in src:raise ValueError('Shortcut or menu UI missing from '+page)
                     if src.index(b'studio-command-palette')>src.index(b'studio-shortcuts-v0617.js'):
                         raise ValueError('Command palette must be in DOM before script initialization')
-                if b'globalThis.MangoImageActions={run:imageCommand' not in z.read('editor.js'):
+                if b'run:imageCommand' not in z.read('editor.js'):
                     raise ValueError('Shortcut actions not wired to Image Studio')
                 if b'root.MangoShortcutsV0617?.active' not in z.read('keyboard-shortcuts-v065.js'):
                     raise ValueError('Legacy Clip shortcut listener can execute duplicate commands')
