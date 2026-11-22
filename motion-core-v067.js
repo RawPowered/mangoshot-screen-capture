@@ -76,7 +76,7 @@
    const p=clamp(ease(active.progress,active.item.ease));
    const a=animation(active.item.type,p,active.mode);
    Object.assign(state,a);
-   if(a.visible!==null)state.text=glyphs(text).slice(0,Math.round(glyphs(text).length*clamp(a.visible))).join('');
+   // Typewriter rendering preserves layout; visible glyphs are selected by the canvas painter.
   }
   return state;
  }
