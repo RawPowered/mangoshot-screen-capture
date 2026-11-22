@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "MangoShot",
-  "version": "0.5.7",
-  "description": "Private screenshots, screen recordings and Wacom-friendly annotations.",
+  "version": "0.6.0",
+  "description": "Local-first screen capture, recording, Wacom annotations and Clip Studio (v0.6 workspace preview).",
   "permissions": [
     "activeTab",
     "scripting"

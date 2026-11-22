@@ -1,0 +1,36 @@
+const vm=require('node:vm'),fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const ctx={Date,JSON,Math,Set,Map,Number};ctx.globalThis=ctx;
+for(const file of ['media-assets.js','project-v2.js'])vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..',file),'utf8'),ctx);
+const P=ctx.MangoProjectV2;
+const source={size:98766,format:'webm',duration:12},legacy={schema:'mangoshot.project.v1',source,
+ segments:[{start:0,end:5},{start:7,end:12}],layers:[],markers:[{time:3,label:'Start'}]};
+const adapter={check:(project,expected)=>{
+ assert.equal(project.schema,'mangoshot.project.v1');assert.equal(expected.size,source.size);
+ return {segments:project.segments,layers:project.layers,markers:project.markers};
+}};
+const migrated=P.fromV1(legacy,source,adapter);
+assert.equal(migrated.schema,P.schema);assert.equal(migrated.timeline.clips.length,2);
+assert.equal(migrated.timeline.clips[1].start,5);
+assert.equal(migrated.timeline.clips[1].sourceIn,7);
+assert.equal(migrated.timeline.clips[1].end,10);
+assert.equal(migrated.legacyV1.markers[0].label,'Start');
+assert.deepEqual(Array.from(migrated.timeline.tracks,x=>x.id),['V3','V2','V1','G3','G2','A2','A1']);
+const image={id:'asset-2',kind:'image',name:'logo.png',mime:'image/png',size:500,lastModified:2,duration:null,width:128,height:128};
+let project=P.create({assets:[...migrated.assets,image],clips:migrated.timeline.clips,legacyV1:legacy});
+project=P.stage(project,image,{start:3,id:'stage-1'});
+const overlay=project.timeline.clips.at(-1);assert.equal(overlay.track,'V2');assert.equal(overlay.end,8);assert.equal(overlay.staged,true);
+assert.equal(P.check(JSON.parse(JSON.stringify(project))).timeline.clips.length,3);
+assert.equal(P.unstage(project,'stage-1').timeline.clips.length,2);
+assert.equal(project.timeline.clips.length,3,'Unstage must be non-destructive');
+const bad=JSON.parse(JSON.stringify(project));bad.timeline.clips[2].assetId='remote-asset';
+assert.throws(()=>P.check(bad),/missing asset/);
+const remote=JSON.parse(JSON.stringify(project));remote.assets[1].id='http://bad.example/logo';
+assert.throws(()=>P.check(remote),/Invalid or duplicate/);
+const collision=JSON.parse(JSON.stringify(project));collision.timeline.clips[2].id='v1-1';
+assert.throws(()=>P.check(collision),/clip identity/);
+const outside=JSON.parse(JSON.stringify(project));outside.assets[1].duration=2;outside.timeline.clips[2].sourceOut=100;
+assert.throws(()=>P.check(outside),/source duration|sourceOut/);
+assert.throws(()=>P.stage(P.create(),image),/Import the asset/);
+const missingDuration={id:'asset-3',kind:'video',name:'intro.mp4',mime:'video/mp4',size:200,lastModified:1,duration:null,width:null,height:null};
+assert.throws(()=>P.stage(P.create({assets:[missingDuration]}),missingDuration),/duration is unavailable/);
+console.log('PASS: v1 migration, v2 local project schema, secondary clip staging and strict validation');

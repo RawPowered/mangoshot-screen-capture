@@ -16,7 +16,7 @@ function restore(snap){segments=clone(snap.segments);layers=clone(snap.layers);s
  byId('out').value=Math.min(length,selection.end).toFixed(2);
  globalThis.MangoClipTimeline?.loadMarkers?.(snap.markers||[]);
  refreshed();}
-function refreshed(){render();sequencePreview?.update();previewSequenceTime=null;globalThis.MangoClipTimeline?.render?.();globalThis.MangoClipTimeline?.onSequenceChange?.();globalThis.MangoLayerUI?.render?.();paintPreview();globalThis.MangoAutoCutUI?.onEditorChange?.();}
+function refreshed(){render();sequencePreview?.update();previewSequenceTime=null;globalThis.MangoClipTimeline?.render?.();globalThis.MangoClipTimeline?.onSequenceChange?.();globalThis.MangoLayerUI?.render?.();paintPreview();globalThis.MangoAutoCutUI?.onEditorChange?.();globalThis.MangoMediaBin?.refresh?.();}
 
 const label=text=>status.textContent=text;
 const time=t=>`${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}.${String(Math.round(t%1*100)).padStart(2,'0')}`;
@@ -279,7 +279,19 @@ if(requestedRecording){
 globalThis.MangoClipView={
  duration:()=>duration,outputDuration:()=>MangoEditOps.length(segments),video:()=>video,
  segments:()=>segments,layers:()=>layers,selectedLayer:()=>selectedLayerId,url:()=>originalUrl,original:()=>original,
- exporting:()=>exporting,message:label,paintPreview,
+ exporting:()=>exporting,sourceFormat:()=>originalFormat,
+ restoreLegacyProject(data){
+  if(!original||exporting)throw new Error('Load the matching source video before restoring a project.');
+  const validated=MangoProject.check(data,{size:original.size,format:originalFormat,duration});
+  remember();segments=validated.segments;layers=validated.layers;
+  selectedLayerId=null;selectedClipIndex=null;rangeSelected=false;
+  const length=MangoEditOps.length(segments);
+  byId('out').max=byId('in').max=length.toFixed(2);
+  byId('in').value='0';byId('out').value=length.toFixed(2);
+  globalThis.MangoClipTimeline?.loadMarkers?.(validated.markers);
+  refreshed();label('v1 edit decisions restored inside the v2 workspace.');
+  return true;
+ },message:label,paintPreview,
  outputAt:source=>MangoSequenceMedia.atSource(segments,source)?.output??null,
  sequencePosition:()=>sequencePreview?.current()??null,
  seekOutput:point=>{if(sequencePreview){if(sequencePreview.isPlaying())sequencePreview.stop();sequencePreview.seekOutput(point);}
