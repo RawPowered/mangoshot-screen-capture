@@ -14,19 +14,22 @@ const api={runtime:{id:'mango',lastError:null,getURL:x=>'chrome-extension://mang
 vm.runInNewContext(read('background.js'),{globalThis:{chrome:api,MangoCaptureStore:store},Date,Number,Map,Promise,Error,URLSearchParams,setTimeout});
 const popup={id:'mango',url:'chrome-extension://mango/popup.html'};
 const source={id:'mango',tab};
-function send(message,sender){return new Promise((resolve,reject)=>{const ret=worker(message,sender,resolve);if(ret!==true&&message.type!=='MANGO_SETUP')reject(new Error('No response handler for '+message.type));});}
+function send(message,sender){return new Promise((resolve,reject)=>{let answered=false;
+ const ret=worker(message,sender,value=>{answered=true;resolve(value);});
+ if(ret!==true&&!answered)reject(new Error('No response handler for '+message.type));
+});}
 (async()=>{
  const id='capture-123456';
- assert.equal((await send({type:'MANGO_POPUP_INIT',mode:'full',source:23,captureId:id},popup)).ok,true);
+ assert.equal((await send({type:'MANGO_POPUP_INIT',mode:'full',source:23,windowId:9,captureId:id},popup)).ok,true);
  assert.equal((await send({type:'MANGO_SETUP'},source)).captureId,id);
- const meta={width:800,height:600,pageHeight:1200,frames:2,full:true};
+ const meta={width:800,height:600,pageHeight:1200,dpr:1,frames:2,full:true};
  assert.equal((await send({type:'MANGO_SOURCE_START',captureId:id,meta},source)).ok,true);
  for(const [index,scrollY] of [[0,0],[1,600]])assert.equal((await send({type:'MANGO_SOURCE_FRAME',captureId:id,index,scrollY},source)).ok,true);
  assert.equal((await send({type:'MANGO_SOURCE_DONE',captureId:id},source)).ok,true);
  assert.equal(framesTaken,2);assert.equal(stored.id,id);assert.equal(stored.frames.length,2);
  assert.equal(opened.length,1);assert.match(opened[0].url,/editor.html\?stored=capture-123456/);
  assert.equal((await send({type:'MANGO_SETUP'},source)).ok,false);
- assert.equal((await send({type:'MANGO_POPUP_INIT',mode:'full',source:23,captureId:'capture-234567'},popup)).ok,true);
+ assert.equal((await send({type:'MANGO_POPUP_INIT',mode:'full',source:23,windowId:9,captureId:'capture-234567'},popup)).ok,true);
  assert.equal((await send({type:'MANGO_SOURCE_START',captureId:'capture-234567',meta:{...meta,frames:1}},source)).ok,true);
  assert.equal((await send({type:'MANGO_SOURCE_FRAME',captureId:'capture-234567',index:1,scrollY:0},source)).ok,false,'reject out-of-order frame');
  assert.equal((await send({type:'MANGO_SOURCE_ERROR',captureId:'capture-234567',error:'Page denied capture'},source)).ok,true);
