@@ -38,7 +38,7 @@ const frame=[{index:0,scrollY:0,dataUrl:png}];
  assert.deepEqual([...drawn[0].slice(1)],[10,5,30,22,0,0,30,22],
   'Draggable area must copy only user selected pixels');
  await assert.rejects(C.compose({width:100,height:60,pageHeight:60,frames:1,full:false,
-  selection:{x:-5,y:0,width:20,height:20}},frame),/selection/i);
+  selection:{x:-5,y:0,width:20,height:20}},frame),/selected.*area/i);
  const blob=await C.toBlob(area);assert.equal(blob.type,'image/png');
  await C.write(C.toBlob(area));assert.equal(written.length,1);
  assert.equal((await written[0][0].data['image/png']).type,'image/png');
