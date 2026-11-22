@@ -16,7 +16,7 @@ const reply=(work,sendResponse)=>{
 };
 const fromPopup=sender=>sender.id===api.runtime.id&&
   sender.url?.startsWith(api.runtime.getURL('popup.html'));
-const validSource=(sender,entry)=>entry&&sender.tab?.id===entry.source&&sender.tab?.active;
+const validSource=(sender,entry)=>!!entry&&sender.tab?.id===entry.source;
 function editorURL(id,error){
   const params=new URLSearchParams();params.set('stored',id);
   if(error)params.set('capture_error',String(error).slice(0,400));
@@ -38,17 +38,23 @@ async function complete(entry,error){
 }
 api.runtime.onMessage.addListener((message,sender,respond)=>{
   if(!message||typeof message.type!=='string')return;
-  if(message.type==='MANGO_POPUP_INIT')return reply((async()=>{
-    if(!fromPopup(sender))throw new Error('Start capture with the MangoShot toolbar.');
-    if(message.mode!=='full'||!globalThis.MangoCaptureStore.valid(message.captureId))
-      throw new Error('Invalid capture session.');
-    const tab=await exec(api.tabs.get.bind(api.tabs),message.source);
-    if(!tab?.active||!/^https?:/.test(tab.url||''))
-      throw new Error('Open a regular, active webpage to capture.');
-    if(sessions.has(tab.id))throw new Error('A screenshot is already running on this tab.');
-    sessions.set(tab.id,{id:message.captureId,source:tab.id,windowId:tab.windowId,
-      started:Date.now(),nextIndex:0,meta:null,frames:[],lastFrame:0});
-  })(),respond);
+  if(message.type==='MANGO_POPUP_INIT'){
+    // Reply synchronously: startup must not depend on a transient MV3 async port.
+    // The trusted popup supplies the tab it just queried under the activeTab gesture.
+    if(!fromPopup(sender))respond({ok:false,error:'Start capture with the MangoShot toolbar.'});
+    else if(message.mode!=='full'||!globalThis.MangoCaptureStore.valid(message.captureId)||
+       !Number.isInteger(message.source)||message.source<1||
+       !Number.isInteger(message.windowId)||message.windowId<0)
+      respond({ok:false,error:'Invalid capture session.'});
+    else if(sessions.has(message.source))
+      respond({ok:false,error:'A screenshot is already running on this tab.'});
+    else{
+      sessions.set(message.source,{id:message.captureId,source:message.source,windowId:message.windowId,
+        started:Date.now(),nextIndex:0,meta:null,frames:[],lastFrame:0});
+      respond({ok:true,captureId:message.captureId});
+    }
+    return false;
+  }
   if(message.type==='MANGO_POPUP_ABORT')return reply((async()=>{
     if(!fromPopup(sender))throw new Error('Unauthorized capture cancellation.');
     const entry=sessions.get(message.source);
@@ -60,7 +66,21 @@ api.runtime.onMessage.addListener((message,sender,respond)=>{
       {ok:false,error:'Capture session expired. Try starting again from the toolbar.'});
     return;
   }
-  if(['MANGO_SOURCE_START','MANGO_SOURCE_FRAME','MANGO_SOURCE_DONE','MANGO_SOURCE_ERROR'].includes(message.type)){
+  if(message.type==='MANGO_SOURCE_START'){
+    const entry=sessions.get(sender.tab?.id),m=message.meta;
+    if(!validSource(sender,entry)||entry.id!==message.captureId)
+      respond({ok:false,error:'Capture session expired. Restart from the MangoShot toolbar.'});
+    else if(Date.now()-entry.started>180000)
+      respond({ok:false,error:'Screenshot capture timed out. Start again.'});
+    else if(entry.meta||!m||!Number.isFinite(m.width)||!Number.isFinite(m.height)||
+        !Number.isFinite(m.dpr)||m.dpr<=0||!Number.isInteger(m.frames)||
+        m.width<1||m.height<1||m.frames<1||m.frames>40||
+        m.pageHeight<1||m.pageHeight>30000||m.width*m.pageHeight*m.dpr*m.dpr>48000000)
+      respond({ok:false,error:'Screenshot dimensions exceed the supported limit.'});
+    else {entry.meta=m;respond({ok:true,frames:m.frames});}
+    return false;
+  }
+  if(['MANGO_SOURCE_FRAME','MANGO_SOURCE_DONE','MANGO_SOURCE_ERROR'].includes(message.type)){
     return reply((async()=>{
       const entry=sessions.get(sender.tab?.id);
       if(!validSource(sender,entry)||entry.id!==message.captureId)
@@ -69,13 +89,7 @@ api.runtime.onMessage.addListener((message,sender,respond)=>{
         await complete(entry,'Screenshot timed out.');
         throw new Error('Screenshot timed out.');
       }
-      if(message.type==='MANGO_SOURCE_START'){
-        const m=message.meta;
-        if(entry.meta||!m||m.width<1||m.height<1||m.frames<1||m.frames>40||
-           m.pageHeight<1||m.pageHeight>30000||m.width*m.pageHeight>48000000)
-          throw new Error('Screenshot dimensions exceed the supported limit.');
-        entry.meta=m;return {frames:m.frames};
-      }
+
       if(message.type==='MANGO_SOURCE_FRAME'){
         if(!entry.meta||message.index!==entry.nextIndex||message.index>=entry.meta.frames||
           !Number.isFinite(message.scrollY))throw new Error('Invalid screenshot frame order.');
