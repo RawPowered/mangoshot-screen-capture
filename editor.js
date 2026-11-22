@@ -315,7 +315,7 @@ function replaceLayer(index,patch){
  if(index<0||!strokes[index]||strokes[index].locked)return false;
  const current=strokes[index];
  if(Object.entries(patch).every(([k,v])=>current[k]===v))return false;
- snapshot();strokes[index]={...current,...patch};redraw();setReady(ready);syncLayerProperties();return true;
+ snapshot();strokes[index]={...current,...patch};redraw();setReady(ready);syncSelectedText();syncLayerProperties();return true;
 }
 function removeLayerAt(index){
  if(index<0||!strokes[index])return false;
@@ -672,7 +672,7 @@ function completeResize(event,cancel=false){
  resizeDrag=null;
  if(cancel&&d.moved){strokes[d.index]=d.initial;history.pop();redraw();}
  if(d.moved&&!cancel){
-  setReady(ready);syncLayerProperties();
+  setReady(ready);syncSelectedText();syncLayerProperties();
   label((d.kind==='text'?'Text':'Image')+' resized · Ctrl+Z to undo.'+
    (document.getElementById('image-keep-ratio')?.checked===false?' Free stretch enabled.':' Hold Shift while dragging to stretch.'));
  }
