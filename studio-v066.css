@@ -76,3 +76,5 @@ body.studio-clip .v063-style-gallery .v063-style-card[data-pack=studio][aria-pre
  body.studio-clip .v066-layout-menu{margin-left:0}
  body.studio-clip .v066-splitter{display:none!important}
 }
+
+body.studio-clip .v066-layout-options .v066-resize-hint{display:block;border-top:1px solid #3d584b;padding:7px 10px;font-size:10px;color:#a9c9b1;line-height:1.45;white-space:normal;}
