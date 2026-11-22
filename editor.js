@@ -696,6 +696,127 @@ function renderStrokeList(){
  }
  syncLayerProperties();
 }
+/* Shared tool / selection property authority. Canvas strokes remain serializable, and
+ * selected vector properties are editable without changing other drawing defaults. */
+const imageToolNames={select:'Select / Move',pen:'Pen',highlighter:'Highlighter',
+ eraser:'Eraser',redact:'Redact',text:'Text','mask-erase':'Mask Erase',
+ 'mask-restore':'Mask Restore'};
+const toolStyles=new Map();
+const toolControlFields=[
+ ['color','stroke'],['size','strokeWidth'],['image-tool-opacity','opacity'],
+ ['image-shape-fill','fill'],['image-shape-fill-enabled','fillEnabled'],
+ ['image-shape-line-style','lineStyle'],['image-shape-radius','cornerRadius'],
+ ['image-shape-points','starPoints'],['image-shape-heads','arrowHead']
+];
+function currentVectorSettings(){
+ const selected=selectedAnyStroke();
+ if(vectorCore?.isVector?.(selected))return {...vectorCore.style(selected)};
+ const stored=toolStyles.get(tool.value)||{};
+ const vector=vectorCore?.defaults?.()||{};
+ return {...vector,...stored,stroke:color.value,
+  strokeWidth:Number(size.value)*(ink.width/(ink.getBoundingClientRect?.().width||ink.width)||1),
+  opacity:Number(document.getElementById('image-tool-opacity')?.value||100)/100};
+}
+function syncVectorControls(){
+ if(!vectorCore)return;
+ const selected=selectedAnyStroke(),vSelected=vectorCore.isVector(selected)?selected:null;
+ const currentTool=vSelected?vectorCore.kindOf(vSelected):tool.value;
+ const isVector=vectorCore.kinds.includes(currentTool);
+ const toolName=document.getElementById('image-active-tool-name');
+ const toolDescription=document.getElementById('image-active-tool-desc');
+ const toolStatus=document.getElementById('image-tool-status');
+ const name=vectorCore.labels[currentTool]||imageToolNames[currentTool]||'Tool';
+ if(toolName)toolName.textContent=vSelected?'Editing '+name:name;
+ if(toolDescription)toolDescription.textContent=vSelected?'Editable vector layer · use controls below':
+  isVector?'Drag directly on screenshot to draw · select layer to refine':
+  currentTool==='select'?'Click a layer to select and edit':currentTool==='text'?'Typography and effects are in Type':
+  currentTool.startsWith('mask-')?'Brush controls are in Mask':'Draw directly on the screenshot';
+ if(toolStatus)toolStatus.textContent=vSelected?'VECTOR LAYER':'ACTIVE · '+name.toUpperCase();
+ const gallery=document.getElementById('image-vector-library');
+ if(gallery)gallery.hidden=!!vSelected?false:!isVector;
+ for(const button of document.querySelectorAll?.('[data-vector-kind]')||[]){
+  const active=button.dataset.vectorKind===currentTool;
+  button.classList.toggle('is-active',active);button.setAttribute('aria-pressed',String(active));
+ }
+ const styles=document.getElementById('image-shape-style');
+ if(styles)styles.hidden=!isVector;
+ const settings=vSelected?vectorCore.style(vSelected):{...vectorCore.defaults(),...(toolStyles.get(tool.value)||{}),
+  stroke:color.value,strokeWidth:Number(size.value),opacity:Number(document.getElementById('image-tool-opacity')?.value||100)/100};
+ for(const [id,key] of toolControlFields){
+  const el=document.getElementById(id);if(!el)continue;
+  // Do not replace active pencil colors unless a vector object is selected.
+  if(key==='strokeWidth'&&vSelected)el.value=String(Math.max(1,Math.round(settings.strokeWidth)));
+  else if(key==='stroke'&&vSelected)el.value=settings.stroke;
+  else if(key==='opacity')el.value=String(Math.round(settings.opacity*100));
+  else if(!['stroke','strokeWidth'].includes(key)){
+   el.value=el.type==='checkbox'?el.value:String(settings[key]??el.value);
+   if(el.type==='checkbox')el.checked=settings[key]===true;
+  }
+  el.disabled=!!vSelected?.locked;
+ }
+ for(const option of document.querySelectorAll?.('[data-shape-option]')||[]){
+  option.hidden=!isVector||!option.dataset.shapeOption?.split(',').includes(currentTool);
+ }
+ const sizeValue=document.getElementById('image-size-value');
+ if(sizeValue)sizeValue.textContent=Math.round(Number(size.value)||4)+' px';
+ const opValue=document.getElementById('image-tool-opacity-value');
+ if(opValue)opValue.textContent=Math.round(Number(document.getElementById('image-tool-opacity')?.value||100))+'%';
+ for(const [id,suffix] of [['image-shape-radius-value',' px'],['image-shape-points-value','']]){
+  const el=document.getElementById(id),src=document.getElementById(id.replace('-value',''));
+  if(el&&src)el.textContent=src.value+suffix;
+ }
+}
+function editVectorStyle(field,value,live=false){
+ const target=selectedAnyStroke(),selected=vectorCore?.isVector(target)?selectedAnyIndex():-1;
+ if(selected>=0){
+  if(target.locked)return;
+  const old=vectorCore.style(target),vector={...(target.vector||{})};
+  const patch={...target,vector};
+  if(field==='stroke'){patch.color=value;vector.stroke=value;}
+  else if(field==='strokeWidth'){patch.size=value;vector.strokeWidth=value;}
+  else if(field==='opacity')patch.opacity=value;
+  else vector[field]=value;
+  const same=field==='stroke'?old.stroke===value:
+   field==='opacity'?old.opacity===value:old[field]===value;
+  if(same)return;
+  if(!live||!vectorGesture||vectorGesture.index!==selected||vectorGesture.field!==field){
+   snapshot();vectorGesture={index:selected,field};
+  }
+  strokes[selected]=patch;redraw();
+  if(!live){vectorGesture=null;setReady(ready);}
+ }else{
+  const pref={...(toolStyles.get(tool.value)||{})};pref[field]=value;toolStyles.set(tool.value,pref);
+ }
+}
+let vectorGesture=null;
+for(const [id,field] of toolControlFields){
+ const el=document.getElementById(id);if(!el)continue;
+ const value=()=>el.type==='checkbox'?el.checked:
+  ['lineStyle','arrowHead','stroke','fill'].includes(field)?el.value:
+  field==='opacity'?Number(el.value)/100:Number(el.value);
+ const onInput=()=>{
+  if(field==='stroke')color.value=el.value;
+  editVectorStyle(field,value(),true);
+  if(id==='color'&&!vectorCore.isVector(selectedAnyStroke()))toolStyles.set(tool.value,{...(toolStyles.get(tool.value)||{}),stroke:el.value});
+  if(id==='size'){}
+  syncVectorControls();
+ };
+ const onChange=()=>{
+  if(vectorGesture){vectorGesture=null;setReady(ready);}
+  else editVectorStyle(field,value(),false);
+  syncVectorControls();
+ };
+ el.addEventListener('input',onInput);el.addEventListener('change',onChange);
+}
+for(const button of document.querySelectorAll?.('[data-vector-kind]')||[]){
+ button.addEventListener('click',()=>{
+  if(textDraft)commitInline();
+  selectedObject=-1;
+  tool.value=button.dataset.vectorKind;
+  syncTool();syncSelectedText();switchInspectorTab('tools');
+  syncVectorControls();
+ });
+}
 const toolButtons=[...(document.querySelectorAll?.('[data-studio-tool]')||[])];
 function syncTool(){
  for(const button of toolButtons){
