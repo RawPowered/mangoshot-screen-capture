@@ -349,6 +349,8 @@ function updateEditorControls(){
  const hint=document.getElementById('image-hint');
  if(hint)hint.textContent=textDraft?'Type here · Enter to place · Shift+Enter new line · Esc cancels':
   tool.value==='text'?'Click on the screenshot to type. Click existing text to edit.':
+  tool.value==='erase-brush'?'Brush across annotations to erase pixels. Shift to Whole Stroke Erase to remove an entire mark.':
+  tool.value==='erase-stroke'?'Drag over pen marks, shapes or text to remove complete unlocked annotations. Ctrl+Z restores them.':
   tool.value==='select'?'Select an image or text layer. Drag corners to resize proportionally; hold Shift to stretch.':
   'Right-click the screenshot to copy all pixels and annotations.';
  if(textContent){textContent.disabled=!selected;textContent.placeholder=selected?'Edit selected text':'Click screenshot to create text';}
@@ -726,7 +728,7 @@ function renderStrokeList(){
 /* Shared tool / selection property authority. Canvas strokes remain serializable, and
  * selected vector properties are editable without changing other drawing defaults. */
 const imageToolNames={select:'Select / Move',pen:'Pen',highlighter:'Highlighter',
- eraser:'Eraser',redact:'Redact',text:'Text','mask-erase':'Mask Erase',
+ eraser:'Legacy Eraser','erase-brush':'Brush Erase','erase-stroke':'Whole Stroke Erase',redact:'Redact',text:'Text','mask-erase':'Mask Erase',
  'mask-restore':'Mask Restore'};
 const toolStyles=new Map();
 const toolControlFields=[
@@ -844,6 +846,60 @@ for(const button of document.querySelectorAll?.('[data-vector-kind]')||[]){
   syncVectorControls();
  });
 }
+/* Eraser options synchronize the rail, Tools dropdown, selected mode and pen
+ * tablet eraser override. Brush and whole-stroke controls remain in one inspector. */
+const imageToolSizes=new Map([['pen',4],['highlighter',8],
+ ['erase-brush',36],['erase-stroke',32],['eraser',36]]);
+let currentImageTool='pen';
+function syncEraserControls(){
+ const erasing=['erase-brush','erase-stroke','eraser'].includes(tool.value);
+ const brush=tool.value!=='erase-stroke';
+ const region=document.getElementById('image-eraser-options');
+ if(region)region.hidden=!erasing;
+ const hardness=document.getElementById('image-eraser-hardness-row');
+ if(hardness)hardness.hidden=!erasing||!brush;
+ const desc=document.getElementById('image-erase-description');
+ if(desc)desc.textContent=brush?
+  'Brush Erase removes only the painted parts of existing annotations. Original screenshot pixels are untouched.':
+  'Whole Stroke Erase removes each touched unlocked annotation, shape or text layer. Imported images use Mask instead.';
+ const slider=document.getElementById('size');
+ if(slider){
+  slider.max=erasing?'240':'48';
+  const value=document.getElementById('image-size-value');
+  if(value)value.textContent=Math.round(Number(slider.value))+(erasing?' px diameter':' px');
+ }
+ for(const button of document.querySelectorAll?.('[data-erase-mode]')||[]){
+  const selected=button.dataset.eraseMode===tool.value;
+  button.classList.toggle('is-active',selected);
+  button.setAttribute('aria-pressed',String(selected));
+ }
+ const value=document.getElementById('image-eraser-hardness-value');
+ const input=document.getElementById('image-eraser-hardness');
+ if(value&&input)value.textContent=input.value+'%';
+}
+for(const button of document.querySelectorAll?.('[data-erase-mode]')||[]){
+ button.addEventListener('click',()=>chooseImageTool(button.dataset.eraseMode));
+}
+document.getElementById('image-eraser-hardness')?.addEventListener?.('input',syncEraserControls);
+document.getElementById('size')?.addEventListener?.('input',()=>{
+ imageToolSizes.set(tool.value,Number(size.value));
+ syncEraserControls();
+});
+const penDiagnostics=penInput?.createDiagnostic?.({
+ canvas:document.getElementById('pen-test-pad'),
+ fields:{
+  type:document.getElementById('pen-test-type'),
+  pressure:document.getElementById('pen-test-pressure'),
+  range:document.getElementById('pen-test-range'),
+  tilt:document.getElementById('pen-test-tilt'),
+  rotation:document.getElementById('pen-test-twist'),
+  eraser:document.getElementById('pen-test-eraser'),
+  events:document.getElementById('pen-test-events'),
+  status:document.getElementById('pen-test-status')
+ },
+ copyButton:document.getElementById('pen-test-copy'),
+ clearButton:document.getElementById('pen-test-clear')
+});
 const toolButtons=[...(document.querySelectorAll?.('[data-studio-tool]')||[])];
 function syncTool(){
  for(const button of toolButtons){
@@ -852,7 +908,7 @@ function syncTool(){
  }
  if(tool.value!=='select')selectedObject=-1;
  ink.style.cursor=tool.value==='text'?'text':tool.value==='select'?'default':'crosshair';
- updateEditorControls();syncVectorControls();
+ updateEditorControls();syncVectorControls();syncEraserControls();
  if(tool.value==='text')switchInspectorTab('type');
  else if(tool.value.startsWith('mask-'))switchInspectorTab('mask');
  else if(tool.value==='select'){
@@ -863,7 +919,15 @@ function syncTool(){
 }
 function chooseImageTool(name){
  if(textDraft)commitInline();
- tool.value=name;
+ if(!tool.options?.length||Array.from(tool.options).some(option=>option.value===name)){
+  if(name!==currentImageTool)imageToolSizes.set(currentImageTool,Number(size.value)||4);
+  tool.value=name;
+  if(name!==currentImageTool){
+   size.value=String(imageToolSizes.get(name)??4);
+   currentImageTool=name;
+  }
+ }
+ if(name==='erase-brush'||name==='erase-stroke')lastEraserMode=name;
  if(name!=='select'&&name!=='text'){selectedText=-1;selectedImage=-1;selectedObject=-1;}
  syncTool();syncSelectedText();redraw();
 }
