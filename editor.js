@@ -303,6 +303,7 @@ for(const button of document.querySelectorAll?.('[data-text-preset]')||[]){
 textFontSize?.addEventListener?.('input',()=>{
  const output=document.getElementById('text-size-readout');
  if(output)output.textContent=textFontSize.value+' px';
+ if(textDraft)positionInline(textDraft);
 });
 textFontSize?.addEventListener?.('change',()=>{
  if(selectedStroke())updateSelectedText({fontSize:Number(textFontSize.value)});
@@ -425,6 +426,7 @@ function toPng(canvas){
 }
 async function copyImage(includeInk=true){
  if(!ready)return false;
+ if(textDraft)commitInline();
  // This is always invoked by a user click, preserving clipboard transient activation.
  if(!navigator.clipboard?.write||typeof ClipboardItem==='undefined'){
   label('Copy image is not available in this browser. Use Export PNG to save the annotated image.');
@@ -445,7 +447,7 @@ async function copyImage(includeInk=true){
 }
 function closeContextMenu(){if(contextMenu)contextMenu.hidden=true;}
 function openContextMenu(event){
- if(!ready||!contextMenu)return;
+ if(!ready||!contextMenu||event.target?.closest?.('.image-text-inline'))return;
  event.preventDefault();event.stopPropagation();
  const maxX=window.innerWidth||1000,maxY=window.innerHeight||800;
  contextMenu.hidden=false;
@@ -487,7 +489,7 @@ function download(blob,extension){const url=URL.createObjectURL(blob),a=document
   a.href=url;a.download='MangoShot-'+new Date().toISOString().replace(/[:.]/g,'-')+'.'+extension;
   document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
 }
-async function exportFile(type){if(!ready)return;document.querySelector('#png').disabled=true;document.querySelector('#pdf').disabled=true;
+async function exportFile(type){if(!ready)return;if(textDraft)commitInline();document.querySelector('#png').disabled=true;document.querySelector('#pdf').disabled=true;
   try{label('Preparing '+type.toUpperCase()+'…');const canvas=flatten();
     if(type==='png'){
       const blob=await toPng(canvas);
