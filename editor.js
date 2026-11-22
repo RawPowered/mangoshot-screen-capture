@@ -183,6 +183,7 @@ function syncSelectedText(){
   if(textFontFamily)textFontFamily.value=stroke.fontFamily||'sans';
   textPreset=stroke.styleId||'plain';
   color.value=stroke.color||color.value;
+  const textFill=document.getElementById('text-fill-color');if(textFill)textFill.value=color.value;
  }
  for(const button of document.querySelectorAll?.('[data-text-preset]')||[])
   button.setAttribute('aria-pressed',String(button.dataset.textPreset===textPreset));
