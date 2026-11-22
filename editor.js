@@ -18,7 +18,7 @@ const selectedBox=document.getElementById('text-selection-box'),inline=document.
 const textFontSize=document.getElementById('text-font-size'),textFontFamily=document.getElementById('text-font-family'),
  textContent=document.getElementById('text-content');
 let selectedText=-1,textDraft=null,dragText=null,textPreset='plain';
-let selectedImage=-1,dragImage=null,maskDraw=null,inspectorTab='layers';
+let selectedImage=-1,selectedObject=-1,dragImage=null,maskDraw=null,inspectorTab='layers';
 function label(message){status.textContent=message;}
 function activate(){call(api.tabs.getCurrent.bind(api.tabs)).then(tab=>
   tab?.id&&call(api.tabs.update.bind(api.tabs),tab.id,{active:true})).catch(()=>{});}
@@ -137,8 +137,13 @@ function redo(){if(!redoHistory.length)return;history.push(cloneStrokes(strokes)
  selectedText=Math.min(selectedText,strokes.length-1);redraw();setReady(ready);syncSelectedText();}
 function selectedStroke(){return selectedText>=0&&strokes[selectedText]?.type==='text'?strokes[selectedText]:null;}
 function selectedImageStroke(){return selectedImage>=0&&strokes[selectedImage]?.type==='image'?strokes[selectedImage]:null;}
-function selectedAnyIndex(){return selectedImage>=0?selectedImage:selectedText;}
+function selectedAnyIndex(){return selectedImage>=0?selectedImage:selectedText>=0?selectedText:selectedObject;}
 function selectedAnyStroke(){return strokes[selectedAnyIndex()]||null;}
+function selectObject(index){
+ selectedText=-1;selectedImage=-1;
+ selectedObject=index>=0&&strokes[index]&& !['text','image'].includes(strokes[index].type)?index:-1;
+ syncSelectedText();renderStrokeList();syncLayerProperties();
+}
 function updateImageSelectionBox(){
  const box=document.getElementById('image-layer-selection-box'),l=selectedImageStroke();
  if(!box)return;
@@ -150,7 +155,7 @@ function updateImageSelectionBox(){
 }
 function selectImage(index){
  if(index<0||strokes[index]?.type!=='image'){selectedImage=-1;updateImageSelectionBox();return;}
- selectedImage=index;selectedText=-1;syncSelectedText();renderStrokeList();
+ selectedImage=index;selectedText=-1;selectedObject=-1;syncSelectedText();renderStrokeList();
  updateImageSelectionBox();syncLayerProperties();
 }
 
@@ -201,7 +206,7 @@ function updateEditorControls(){
  if(remove)remove.disabled=!selected;
 }
 function selectText(index){
- selectedImage=-1;selectedText=index>=0&&strokes[index]?.type==='text'?index:-1;
+ selectedImage=-1;selectedObject=-1;selectedText=index>=0&&strokes[index]?.type==='text'?index:-1;
  syncSelectedText();renderStrokeList();
 }
 function updateSelectedText(patch){
@@ -296,8 +301,8 @@ function removeLayerAt(index){
  if(index<0||!strokes[index])return false;
  if(strokes[index].locked){label('Unlock this layer before deleting it.');return false;}
  snapshot();strokes.splice(index,1);
- if(selectedText===index||selectedImage===index){selectedText=-1;selectedImage=-1;}
- else {if(selectedText>index)selectedText--;if(selectedImage>index)selectedImage--;}
+ if(selectedText===index||selectedImage===index||selectedObject===index){selectedText=-1;selectedImage=-1;selectedObject=-1;}
+ else {if(selectedText>index)selectedText--;if(selectedImage>index)selectedImage--;if(selectedObject>index)selectedObject--;}
  redraw();setReady(ready);syncSelectedText();syncLayerProperties();label('Layer deleted · Ctrl+Z to restore.');return true;
 }
 function moveLayerAt(index,delta){
@@ -306,6 +311,7 @@ function moveLayerAt(index,delta){
  snapshot();const [l]=strokes.splice(index,1);strokes.splice(target,0,l);
  if(selectedText===index)selectedText=target;else if(selectedText===target)selectedText=index;
  if(selectedImage===index)selectedImage=target;else if(selectedImage===target)selectedImage=index;
+ if(selectedObject===index)selectedObject=target;else if(selectedObject===target)selectedObject=index;
  redraw();setReady(ready);syncLayerProperties();return true;
 }
 function duplicateSelectedLayer(){
@@ -315,7 +321,9 @@ function duplicateSelectedLayer(){
  layer.name=(layer.name||layer.type)+' copy';
  layer.points=(layer.points||[]).map(p=>({...p,x:p.x+20,y:p.y+20}));
  strokes.splice(i+1,0,layer);
- if(layer.type==='text'){selectedText=i+1;selectedImage=-1;}else if(layer.type==='image'){selectedImage=i+1;selectedText=-1;}
+ if(layer.type==='text'){selectedText=i+1;selectedImage=-1;selectedObject=-1;}
+ else if(layer.type==='image'){selectedImage=i+1;selectedText=-1;selectedObject=-1;}
+ else{selectedObject=i+1;selectedText=-1;selectedImage=-1;}
  redraw();setReady(ready);syncSelectedText();syncLayerProperties();return true;
 }
 function syncLayerProperties(){
@@ -357,7 +365,7 @@ async function importImages(files){
    layer.width=Math.max(1,Math.round(layer.width*scale));layer.height=Math.max(1,Math.round(layer.height*scale));
    layer.points[0]={...layer.points[0],x:Math.max(0,Math.round((base.width-layer.width)/2)),
     y:Math.max(0,Math.round((base.height-layer.height)/2))};
-   snapshot();strokes.push(layer);selectedImage=strokes.length-1;selectedText=-1;
+   snapshot();strokes.push(layer);selectedImage=strokes.length-1;selectedText=-1;selectedObject=-1;
    redraw();setReady(true);switchInspectorTab('layers');syncLayerProperties();
    label('Image layer imported. Select to drag; use Mask to refine.');
   }catch(error){label('Image import failed: '+error.message);}
@@ -458,32 +466,44 @@ function renderStrokeList(){
  const list=document.getElementById('stroke-list');
  if(!list||typeof document.createElement!=='function'||typeof list.replaceChildren!=='function')return;
  list.replaceChildren();
- if(!strokes.length){list.textContent='No annotations yet';return;}
- strokes.forEach((stroke,i)=>{
-  const row=document.createElement('div');row.className='stroke-entry'+(selectedText===i?' is-selected':'');
+ if(!strokes.length){list.textContent='No editable layers yet. Import an image, add text or draw.';syncLayerProperties();return;}
+ for(let i=strokes.length-1;i>=0;i--){
+  const stroke=strokes[i],row=document.createElement('div');
+  row.className='stroke-entry image-layer-row'+(selectedAnyIndex()===i?' is-selected':'');
+  row.setAttribute('role','group');row.setAttribute('aria-label',(stroke.name||stroke.type)+' layer');
+  const eye=document.createElement('button');eye.type='button';eye.className='image-layer-eye';
+  eye.textContent=stroke.visible===false?'◌':'◉';eye.title=stroke.visible===false?'Show layer':'Hide layer';
+  eye.setAttribute('aria-label',eye.title);eye.setAttribute('aria-pressed',String(stroke.visible!==false));
+  eye.addEventListener('click',()=>replaceLayer(i,{visible:stroke.visible===false}));
   const title=document.createElement('button');title.type='button';title.className='image-object-select';
-  title.textContent=String(i+1).padStart(2,'0')+' · '+(stroke.type==='text'?(stroke.text||'Text').slice(0,28):stroke.type);
-  title.title='Select '+stroke.type+' annotation';title.setAttribute('aria-label','Select annotation '+(i+1));
+  const name=stroke.name||(stroke.type==='text'?((stroke.text||'Text').slice(0,32)):stroke.type);
+  title.textContent=(stroke.type==='image'?'▣ ':stroke.type==='text'?'T ':'◇ ')+name;
+  title.title='Select '+name+' layer';title.setAttribute('aria-label','Select '+name+' layer');
   title.addEventListener('click',()=>{
-   if(stroke.type==='text'){tool.value='select';syncTool();selectText(i);}
-   else selectText(-1);
+   tool.value='select';syncTool();
+   if(stroke.type==='text'){selectText(i);switchInspectorTab('type');}
+   else if(stroke.type==='image'){selectImage(i);switchInspectorTab('layers');}
+   else{selectObject(i);switchInspectorTab('layers');}
   });
-  row.append(title);
-  if(stroke.type==='text'){
-   const edit=document.createElement('button');edit.type='button';edit.textContent='Edit';
-   edit.title='Edit text';edit.addEventListener('click',()=>beginInline(stroke.points[0],i));
-   row.append(edit);
-  }
-  const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.className='image-object-remove';
-  remove.title='Delete annotation '+(i+1)+' (Undo restores it)';
-  remove.setAttribute('aria-label','Delete annotation '+(i+1));
-  remove.addEventListener('click',()=>{
-   snapshot();strokes.splice(i,1);
-   if(selectedText===i)selectedText=-1;else if(selectedText>i)selectedText--;
-   redraw();setReady(ready);syncSelectedText();
+  const lock=document.createElement('button');lock.type='button';lock.className='image-layer-lock';
+  lock.textContent=stroke.locked?'🔒':'▢';lock.title=stroke.locked?'Unlock layer':'Lock layer';
+  lock.setAttribute('aria-label',lock.title);
+  lock.addEventListener('click',()=>{snapshot();strokes[i]={...stroke,locked:!stroke.locked};redraw();setReady(ready);});
+  const edit=document.createElement('button');edit.type='button';edit.className='image-layer-edit';
+  edit.textContent='⋯';edit.title=stroke.type==='text'?'Edit text':stroke.type==='image'?'Open mask controls':'Select annotation';
+  edit.addEventListener('click',()=>{
+   if(stroke.type==='text'){selectText(i);beginInline(stroke.points[0],i);}
+   else if(stroke.type==='image'){selectImage(i);switchInspectorTab('mask');}
+   else{selectObject(i);}
   });
-  row.append(remove);list.append(row);
- });
+  const remove=document.createElement('button');remove.type='button';remove.textContent='×';
+  remove.className='image-object-remove';remove.title='Delete '+name+' layer';
+  remove.setAttribute('aria-label',remove.title);remove.disabled=!!stroke.locked;
+  remove.addEventListener('click',()=>removeLayerAt(i));
+  row.append(eye,title,lock,edit,remove);
+  list.append(row);
+ }
+ syncLayerProperties();
 }
 const toolButtons=[...(document.querySelectorAll?.('[data-studio-tool]')||[])];
 function syncTool(){
