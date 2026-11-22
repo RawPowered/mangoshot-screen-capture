@@ -56,3 +56,9 @@ body.popup #resources{border-color:#52775a;background:#25342b}
 body.popup button:hover{border-color:#b7f279}
 @media(max-width:830px){body.studio .v069-app-wordmark{height:24px;max-width:126px}body.studio .studio-identity{min-width:0}}
 @media(prefers-reduced-motion:reduce){body.studio *{scroll-behavior:auto!important}}
+
+body.studio .studio-mark{display:grid;place-items:center;overflow:visible;background:#17241d;border-color:#3d6543;box-shadow:none}
+body.studio .studio-mark .v069-app-icon{width:36px;height:36px;max-width:none;max-height:none;object-fit:contain}
+body.popup .resource-entry{display:block;padding:11px 13px;text-decoration:none;border:1px solid #557a5f;background:#23362b;border-radius:8px;color:#d4ffba;font-weight:750;font-size:12px}
+body.popup .resource-entry:hover,body.popup .resource-entry:focus-visible{border-color:#c5fa8b;background:#324a31}
+body.studio .studio-tab.v069-resource-tab{font-size:11px}
