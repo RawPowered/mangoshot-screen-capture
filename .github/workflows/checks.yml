@@ -24,3 +24,4 @@ jobs:
           node tests/popup-full-v0610.cjs
           node tests/ux-v0610.cjs
           node tests/image-editor-v0611.cjs
+          node tests/image-layers-v0612.cjs
