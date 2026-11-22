@@ -18,6 +18,12 @@
   <button type="button" class="image-resize-handle" data-resize-handle="sw" data-resize-kind="image" aria-label="Resize image from bottom left"></button>
   <button type="button" class="image-resize-handle" data-resize-handle="se" data-resize-kind="image" aria-label="Resize image from bottom right"></button>
  </div>
+<div id="vector-selection-box" class="image-vector-selection" hidden aria-label="Selected vector shape resize frame">
+ <button type="button" class="image-resize-handle" data-resize-handle="nw" data-resize-kind="vector" aria-label="Resize vector from top left"></button>
+ <button type="button" class="image-resize-handle" data-resize-handle="ne" data-resize-kind="vector" aria-label="Resize vector from top right"></button>
+ <button type="button" class="image-resize-handle" data-resize-handle="sw" data-resize-kind="vector" aria-label="Resize vector from bottom left"></button>
+ <button type="button" class="image-resize-handle" data-resize-handle="se" data-resize-kind="vector" aria-label="Resize vector from bottom right"></button>
+</div>
 <div id="text-inline" class="image-text-inline" hidden>
 <textarea id="text-inline-input" rows="2" maxlength="1000" placeholder="Type text here…" aria-label="Write annotation text"></textarea>
 <div class="image-inline-actions"><span>Enter to place · Shift+Enter line break</span><button type="button" id="text-inline-cancel">Cancel</button><button type="button" class="primary" id="text-inline-place">Place text</button></div>
