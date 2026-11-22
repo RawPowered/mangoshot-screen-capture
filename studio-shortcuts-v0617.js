@@ -194,8 +194,14 @@
   }
   paint();search?.focus?.();return true;
  }
- function closePalette(){if(!palette)return;try{palette.close?.();}catch{}palette.removeAttribute?.('open');}
- let paletteSearch=null,paletteResults=null,paletteFeedback=null,foundPalette=[];
+ function closePalette(){
+  if(!palette)return;
+  try{palette.close?.();}catch{}
+  palette.removeAttribute?.('open');
+  const restore=focusBeforePalette;focusBeforePalette=null;
+  restore?.focus?.({preventScroll:true});
+ }
+ let paletteSearch=null,paletteResults=null,paletteFeedback=null,foundPalette=[],focusBeforePalette=null;
  function paintPalette(){
   if(!paletteResults)return;
   foundPalette=defs.filter(d=>
@@ -205,7 +211,8 @@
   for(let i=0;i<foundPalette.length;i++){
    const d=foundPalette[i];
    const b=create('','button','v0617-command-row');
-   b.type='button';b.dataset.commandId=d.id;b.setAttribute('aria-selected',String(i===selectedPalette));
+   b.type='button';b.id='v0617-command-'+i;b.dataset.commandId=d.id;
+   b.setAttribute('role','option');b.setAttribute('aria-selected',String(i===selectedPalette));
    b.append(create(d.label,'strong'),create(d.group,'small'),create(display(keys[d.id]),'kbd'));
    b.addEventListener('mouseenter',()=>{selectedPalette=i;highlightPalette();});
    b.addEventListener('click',()=>runPalette(d.id));
@@ -213,20 +220,26 @@
   }
   if(!foundPalette.length)paletteResults.append(create('No matching commands.','p','v0617-shortcut-empty'));
   if(paletteFeedback)paletteFeedback.textContent=foundPalette.length+' matching command'+(foundPalette.length===1?'':'s');
+  highlightPalette();
  }
  function highlightPalette(){
+  let activeId='';
   for(const b of paletteResults?.querySelectorAll?.('[data-command-id]')||[]){
    const idx=foundPalette.findIndex(d=>d.id===b.dataset.commandId);
-   b.setAttribute('aria-selected',String(idx===selectedPalette));
+   const selected=idx===selectedPalette;
+   b.setAttribute('aria-selected',String(selected));
+   if(selected){activeId=b.id;b.scrollIntoView?.({block:'nearest'});}
+  }
+  if(paletteSearch){
+   if(activeId)paletteSearch.setAttribute('aria-activedescendant',activeId);
+   else paletteSearch.removeAttribute?.('aria-activedescendant');
   }
  }
  function runPalette(id){
-  closePalette();
+  if(id==='commandPalette')return true;
   const ok=run(id);
-  if(!ok){
-   if(paletteFeedback)paletteFeedback.textContent='Load or select the necessary media/layer, then retry.';
-   root.document?.getElementById?.('status')&&(root.document.getElementById('status').textContent='Command unavailable. Load media or select a compatible layer.');
-  }
+  if(ok)closePalette();
+  else if(paletteFeedback)paletteFeedback.textContent='Unavailable: load media or select a compatible layer, then retry.';
   return ok;
  }
  function makePaletteUI(){
@@ -237,8 +250,11 @@
   paletteSearch=document.createElement('input');paletteSearch.type='search';
   paletteSearch.placeholder='Search tools, actions or keyboard shortcuts…';
   paletteSearch.setAttribute('aria-label','Search MangoShot commands');
+  paletteSearch.setAttribute('role','combobox');
+  paletteSearch.setAttribute('aria-autocomplete','list');
+  paletteSearch.setAttribute('aria-controls','v0617-command-results');
   paletteSearch.addEventListener('input',()=>{paletteQuery=paletteSearch.value.trim().toLowerCase();selectedPalette=0;paintPalette();});
-  paletteResults=create('','div','v0617-command-results');paletteResults.setAttribute('role','listbox');
+  paletteResults=create('','div','v0617-command-results');paletteResults.id='v0617-command-results';paletteResults.setAttribute('role','listbox');
   paletteResults.setAttribute('aria-label','Available commands');
   paletteFeedback=create('','p','v0617-command-feedback');paletteFeedback.setAttribute('role','status');
   const help=create('↑ ↓ Navigate · Enter Run · Esc Close · ? Shortcut settings','p','v0617-command-help');
@@ -250,7 +266,7 @@
  function openPalette(){
   if(!palette)return false;
   if(isOpen(modal)){try{modal.close?.();}catch{modal.removeAttribute?.('open');}}
-  menuClose();paletteQuery='';selectedPalette=0;if(paletteSearch)paletteSearch.value='';
+  menuClose();focusBeforePalette=document.activeElement;paletteQuery='';selectedPalette=0;if(paletteSearch)paletteSearch.value='';
   paintPalette();
   if(!isOpen(palette)){try{palette.showModal();}catch{palette.setAttribute('open','');}}
   paletteSearch?.focus?.();return true;
