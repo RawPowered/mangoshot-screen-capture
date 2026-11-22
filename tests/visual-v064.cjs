@@ -10,7 +10,8 @@ assert.ok(zoom.includes("setScale(next.scale);setNumeric(next.x,next.y)"),'Zoom 
 assert.ok(zoom.includes("const corner=e.target?.dataset?.corner"),'Resize must distinguish corner drag from pan');
 assert.ok(zoom.includes("frame.append(canvas,fallback,playing,active)"),'Frame status must report pending frames');
 assert.ok(ui.includes("advanced.append(advancedBody)"),'Precision controls must be behind Advanced');
-for(const id of ['v063-zoom-in','v063-zoom-out','v061-zoom-x','v061-zoom-y','v061-zoom-scale','v061-zoom-duration','v063-add-range','mark-in','mark-out','split','cut','trim','undo','redo','reset'])assert.ok(html.includes('id="'+id+'"'),'Legacy edit binding removed '+id);
+for(const id of ['v061-zoom-x','v061-zoom-y','v061-zoom-scale','v061-zoom-duration','mark-in','mark-out','split','cut','trim','undo','redo','reset'])assert.ok(html.includes('id="'+id+'"'),'Legacy HTML edit binding removed '+id);
+for(const id of ['v063-zoom-in','v063-zoom-out','v063-add-range'])assert.ok(zoom.includes("id='"+id+"'"),'Dynamic HUD control removed '+id);
 assert.ok(ui.includes("const frames=mk('div','v064-clip-frames')"),'Source thumbnail mini timeline required');
 assert.ok(ui.includes("const edge=e.target?.dataset?.edge"),'Visual clip In/Out handles required');
 assert.ok(ui.includes("view()?.setRange?.(draft.a,draft.b)"),'Clip range drag must commit through existing editor model');
