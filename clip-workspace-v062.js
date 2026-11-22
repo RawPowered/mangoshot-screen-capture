@@ -132,7 +132,7 @@
  const mediaMenu=[...document.querySelectorAll('.v06-menu-bar .v06-menu')].find(m=>q(m,'summary')?.textContent.trim()==='Layer');
  const mediaPop=q(mediaMenu,'.v06-menu-pop');
  mediaPop?.append(button('Show Media Bin',()=>{
-   bin.scrollIntoView?.({block:'nearest',behavior:'smooth'});
+   root.MangoMediaDock?.show?.(); // pinned dock; never scroll the editor document
    el('v06-media-input')?.focus?.();
    if(mediaMenu)mediaMenu.open=false;
  },'v062-menu-command'));

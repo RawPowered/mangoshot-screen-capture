@@ -259,6 +259,7 @@
  ui('make-thumbnails').addEventListener('click',()=>{void generateFrames(false);});
  ui('analyze-audio').addEventListener('click',drawWaveform);
  document.addEventListener('keydown',event=>{
+  if(globalThis.MangoShortcuts?.active)return; // centralized, editable shortcuts
   const st=state();if(!st?.duration()||event.target?.matches?.('input,textarea,select,[contenteditable]')||st.exporting())return;
   if(event.ctrlKey&&!event.altKey&&event.shiftKey&&event.key.toLowerCase()==='z'){event.preventDefault();ui('redo').click();return;}
   if(event.ctrlKey&&!event.altKey&&!event.shiftKey&&event.key.toLowerCase()==='z'){event.preventDefault();ui('undo').click();return;}

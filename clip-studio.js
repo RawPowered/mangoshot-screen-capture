@@ -405,7 +405,7 @@ for(const [id,delta] of [['program-back',-1/30],['program-forward',1/30]])
  byId(id).addEventListener('click',()=>{if(!original||exporting)return;sequencePreview?.stop();
   const current=sequencePreview?.current()??0;globalThis.MangoClipView.seekOutput(Math.max(0,Math.min(MangoEditOps.length(segments)-.005,current+delta)));});
 video.addEventListener('ended',()=>sequencePreview?.stop());
-document.addEventListener('keydown',e=>{if(e.key!==' '||e.ctrlKey||e.altKey||e.metaKey||e.target?.matches?.('input,textarea,select,[contenteditable]'))return;
+document.addEventListener('keydown',e=>{if(globalThis.MangoShortcuts?.active)return;if(e.key!==' '||e.ctrlKey||e.altKey||e.metaKey||e.target?.matches?.('input,textarea,select,[contenteditable]'))return;
  e.preventDefault();byId('program-play').click();});
 
 byId('save-project').addEventListener('click',()=>{if(!original||exporting)return;
