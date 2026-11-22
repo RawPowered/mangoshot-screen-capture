@@ -111,7 +111,8 @@
   const v=view();if(!primary||!v?.original()){label('Load the matching primary video using Import video before restoring decisions.');return;}
   try{if(typeof v.restoreLegacyProject!=='function')throw new Error('Legacy restore adapter unavailable.');
    v.restoreLegacyProject(loadedProject.legacyV1);
-   label('Primary timeline restored from v2 legacy decisions; secondary assets remain staging-only.');}
+   if(loadedProject.creative?.zoomFrames)v.setZoomFrames(loadedProject.creative.zoomFrames);
+   label('Primary timeline and saved zooms restored; secondary assets remain staging-only.');}
   catch(e){label('Cannot restore primary timeline: '+e.message);}
  };
  root.MangoMediaBin={registry,addFiles,refresh:draw,staged:()=>staged.map(x=>({...x})),snapshot:()=>registry.snapshot()};
