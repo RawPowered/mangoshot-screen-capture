@@ -61,6 +61,13 @@
    updateTimes();
   }
   el('v061-zoom-scale')?.addEventListener('change',sync);
+  // Selected camera keyframes and decoded sources update time fields
+  // programmatically; keep the visible In/Out labels in sync too.
+  const zoomRows=el('v061-zoom-events');
+  zoomRows?.addEventListener('click',()=>root.requestAnimationFrame?.(sync));
+  const sourceVideo=el('video');
+  sourceVideo?.addEventListener('loadedmetadata',()=>root.requestAnimationFrame?.(sync));
+  for(const id of ['v063-zoom-in','v063-zoom-out'])el(id)?.addEventListener('input',sync);
   const refresh=root.MangoZoomHUD.refresh;
   root.MangoZoomHUD.refresh=()=>{refresh();sync();};
   sync();
