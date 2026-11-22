@@ -28,3 +28,5 @@ jobs:
           node tests/image-typefx-v0613.cjs
           node tests/capture-output-v0614.cjs
           node tests/area-capture-v0614.cjs
+          node tests/image-vector-v0615.cjs
+          node tests/clip-tools-v0615.cjs

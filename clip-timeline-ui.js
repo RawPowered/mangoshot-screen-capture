@@ -208,9 +208,34 @@
   },550);
  }
 
- function setTool(name){tool=name;for(const id of ['tool-select','tool-razor','range-tool']){
-   const el=ui(id);if(!el)continue;el.setAttribute('aria-pressed',String(id==='tool-'+name));
- }ui('timeline').dataset.tool=name;state()?.message(name==='razor'?'Razor selected · click V1 to split.':name==='range'?'Range tool · drag along ruler, then Ripple Delete.':'Selection tool enabled.');
+ function setTool(name){
+  if(!['select','razor','range'].includes(name))return false;
+  tool=name;
+  const ids={select:'tool-select',razor:'tool-razor',range:'range-tool'};
+  const titles={select:'SELECT',razor:'RAZOR',range:'RANGE'};
+  const hints={select:'Move / trim clips',razor:'Click V1 to split',range:'Drag timeline range'};
+  for(const [kind,id] of Object.entries(ids)){
+   const active=kind===name,legacy=ui(id);
+   if(legacy){
+    legacy.setAttribute('aria-pressed',String(active));
+    legacy.classList?.toggle?.('is-active',active);
+   }
+   for(const button of document.querySelectorAll?.('[data-v06-tool="'+id+'"]')||[]){
+    button.setAttribute('aria-pressed',String(active));
+    button.classList?.toggle?.('is-active',active);
+   }
+  }
+  const timeline=ui('timeline');if(timeline)timeline.dataset.tool=name;
+  if(document.body?.dataset)document.body.dataset.clipTool=name;
+  const indicator=ui('v0615-active-tool');
+  if(indicator){
+   indicator.dataset.tool=name;
+   const strong=indicator.querySelector?.('strong');if(strong)strong.textContent=titles[name];
+   const small=indicator.querySelector?.('small');if(small)small.textContent=hints[name];
+  }
+  state()?.message(name==='razor'?'Razor selected · click V1 to split.':
+   name==='range'?'Range tool · drag along ruler, then Ripple Delete.':'Selection tool enabled.');
+  return true;
  }
  function razorOnTimeline(event){if(tool!=='razor')return;
    if(event.target?.classList?.contains('trim-grip'))return;
