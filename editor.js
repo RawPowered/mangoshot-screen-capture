@@ -390,12 +390,99 @@ ink.addEventListener('dblclick',event=>{
 });
 document.querySelector('#undo').addEventListener('click',undo);document.getElementById('redo')?.addEventListener('click',redo);
 document.querySelector('#clear').addEventListener('click',()=>{if(strokes.length){snapshot();strokes=[];redraw();setReady(true);}});
-window.addEventListener('keydown',event=>{if(!ready||!event.ctrlKey||event.target?.matches?.('input,textarea,select,[contenteditable]'))return;
+function isTyping(target){return !!target?.matches?.('input,textarea,select,[contenteditable],[role="textbox"]');}
+window.addEventListener('keydown',event=>{
+ if(!ready)return;
+ if(event.key==='Escape'){
+  if(textDraft){event.preventDefault();cancelInline();return;}
+  if(contextMenu&&!contextMenu.hidden){event.preventDefault();closeContextMenu();}
+  return;
+ }
+ if(isTyping(event.target))return;
+ if((event.key==='Delete'||event.key==='Backspace')&&selectedStroke()&&!event.ctrlKey&&!event.metaKey){
+  event.preventDefault();deleteSelectedText();return;
+ }
+ if(!event.ctrlKey&&!event.metaKey&&!event.altKey){
+  const key=event.key.toLowerCase();
+  if(key==='v'){event.preventDefault();tool.value='select';syncTool();return;}
+  if(key==='t'){event.preventDefault();tool.value='text';syncTool();return;}
+ }
+ if(!event.ctrlKey&&!event.metaKey)return;
  if(event.key.toLowerCase()==='z'){event.preventDefault();event.shiftKey?redo():undo();}
  else if(event.key.toLowerCase()==='y'){event.preventDefault();redo();}
 },true);
-function flatten(){const canvas=document.createElement('canvas');canvas.width=base.width;canvas.height=base.height;
-  const merged=canvas.getContext('2d');merged.drawImage(base,0,0);merged.drawImage(ink,0,0);return canvas;}
+function flatten(includeInk=true){
+ if(editorCore?.merge)return editorCore.merge(base,ink,includeInk);
+ const canvas=document.createElement('canvas');canvas.width=base.width;canvas.height=base.height;
+ const merged=canvas.getContext('2d');merged.drawImage(base,0,0);
+ if(includeInk)merged.drawImage(ink,0,0);
+ return canvas;
+}
+function toPng(canvas){
+ if(editorCore?.toPng)return editorCore.toPng(canvas);
+ return new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):
+  reject(new Error('PNG encoding failed.')),'image/png'));
+}
+async function copyImage(includeInk=true){
+ if(!ready)return false;
+ // This is always invoked by a user click, preserving clipboard transient activation.
+ if(!navigator.clipboard?.write||typeof ClipboardItem==='undefined'){
+  label('Copy image is not available in this browser. Use Export PNG to save the annotated image.');
+  return false;
+ }
+ try{
+  const composed=flatten(includeInk);
+  // Promise-backed PNG keeps the clipboard.write call inside the click gesture,
+  // even for large full-page screenshots that take time to encode.
+  const png=toPng(composed);
+  await navigator.clipboard.write([new ClipboardItem({'image/png':png})]);
+  label((includeInk?'Annotated screenshot':'Original screenshot')+' copied · '+base.width+' × '+base.height+' px. Paste into another application.');
+  return true;
+ }catch(error){
+  label('Image copy failed: '+error.message+'. Use Export PNG if clipboard image access is blocked.');
+  return false;
+ }
+}
+function closeContextMenu(){if(contextMenu)contextMenu.hidden=true;}
+function openContextMenu(event){
+ if(!ready||!contextMenu)return;
+ event.preventDefault();event.stopPropagation();
+ const maxX=window.innerWidth||1000,maxY=window.innerHeight||800;
+ contextMenu.hidden=false;
+ const width=contextMenu.offsetWidth||260,height=contextMenu.offsetHeight||290;
+ contextMenu.style.left=Math.max(6,Math.min(maxX-width-8,event.clientX))+'px';
+ contextMenu.style.top=Math.max(6,Math.min(maxY-height-8,event.clientY))+'px';
+ const deleteButton=contextMenu.querySelector?.('[data-image-action="delete"]');
+ if(deleteButton)deleteButton.disabled=!selectedStroke();
+ contextMenu.querySelector?.('[role="menuitem"]:not(:disabled)')?.focus?.();
+}
+wrap.addEventListener('contextmenu',openContextMenu);
+document.addEventListener?.('pointerdown',event=>{
+ if(contextMenu&&!contextMenu.hidden&&!contextMenu.contains?.(event.target))closeContextMenu();
+},true);
+window.addEventListener('scroll',closeContextMenu,true);
+window.addEventListener('blur',closeContextMenu);
+contextMenu?.addEventListener?.('keydown',event=>{
+ const items=[...(contextMenu.querySelectorAll?.('[role="menuitem"]:not(:disabled)')||[])];
+ const index=items.indexOf(document.activeElement);
+ if(event.key==='Escape'){event.preventDefault();closeContextMenu();ink.focus?.();return;}
+ if(event.key==='ArrowDown'||event.key==='ArrowUp'){
+  event.preventDefault();items[(index+(event.key==='ArrowDown'?1:items.length-1))%items.length]?.focus?.();
+ }
+});
+for(const button of document.querySelectorAll?.('[data-image-action]')||[]){
+ button.addEventListener('click',()=>{
+  const action=button.dataset.imageAction;
+  closeContextMenu();
+  if(action==='copy'){void copyImage(true);return;}
+  if(action==='copy-original'){void copyImage(false);return;}
+  if(action==='png'||action==='pdf'){void exportFile(action);return;}
+  if(action==='undo'){undo();return;}
+  if(action==='redo'){redo();return;}
+  if(action==='delete')deleteSelectedText();
+ });
+}
+document.getElementById('copy-image')?.addEventListener?.('click',()=>{void copyImage(true);});
 function download(blob,extension){const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download='MangoShot-'+new Date().toISOString().replace(/[:.]/g,'-')+'.'+extension;
   document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
@@ -403,7 +490,7 @@ function download(blob,extension){const url=URL.createObjectURL(blob),a=document
 async function exportFile(type){if(!ready)return;document.querySelector('#png').disabled=true;document.querySelector('#pdf').disabled=true;
   try{label('Preparing '+type.toUpperCase()+'…');const canvas=flatten();
     if(type==='png'){
-      const blob=await new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error('PNG encoding failed.')),'image/png'));
+      const blob=await toPng(canvas);
       download(blob,'png');
     }else download(await MangoPDF.fromCanvas(canvas),'pdf');
     label(type.toUpperCase()+' exported locally.');
