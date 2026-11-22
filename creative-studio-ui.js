@@ -31,6 +31,7 @@
  let wasMuted=null;
  async function record(){const v=view();if(!v?.original?.()||v.exporting())return notify('Import a video before recording voiceover.');
   try{const at=v.sequencePosition?.()||0;if(at>=v.outputDuration()-.1)throw Error('Move the playhead before the end of the video.');
+   if(v.isPlaying?.())el('program-play').click();
    await controller.begin(at);wasMuted=v.video().muted;if(el('v061-voice-mute').checked)v.video().muted=true;
    el('program-play').click();renderVoice();notify('Recording voiceover on A2. Press Stop when finished.');
   }catch(e){notify('Microphone unavailable: '+e.message);renderVoice();}
@@ -50,6 +51,7 @@
    const b=el(id);if(b)b.disabled=!!off;
   }
   const note=el('v061-voice-status');if(note)note.textContent=s.recording?'● Recording microphone…':c?('A2 voiceover · '+c.start.toFixed(2)+'s–'+(c.start+c.duration).toFixed(2)+'s · download to preserve'):'No narration yet.';
+  view()?.updateControls?.();
   const track=el('v061-voice-track');track?.replaceChildren();
   if(track&&c){const chip=document.createElement('span'),length=view()?.outputDuration?.()||1;
    chip.className='v061-voice-chip';chip.style.left=100*c.start/length+'%';chip.style.width=100*Math.min(c.duration,Math.max(0,length-c.start))/length+'%';chip.textContent='♫ A2 Voiceover';track.append(chip);}
