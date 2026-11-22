@@ -184,3 +184,10 @@ body.studio{color-scheme:dark;background:var(--studio-bg);color:var(--studio-tex
 .autocut-overlay{position:absolute;left:0;top:33px;bottom:0;right:0;pointer-events:none;z-index:4;overflow:hidden}
 .autocut-cut-mark{position:absolute;top:0;bottom:0;background:rgba(231,103,69,.22);border-left:1px dashed #ea916c;border-right:1px dashed #ea916c;box-sizing:border-box}
 @media(max-width:750px){.autocut-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.autocut-panel summary{display:block}.autocut-list{grid-template-columns:1fr}}
+
+/* v0.5.6 sequence-synced A1/V1 guides and high-performance export controls */
+.thumbnail-strip .frame-thumb-pending{background:#253033;color:#c7d2c7;font:10px/1.2 system-ui;display:flex;justify-content:center;align-items:center;border:1px dashed #657873}
+.desktop-render-guide{color:#adbfbe;font-size:11px;line-height:1.55;border-top:1px solid #445055;padding:7px 0}
+.desktop-render-guide summary{cursor:pointer;color:#d8e8cf;font-weight:650}
+.desktop-render-guide code{display:block;overflow-wrap:anywhere;padding:8px;background:#11191c;border:1px solid #435251;border-radius:4px;color:#bedda7;user-select:text}
+.studio .timeline-tools select{width:auto;min-width:104px;background:#1a2527;color:#e9f1e8;padding:6px 8px}

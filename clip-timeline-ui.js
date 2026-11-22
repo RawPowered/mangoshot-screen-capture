@@ -4,26 +4,71 @@
  const format=seconds=>{const sec=Math.max(0,seconds||0),mins=Math.floor(sec/60);
    return String(Math.floor(mins/60)).padStart(2,'0')+':'+String(mins%60).padStart(2,'0')+':'+String(Math.floor(sec%60)).padStart(2,'0');};
  let markers=[],generation=0,tool='select',draggingPlayhead=false,draggingRange=false,rangeAnchor=0;
- let thumbnailUrls=[];
- const drawWaveform=async()=>{const st=state(),blob=st?.original?.();if(!blob)return;
-  if(blob.size>130*1024*1024){st.message('Audio analysis is limited to files under 130 MB.');return;}
-  const button=ui('analyze-audio');button.disabled=true;st.message('Decoding audio locally for waveform…');
-  let context;try{const Audio=globalThis.AudioContext||globalThis.webkitAudioContext;if(!Audio)throw new Error('Web Audio is unavailable');
-   context=new Audio();const audio=await context.decodeAudioData(await blob.arrayBuffer());
-   if(!audio.numberOfChannels)throw new Error('No audio channels found');
-   const canvas=ui('audio-waveform'),ctx=canvas.getContext('2d'),channel=audio.getChannelData(0),width=canvas.width,height=canvas.height;
-   ctx.clearRect(0,0,width,height);ctx.fillStyle='#79bca0';const group=Math.max(1,Math.floor(channel.length/width));
-   for(let x=0;x<width;x++){let max=0;for(let k=x*group;k<Math.min(channel.length,(x+1)*group);k+=Math.max(1,Math.floor(group/28)))max=Math.max(max,Math.abs(channel[k]));
-    const bar=Math.max(1,max*height*.9);ctx.fillRect(x,(height-bar)/2,1,bar);}
-   st.message('Audio waveform generated locally.');
-  }catch(error){st.message('No usable audio waveform for this file (it may have no audio track, or the browser cannot decode its audio): '+error.message);}
+ // Caches are keyed by SOURCE time. Every render reprojects them into
+ // sequence time, so edited gaps never appear in the A1 or thumbnail strips.
+ let thumbnailUrls=[],thumbnailCache=[],generated=false,renderTimer=0,sourceUrl=null,sequenceSignature='';
+ let waveformPeaks=null,waveformDuration=0,profile='balanced';
+ const thumbCount=duration=>profile==='high'?Math.min(80,Math.max(16,Math.ceil(duration/5))):Math.min(36,Math.max(12,Math.ceil(duration/10)));
+ function reflowThumbnails(){
+  const st=state(),frameStrip=ui('thumbnail-strip');if(!frameStrip)return;
+  const duration=st?.outputDuration()||0;
+  frameStrip.replaceChildren();if(!generated||!duration)return;
+  const plan=globalThis.MangoSequenceMedia.thumbnailPlan(st.segments(),thumbCount(duration));
+  for(const frame of plan){
+   const node=document.createElement('span');node.className='frame-thumb';
+   node.title='Sequence '+format(frame.output)+' · source '+format(frame.source);
+   // Do not show a frame captured from a deleted source range. Placeholder
+   // until reanalysis is preferable to a deceptive pre-cut thumbnail.
+   let nearest=null,distance=Infinity;
+   for(const item of thumbnailCache){const diff=Math.abs(item.source-frame.source);
+    if(diff<distance){nearest=item;distance=diff;}}
+   const tolerance=Math.min(1.5,Math.max(.12,duration/plan.length*.16));
+   const retained=globalThis.MangoSequenceMedia.sections(st.segments())[frame.index];
+   if(nearest&&distance<=tolerance&&nearest.source>=retained.sourceStart-.0001&&nearest.source<=retained.sourceEnd+.0001){node.style.backgroundImage='url('+nearest.url+')';}
+   else {node.className+=' frame-thumb-pending';node.textContent=format(frame.output);}
+   frameStrip.appendChild(node);
+  }
+ }
+ function redrawWaveform(){
+  const st=state(),canvas=ui('audio-waveform');if(!canvas)return;
+  const ctx=canvas.getContext?.('2d');if(!ctx)return;
+  const width=canvas.width,height=canvas.height;ctx.clearRect(0,0,width,height);
+  if(!waveformPeaks||!st?.outputDuration())return;
+  const display=globalThis.MangoSequenceMedia.peakSeries(st.segments(),waveformPeaks,waveformDuration,width);
+  ctx.fillStyle='#79bca0';
+  for(let x=0;x<width;x++){
+   const bar=Math.max(1,Math.min(height*.92,display[x]*height*.9));
+   ctx.fillRect(x,(height-bar)/2,1,bar);
+  }
+  // Small guide lines keep A1's cut boundaries aligned with V1.
+  const rows=globalThis.MangoSequenceMedia.sections(st.segments());
+  ctx.fillStyle='rgba(235,204,137,.75)';
+  for(const row of rows.slice(1))ctx.fillRect(Math.round(row.outputStart/st.outputDuration()*width),0,1,height);
+ }
+ const drawWaveform=async()=>{
+  const st=state(),blob=st?.original();if(!blob)return;
+  const max=profile==='high'?700:130;
+  if(blob.size>max*1024*1024){st.message('Audio analysis exceeds '+max+' MB in '+profile+' mode. Select High-performance to raise the limit.');return;}
+  const button=ui('analyze-audio');button.disabled=true;st.message('Decoding local source audio; the waveform will follow the edited sequence…');
+  let context;
+  try{
+   const Audio=globalThis.AudioContext||globalThis.webkitAudioContext;
+   if(!Audio)throw new Error('Web Audio is unavailable');
+   context=new Audio();const decoded=await context.decodeAudioData(await blob.arrayBuffer());
+   if(!decoded.numberOfChannels)throw new Error('No audio channels found');
+   waveformDuration=decoded.duration;
+   waveformPeaks=globalThis.MangoSequenceMedia.audioPeaks(decoded.getChannelData(0),
+    profile==='high'?16000:6500);
+   redrawWaveform();st.message('A1 waveform projected onto '+st.segments().length+' retained video clips.');
+  }catch(error){waveformPeaks=null;redrawWaveform();
+   st.message('Waveform unavailable: the source may have no audio, or this browser cannot decode the container ('+error.message+').');}
   finally{if(context)void context.close().catch(()=>{});button.disabled=false;}
  };
 
  const state=()=>globalThis.MangoClipView;
  function playhead(){const st=state();if(!st)return;
    const d=st.outputDuration();const video=st.video();
-   const point=st.outputAt(video.currentTime);
+   const point=st.sequencePosition?.()??st.outputAt(video.currentTime);
    ui('timeline-playhead').style.left=(d>0&&point!==null?Math.min(100,Math.max(0,point/d*100)):0)+'%';
    ui('current-time').textContent=format(point===null?video.currentTime:point);
    const slider=ui('timeline-playhead');slider.setAttribute?.('aria-valuemin','0');
@@ -51,7 +96,7 @@
   if(box){const show=current?.active&&current.end-current.start>=.04&&duration>0;
    box.classList.toggle('is-active',!!show);
    if(show){box.style.left=(current.start/duration*100)+'%';box.style.width=(Math.max(0,current.end-current.start)/duration*100)+'%';}}
-  playhead();
+  reflowThumbnails();redrawWaveform();playhead();
  }
  function addMarker(){const st=state();if(!st?.duration()||st.exporting())return;
   const t=st.outputAt(st.video().currentTime);if(t===null)return;const label='Marker '+(markers.length+1);
@@ -111,43 +156,58 @@
   st.video().pause?.();st.seekOutput(next);playhead();keepPlayheadVisible();
  }
 
- async function generateFrames(){const st=state(),source=st?.url();if(!source||!st.duration())return;
-   const generationId=++generation;const button=ui('make-thumbnails');button.disabled=true;st.message('Generating local preview frames…');
-   const frames=ui('thumbnail-strip');frames.replaceChildren();for(const url of thumbnailUrls)try{URL.revokeObjectURL(url);}catch{}thumbnailUrls=[];let thumbVideo;
-   try{
-    thumbVideo=document.createElement('video');thumbVideo.preload='auto';thumbVideo.muted=true;thumbVideo.playsInline=true;
-    thumbVideo.src=source;
-    const waitEvent=(event,ms=7000)=>new Promise((resolve,reject)=>{
-      const timer=setTimeout(()=>{clear();reject(new Error('Media '+event+' timed out'));},ms);
-      function clear(){clearTimeout(timer);thumbVideo.removeEventListener(event,done);thumbVideo.removeEventListener('error',fail);}
-      function done(){clear();resolve();}function fail(){clear();reject(thumbVideo.error||new Error('Media decoding failed'));}
-      thumbVideo.addEventListener(event,done,{once:true});thumbVideo.addEventListener('error',fail,{once:true});
-    });
-    const meta=waitEvent('loadedmetadata');await meta;
-    if(thumbVideo.readyState<2)await waitEvent('loadeddata');
-    const width=150,height=Math.round(width*(thumbVideo.videoHeight||9)/(thumbVideo.videoWidth||16));
-    const canvas=document.createElement('canvas');canvas.width=width;canvas.height=Math.max(50,height);
-    const ctx=canvas.getContext('2d',{alpha:false});const n=Math.min(12,Math.max(5,Math.ceil(st.duration()/20)));
-    for(let i=0;i<n;i++){
-      if(generation!==generationId)return;
-      const target=Math.min(Math.max(0,st.duration()-.08),((i+.35)/n)*st.duration());
-      if(Math.abs(thumbVideo.currentTime-target)>.02){const seeked=waitEvent('seeked');thumbVideo.currentTime=target;await seeked;}
-      ctx.drawImage(thumbVideo,0,0,canvas.width,canvas.height);
-      // Prefer async encoding: large screenshots should not lock up edit tools.
-      let url;
-      if(canvas.toBlob&&globalThis.URL?.createObjectURL){
-       const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.64));
-       if(blob){url=URL.createObjectURL(blob);thumbnailUrls.push(url);}
-      }
-      if(!url)url=canvas.toDataURL('image/jpeg',.64);
-      const node=document.createElement('span');node.className='frame-thumb';node.style.backgroundImage='url('+url+')';
-      node.title=format(target);frames.appendChild(node);
-      await new Promise(resolve=>setTimeout(resolve,0)); // yield even if tab is backgrounded
+ async function generateFrames(automatic=false){
+  const st=state(),source=st?.url();if(!source||!st.duration())return;
+  const myGeneration=++generation,button=ui('make-thumbnails');
+  generated=true;sourceUrl=source;
+  button.disabled=true;
+  if(!automatic)st.message('Generating sequence-aligned preview frames locally…');
+  const plan=globalThis.MangoSequenceMedia.thumbnailPlan(st.segments(),thumbCount(st.outputDuration()));
+  let thumbVideo;
+  const wait=(el,event,ms=10000)=>new Promise((resolve,reject)=>{
+   const timer=setTimeout(()=>{clean();reject(new Error('Media '+event+' timed out'));},ms);
+   function clean(){clearTimeout(timer);el.removeEventListener(event,done);el.removeEventListener('error',fail);}
+   function done(){clean();resolve();}function fail(){clean();reject(el.error||new Error('Media decode failed'));}
+   el.addEventListener(event,done,{once:true});el.addEventListener('error',fail,{once:true});
+  });
+  try{
+   thumbVideo=document.createElement('video');thumbVideo.preload='auto';thumbVideo.muted=true;thumbVideo.playsInline=true;
+   const metadata=wait(thumbVideo,'loadedmetadata');thumbVideo.src=source;await metadata;
+   if(thumbVideo.readyState<2)await wait(thumbVideo,'loadeddata');
+   const width=150,height=Math.max(50,Math.round(width*(thumbVideo.videoHeight||9)/(thumbVideo.videoWidth||16)));
+   const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
+   const ctx=canvas.getContext('2d',{alpha:false});
+   for(let i=0;i<plan.length;i++){
+    if(generation!==myGeneration||st.url()!==source)return;
+    const sourceTime=Math.max(0,Math.min(thumbVideo.duration-.05,plan[i].source));
+    const existing=thumbnailCache.find(c=>Math.abs(c.source-sourceTime)<.06);
+    if(existing)continue;
+    if(Math.abs(thumbVideo.currentTime-sourceTime)>.018){const done=wait(thumbVideo,'seeked');thumbVideo.currentTime=sourceTime;await done;}
+    if(generation!==myGeneration)return;
+    ctx.drawImage(thumbVideo,0,0,width,height);
+    let url;if(canvas.toBlob&&globalThis.URL?.createObjectURL){
+     const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.72));
+     if(blob)url=URL.createObjectURL(blob);
     }
-    st.message('Generated '+n+' local thumbnails.');
-   }catch(error){st.message('Thumbnails unavailable: '+error.message);}
-   finally{if(thumbVideo){thumbVideo.pause();thumbVideo.removeAttribute('src');thumbVideo.load();}button.disabled=false;}
+    if(!url)url=canvas.toDataURL('image/jpeg',.72);
+    thumbnailCache.push({source:sourceTime,url});thumbnailUrls.push(url);
+    if(thumbnailCache.length>200){const stale=thumbnailCache.shift();
+     if(stale.url.startsWith('blob:'))URL.revokeObjectURL(stale.url);thumbnailUrls=thumbnailUrls.filter(url=>url!==stale.url);}
+    if(i%4===0)reflowThumbnails();
+    await new Promise(resolve=>setTimeout(resolve,0));
+   }
+   if(generation===myGeneration){reflowThumbnails();
+    if(!automatic)st.message('Sequence-synchronized thumbnails ready. Cuts remain aligned after edits.');}
+  }catch(error){if(generation===myGeneration)st.message('Thumbnail analysis unavailable: '+error.message);}
+  finally{thumbVideo?.pause?.();thumbVideo?.removeAttribute?.('src');thumbVideo?.load?.();button.disabled=false;}
  }
+ function scheduleRegeneration(){
+  if(!generated)return;
+  clearTimeout(renderTimer);renderTimer=setTimeout(()=>{const st=state();
+   if(st?.url()&&st.outputDuration()&&!st.exporting())void generateFrames(true);
+  },550);
+ }
+
  function setTool(name){tool=name;for(const id of ['tool-select','tool-razor','range-tool']){
    const el=ui(id);if(!el)continue;el.setAttribute('aria-pressed',String(id==='tool-'+name));
  }ui('timeline').dataset.tool=name;state()?.message(name==='razor'?'Razor selected · click V1 to split.':name==='range'?'Range tool · drag along ruler, then Ripple Delete.':'Selection tool enabled.');
@@ -196,7 +256,7 @@
  ui('timeline-zoom').addEventListener('input',render);
  ui('add-marker').addEventListener('click',addMarker);
  ui('split').addEventListener('click',split);
- ui('make-thumbnails').addEventListener('click',generateFrames);
+ ui('make-thumbnails').addEventListener('click',()=>{void generateFrames(false);});
  ui('analyze-audio').addEventListener('click',drawWaveform);
  document.addEventListener('keydown',event=>{
   const st=state();if(!st?.duration()||event.target?.matches?.('input,textarea,select,[contenteditable]')||st.exporting())return;
@@ -219,6 +279,6 @@
   else if(key==='j'){st.video().pause();st.seekOutput(Math.max(0,(st.outputAt(st.video().currentTime)||0)-2));event.preventDefault();}
   else if(event.altKey&&key==='backspace'){rippleSelection();event.preventDefault();}
  });
- globalThis.MangoClipTimeline={render,markers:()=>markers.map(m=>({...m})),loadMarkers(items){markers=items.map(m=>({...m}));render();},reset(){tool='select';setTool('select');generation++;markers=[];draggingPlayhead=false;draggingRange=false;
-  for(const url of thumbnailUrls)try{URL.revokeObjectURL(url);}catch{}thumbnailUrls=[];ui('thumbnail-strip').replaceChildren();const hint=document.createElement('span');hint.className='frame-thumb-label';hint.textContent='Generate thumbnails to inspect source frames';ui('thumbnail-strip').appendChild(hint);const wave=ui('audio-waveform');wave?.getContext?.('2d')?.clearRect(0,0,wave.width,wave.height);render();},playhead};
+ globalThis.MangoClipTimeline={render,markers:()=>markers.map(m=>({...m})),loadMarkers(items){markers=items.map(m=>({...m}));render();},onSequenceChange(){const signature=JSON.stringify(state()?.segments()||[]);if(signature===sequenceSignature)return;sequenceSignature=signature;++generation;reflowThumbnails();redrawWaveform();scheduleRegeneration();},setProfile(next){profile=next==='high'?'high':'balanced';reflowThumbnails();scheduleRegeneration();},reset(){tool='select';setTool('select');generation++;markers=[];draggingPlayhead=false;draggingRange=false;generated=false;waveformPeaks=null;waveformDuration=0;sourceUrl=null;sequenceSignature=JSON.stringify(state()?.segments()||[]);clearTimeout(renderTimer);thumbnailCache=[];
+  for(const url of thumbnailUrls)if(url.startsWith('blob:'))try{URL.revokeObjectURL(url);}catch{}thumbnailUrls=[];ui('thumbnail-strip').replaceChildren();const hint=document.createElement('span');hint.className='frame-thumb-label';hint.textContent='Generate thumbnails to inspect source frames';ui('thumbnail-strip').appendChild(hint);const wave=ui('audio-waveform');wave?.getContext?.('2d')?.clearRect(0,0,wave.width,wave.height);render();},playhead};
 })();
