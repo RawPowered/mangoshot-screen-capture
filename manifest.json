@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "MangoShot",
-  "version": "0.6.16",
-  "description": "MangoShot Wacom and browser pen pressure diagnostic, pressure-sensitive brush eraser, whole-stroke eraser and eraser-tip recognition.",
+  "version": "0.6.17",
+  "description": "MangoShot unified keyboard shortcut controls, configurable editor keymaps, searchable command palette and accessible File/Edit/Layer menus.",
   "permissions": [
     "activeTab",
     "scripting",
