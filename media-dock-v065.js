@@ -18,7 +18,7 @@
  if(count){count.classList.add('v065-media-count');num.append(count);}
  heading.append(num);
  const tools=make('div','v065-dock-tools');
- const importButton=action('Import','Import local images, video or audio',''.constructor===String?()=>assetInput.click():()=>assetInput.click(),'v065-import-action');
+ const importButton=action('Import','Import local images, video or audio',()=>assetInput.click(),'v065-import-action');
  importButton.id='v065-import-media';
  const toggle=action('Collapse','Collapse Media Library',()=>setCollapsed(!collapsed),'v065-dock-collapse');
  toggle.id='v065-media-toggle';
@@ -34,6 +34,7 @@
   toggle.textContent=collapsed?'Expand':'Collapse';
   toggle.setAttribute('aria-expanded',String(!collapsed));
   toggle.title=collapsed?'Expand Media Library':'Collapse Media Library';
+  root.MangoToolIcons?.refresh?.(root.MangoShortcuts?.keys?.()||{});
   try{root.localStorage?.setItem('MangoShot.MediaDockCollapsed.v1',collapsed?'1':'0');}catch{}
  }
  try{collapsed=root.localStorage?.getItem('MangoShot.MediaDockCollapsed.v1')==='1';}catch{}
