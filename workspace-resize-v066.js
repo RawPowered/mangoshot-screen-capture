@@ -40,7 +40,8 @@
   h.dataset.split=name;h.tabIndex=0;h.setAttribute('role','separator');
   h.setAttribute('aria-orientation',orientation);
   h.setAttribute('aria-label',label);
-  h.setAttribute('aria-valuemin','0');h.setAttribute('aria-valuemax','100');
+  h.setAttribute('aria-valuemin',name==='side'?'260':name==='dock'?'36':'0');
+  h.setAttribute('aria-valuemax',name==='side'?'620':name==='dock'?'240':'100');
   h.title=label+' · Drag or use arrow keys · Double click to reset';
   layout.append(h);handles[name]=h;return h;
  }
@@ -109,6 +110,13 @@
   });
   element.addEventListener('dblclick',()=>{states[profile()][axis==='top'?'top':axis==='dock'?'dock':'side']=defaults[profile()][axis==='top'?'top':axis==='dock'?'dock':'side'];states[profile()]=bound(states[profile()]);save(profile());redraw();});
  }
+ const video=document.getElementById('video'),previewFrame=document.getElementById('clip-preview-frame');
+ video?.addEventListener('loadedmetadata',()=>{
+  if(video.videoWidth>0&&video.videoHeight>0){
+   previewFrame?.style.setProperty('--mango-aspect',String(video.videoWidth/video.videoHeight));
+   redraw();
+  }
+ });
  const transport=document.querySelector('.workspace-switch');
  const layouts=document.createElement('details');layouts.className='v066-layout-menu';
  const summary=document.createElement('summary');summary.textContent='▣ Panels';summary.title='Adjust, save or restore workspace dimensions';
