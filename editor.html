@@ -34,7 +34,7 @@
   <div id="image-layer-properties" class="image-layer-properties" hidden>
    <div class="image-pane-title"><strong>Selected layer</strong><span id="image-selected-layer-name"></span></div>
    <label>Opacity <input id="image-layer-opacity" type="range" min="0" max="100" value="100"><output id="image-opacity-readout">100%</output></label>
-   <label class="image-aspect-toggle"><input id="image-keep-ratio" type="checkbox" checked> <span><strong><icon aria-hidden="true"></icon> Lock proportions</strong><small>Drag a corner to resize · hold Shift to stretch</small></span></label>
+   <label class="image-aspect-toggle"><input id="image-keep-ratio" type="checkbox" checked> <span><strong>Lock proportions</strong><small>Drag a corner to resize · hold Shift to stretch</small></span></label><div id="image-transform-readout" role="status" aria-live="off">Drag corners to resize · hold Shift to stretch</div>
    <div class="image-layer-buttons"><button type="button" id="image-layer-front">Move up</button><button type="button" id="image-layer-back">Move down</button><button type="button" id="image-layer-remove">Delete</button></div>
    <details class="image-transform-details"><summary>Advanced size & position</summary>
     <div class="image-transform-grid"><label>X <input id="image-layer-x" type="number"></label><label>Y <input id="image-layer-y" type="number"></label><label>Width <input id="image-layer-width" type="number" min="1"></label><label>Height <input id="image-layer-height" type="number" min="1"></label></div>
@@ -54,7 +54,7 @@
     <button type="button" data-text-preset="plain" aria-pressed="true">Text</button><button type="button" data-text-preset="title" aria-pressed="false">Title</button><button type="button" data-text-preset="label" aria-pressed="false">Label</button><button type="button" data-text-preset="callout" aria-pressed="false">Callout</button>
    </div>
    <div class="image-type-presets" role="group" aria-label="Text size presets"><button type="button" data-text-size="32">Small</button><button type="button" data-text-size="56">Medium</button><button type="button" data-text-size="96">Headline</button></div>
-   <label>Text size <input id="text-font-size" type="range" min="14" max="200" value="48"><output id="text-size-readout">48 px</output></label>
+   <label>Text size <input id="text-font-size" type="range" min="14" max="400" value="48"><output id="text-size-readout">48 px</output></label>
    <label>Font <select id="text-font-family"><option value="sans">Modern Sans</option><option value="serif">Editorial Serif</option><option value="mono">Monospace</option><option value="display">Bold Display</option><option value="rounded">Rounded</option><option value="classic">Classic Serif</option></select></label>
    <label>Text color <input id="text-fill-color" type="color" value="#ffffff"></label>
    <section class="image-fx" aria-label="Text layer effects">
