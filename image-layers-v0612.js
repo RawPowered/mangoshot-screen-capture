@@ -124,6 +124,6 @@
   return {cutoutKey,width:w,height:h,removed:alpha.reduce((n,a)=>n+(a===0),0)};
  }
  function clearCutout(stroke){return {...stroke,cutoutKey:null};}
- root.MangoImageLayersV0612={assets,importFile,asset,bounds,hit,normalize,paint,composite,quickCutout,clearCutout,
+ root.MangoImageLayersV0612={assets,checkFile,importFile,asset,bounds,hit,normalize,paint,composite,quickCutout,clearCutout,
   clamp};
 })(typeof globalThis!=='undefined'?globalThis:this);
