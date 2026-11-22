@@ -15,6 +15,7 @@ const context={globalThis:{chrome:api,crypto:{randomUUID:()=> 'capture-123456'}}
 vm.runInNewContext(read('popup.js'),context);
 (async()=>{
  await handlers['#visible:click']();
+ if(!screenshots)console.log('Capture status:',doc.querySelector('#status').textContent);
  assert.equal(screenshots,1,'visible area must capture directly before editor opens');
  assert.equal(saves.length,1);assert.equal(saves[0].frames[0].dataUrl,imgData);
  assert.equal(opened[0].active,true);assert.match(opened[0].url,/capture-result.html\?stored=capture-123456/);
