@@ -563,18 +563,37 @@ document.getElementById('text-fill-color')?.addEventListener?.('change',event=>{
  if(selectedStroke())updateSelectedText({color:event.target.value});
 });
 
+// Layer FX sliders, offsets and colors paint while being adjusted.
+const fxGestures=new WeakMap();
+function fxValue(input){
+ return input.type==='checkbox'?input.checked:
+  input.type==='color'?input.value:
+  input.dataset.fxPercent!==undefined?Number(input.value)/100:Number(input.value);
+}
 for(const input of document.querySelectorAll?.('[data-fx-group]')||[]){
- input.addEventListener('change',()=>{
+ function paintFx(live){
   const current=selectedStroke();
   if(!current||current.locked||!typeEffects)return;
   const group=input.dataset.fxGroup,field=input.dataset.fxField;
   const fx=typeEffects.merged(current.effects);
   if(!fx[group]||!(field in fx[group]))return;
-  fx[group][field]=input.type==='checkbox'?input.checked:
-   input.type==='color'?input.value:
-   input.dataset.fxPercent!==undefined?Number(input.value)/100:Number(input.value);
-  updateSelectedText({effects:typeEffects.merged(fx)});
- });
+  const next=fxValue(input);
+  if(fx[group][field]===next){
+   if(!live&&fxGestures.has(input)){fxGestures.delete(input);setReady(ready);syncTextEffects();}
+   return;
+  }
+  fx[group][field]=next;const edited=typeEffects.merged(fx);
+  if(live){
+   if(!fxGestures.has(input)){snapshot();fxGestures.set(input,selectedText);}
+   strokes[selectedText]={...current,effects:edited};
+   scheduleRedraw();
+  }else if(fxGestures.has(input)){
+   fxGestures.delete(input);strokes[selectedText]={...current,effects:edited};
+   redraw();setReady(ready);syncTextEffects();
+  }else updateSelectedText({effects:edited});
+ }
+ input.addEventListener('input',()=>paintFx(true));
+ input.addEventListener('change',()=>paintFx(false));
 }
 for(const button of document.querySelectorAll?.('[data-fx-preset]')||[]){
  button.addEventListener('click',()=>{
