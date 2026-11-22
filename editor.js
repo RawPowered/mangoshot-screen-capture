@@ -475,7 +475,7 @@ function renderStrokeList(){
   const eye=document.createElement('button');eye.type='button';eye.className='image-layer-eye';
   eye.textContent=stroke.visible===false?'◌':'◉';eye.title=stroke.visible===false?'Show layer':'Hide layer';
   eye.setAttribute('aria-label',eye.title);eye.setAttribute('aria-pressed',String(stroke.visible!==false));
-  eye.addEventListener('click',()=>replaceLayer(i,{visible:stroke.visible===false}));
+  eye.addEventListener('click',()=>{snapshot();strokes[i]={...strokes[i],visible:strokes[i].visible===false};redraw();setReady(ready);syncLayerProperties();});
   const title=document.createElement('button');title.type='button';title.className='image-object-select';
   const name=stroke.name||(stroke.type==='text'?((stroke.text||'Text').slice(0,32)):stroke.type);
   title.textContent=(stroke.type==='image'?'▣ ':stroke.type==='text'?'T ':'◇ ')+name;
