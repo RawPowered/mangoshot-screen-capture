@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "MangoShot",
-  "version": "0.6.7",
-  "description": "MangoShot Clip Studio: animated text and callouts, numeric timers, cut transitions and editable motion properties.",
+  "version": "0.6.8",
+  "description": "MangoShot Clip Studio: visual-first, compact motion inspector with animation galleries and advanced edit controls.",
   "permissions": [
     "activeTab",
     "scripting"
