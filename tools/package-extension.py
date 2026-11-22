@@ -30,7 +30,7 @@ def build(out,release_tag):
         if actual['version']!=version:raise ValueError('Invalid archive manifest')
         for html in ('popup.html','editor.html'):
             if b'capture-store.js' not in z.read(html):raise ValueError(f'Capture library missing from {html}')
-        if version in ('0.6.9','0.6.10','0.6.11','0.6.12','0.6.13','0.6.14','0.6.15'):
+        if version in ('0.6.9','0.6.10','0.6.11','0.6.12','0.6.13','0.6.14','0.6.15','0.6.16'):
             for icon in ('16','32','48','128'):
                 if not z.read(f'icons/icon-{icon}.png').startswith(b'\x89PNG\r\n\x1a\n'):
                     raise ValueError(f'Brand icon-{icon} must be PNG')
@@ -38,23 +38,23 @@ def build(out,release_tag):
                 data=z.read('assets/'+asset)
                 if not (data.startswith(b'RIFF') and data[8:12]==b'WEBP'):
                     raise ValueError(f'Brand asset missing or invalid: {asset}')
-            if version in ('0.6.11','0.6.12','0.6.13','0.6.14','0.6.15'):
+            if version in ('0.6.11','0.6.12','0.6.13','0.6.14','0.6.15','0.6.16'):
                 editor=z.read('editor.html')
                 for dep in (b'image-editor-core-v0611.js',b'image-studio-v0611.css',b'image-context-menu',b'text-inline-input'):
                     if dep not in editor:raise ValueError('Image Studio UI missing '+dep.decode())
                 if b'ClipboardItem' not in z.read('editor.js'):
                     raise ValueError('Clipboard image write implementation missing')
-                if version in ('0.6.12','0.6.13','0.6.14','0.6.15'):
+                if version in ('0.6.12','0.6.13','0.6.14','0.6.15','0.6.16'):
                     for dep in (b'image-layers-v0612.js',b'image-studio-v0612.css',b'image-panel-layers',b'image-panel-type',b'image-panel-mask',b'image-import-file'):
                         if dep not in editor:raise ValueError('Layer Studio dependency missing '+dep.decode())
                     for dep in ('image-layers-v0612.js','image-studio-v0612.css'):
                         if dep not in z.namelist():raise ValueError('Layer Studio file missing '+dep)
-                    if version in ('0.6.13','0.6.14','0.6.15'):
+                    if version in ('0.6.13','0.6.14','0.6.15','0.6.16'):
                         for dep in (b'image-type-effects-v0613.js',b'image-studio-v0613.css',b'data-resize-handle',b'data-fx-group',b'image-keep-ratio'):
                             if dep not in editor:raise ValueError('v0.6.13 text FX / transform control missing '+dep.decode())
                         for dep in ('image-type-effects-v0613.js','image-studio-v0613.css'):
                             if dep not in z.namelist():raise ValueError('Image text FX file missing '+dep)
-            if version in ('0.6.14','0.6.15'):
+            if version in ('0.6.14','0.6.15','0.6.16'):
                 if 'clipboardWrite' not in actual['permissions']:
                     raise ValueError('Quick Copy needs clipboardWrite permission')
                 for dep in ('capture-output-v0614.js','selection-v0614.js',
@@ -71,7 +71,7 @@ def build(out,release_tag):
                 for dep in (b'capture-output-v0614.js',b'image-clipboard-landing',
                             b'clipboard-paste-zone',b'image-studio-v0614.css'):
                     if dep not in editor:raise ValueError('Clipboard import not wired')
-            if version == '0.6.15':
+            if version in ('0.6.15','0.6.16'):
                 for dep in ('image-vector-v0615.js','image-studio-v0615.css','studio-v0615.css'):
                     if dep not in z.namelist():raise ValueError('Missing v0.6.15 editor asset '+dep)
                 for dep in (b'image-vector-v0615.js',b'image-studio-v0615.css',
