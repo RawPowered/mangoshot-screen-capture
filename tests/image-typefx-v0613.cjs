@@ -53,7 +53,8 @@ const stretched=E.applyResize(start,{x:100,y:60,width:200,height:100},free);
 assert.ok(Math.abs(stretched.scaleX-1.5)<1e-7);assert.ok(Math.abs(stretched.scaleY-1.1)<1e-7,'Text transforms may distort only in free mode');
 let visual=E.bounds(ctx,{...start,scaleX:2,scaleY:2});
 assert.equal(visual.width,b.width*2);assert.equal(visual.height,b.height*2);
-assert.ok(!('scaleX' in start),'Original source layer remains immutable after transform');
+assert.equal(start.scaleX,1,'Original source text scale remains intact after transform');
+assert.equal(start.points[0].x,100,'Original source text geometry remains intact');
 const html=read('editor.html'),editor=read('editor.js'),css=read('image-studio-v0613.css');
 for(const name of ['image-type-effects-v0613.js','image-studio-v0613.css','data-resize-kind="text"',
  'data-resize-kind="image"','image-keep-ratio','image-transform-readout',
