@@ -1,0 +1,59 @@
+name: MangoShot v0.6 Workspace Overlay
+on:
+  push:
+    branches:
+      - feat/mangoshot-v0.6-media-workspace
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-and-publish-overlay:
+    if: github.repository == 'RawPowered/mangoshot-screen-capture'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run all regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test in tests/*.cjs; do node "$test"; done
+      - name: Build and verify overlay ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/build-overlay.py --out dist
+          unzip -t dist/MangoShot-v0.6.0-workspace-overlay-from-v0.5.7.zip
+          (cd dist && sha256sum MangoShot-v0.6.0-workspace-overlay-from-v0.5.7.zip > OVERLAY-SHA256SUMS.txt)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MangoShot-v0.6.0-overlay-from-v0.5.7
+          path: |
+            dist/MangoShot-v0.6.0-workspace-overlay-from-v0.5.7.zip
+            dist/OVERLAY-SHA256SUMS.txt
+          retention-days: 14
+      - name: Publish immutable development prerelease
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          tag='v0.6.0-workspace-alpha.1'
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release already published; refusing overwrite."
+            exit 0
+          fi
+          gh release create "$tag" \
+            dist/MangoShot-v0.6.0-workspace-overlay-from-v0.5.7.zip \
+            dist/OVERLAY-SHA256SUMS.txt \
+            --target "$GITHUB_SHA" \
+            --title 'MangoShot v0.6 Workspace Alpha 1 — v0.5.7 Overlay' \
+            --notes-file docs/V0.6-OVERLAY-INSTALL.md \
+            --prerelease --latest=false
