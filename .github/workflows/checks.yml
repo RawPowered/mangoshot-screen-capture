@@ -19,3 +19,4 @@ jobs:
           done
           node tests/motion-v067.cjs
           node tests/visual-inspector-v068.cjs
+          node tests/premium-v069.cjs

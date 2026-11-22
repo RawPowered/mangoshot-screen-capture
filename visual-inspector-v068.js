@@ -48,7 +48,7 @@
   host.prepend(views);host.prepend(bar);activate(current);
   return {bar,views,pages,activate,current:()=>current};
  };
- const graphicTabs=tabs(graphics,[['design','Design'],['motion','Motion'],['numbers','Numbers'],['advanced','Advanced']],'graphic');
+ const graphicTabs=tabs(graphics,[['design','Design'],['premium','Premium'],['motion','Motion'],['numbers','Numbers'],['advanced','Advanced']],'graphic');
  const clipTabs=tabs(clip,[['edit','Edit'],['transitions','Transitions']],'clip');
  // Keep one compact layer switcher visible above all graphic subpages.
  const layerSection=layerList.closest('.inspector-section');

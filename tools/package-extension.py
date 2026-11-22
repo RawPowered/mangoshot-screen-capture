@@ -12,7 +12,8 @@ def build(out,release_tag):
     if release_tag.split('-')[0]!=f'v{version}':raise ValueError('Tag/version mismatch')
     out.mkdir(parents=True,exist_ok=True)
     files=sorted(set(p for ext in ('*.js','*.css','*.html','manifest.json') for p in BASE.glob(ext) if p.is_file()) |
-                 set(p for p in (BASE/'icons').glob('*.png') if p.is_file()))
+                 set(p for p in (BASE/'icons').glob('*.png') if p.is_file()) |
+                 set(p for p in (BASE/'assets').glob('*.webp') if p.is_file()))
     required=['manifest.json','popup.html','capture-store.js','content.js','background.js','editor.js','recorder.js','clip-studio.js','pdf-export.js']
     for name in required:
         if name not in {p.name for p in files}:raise ValueError(f'Missing required extension file: {name}')
@@ -29,6 +30,16 @@ def build(out,release_tag):
         if actual['version']!=version:raise ValueError('Invalid archive manifest')
         for html in ('popup.html','editor.html'):
             if b'capture-store.js' not in z.read(html):raise ValueError(f'Capture library missing from {html}')
+        if version == '0.6.9':
+            for icon in ('16','32','48','128'):
+                if not z.read(f'icons/icon-{icon}.png').startswith(b'\x89PNG\r\n\x1a\n'):
+                    raise ValueError(f'Brand icon-{icon} must be PNG')
+            for asset in ('mangoshot-wordmark.webp','mangoshot-icon.webp'):
+                data=z.read('assets/'+asset)
+                if not (data.startswith(b'RIFF') and data[8:12]==b'WEBP'):
+                    raise ValueError(f'Brand asset missing or invalid: {asset}')
+            if b'<iframe' in z.read('resources.html').lower():
+                raise ValueError('Resource directory must not embed provider frames')
     print(f'OK {target.name}: {len(files)} files; SHA-256 {hashlib.sha256(target.read_bytes()).hexdigest()}')
     return target
 if __name__=='__main__':
