@@ -2,7 +2,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const root=path.resolve(__dirname,'..'),read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const html=read('clip-studio.html'),css=read('studio-v066.css'),js=read('workspace-resize-v066.js'),presets=read('preset-pack-v066.js');
 const menu=read('polish-icons-v066.js'),media=read('clip-media-bin.js');
-assert.equal(JSON.parse(read('manifest.json')).version,'0.6.8');
+assert.equal(JSON.parse(read('manifest.json')).version,'0.6.9');
 for(const name of ['studio-v066.css','workspace-resize-v066.js','preset-pack-v066.js','polish-icons-v066.js'])
  assert.ok(html.includes(name),'missing release dependency '+name);
 assert.ok(html.indexOf('media-dock-v065.js')<html.indexOf('workspace-resize-v066.js'),'Resizable grid must initialize after dock relocation');
