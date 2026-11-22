@@ -3,7 +3,7 @@ const root=path.resolve(__dirname,'..'),read=f=>fs.readFileSync(path.join(root,f
 const ctx={JSON,Date,Math,Number,String,Array,Intl};ctx.globalThis=ctx;
 for(const f of ['motion-core-v067.js','clip-graphics.js','clip-project.js'])vm.runInNewContext(read(f),ctx,{filename:f});
 const M=ctx.MangoMotion,G=ctx.MangoGraphics,P=ctx.MangoProject;
-const source={size:1200,format:'mp4',duration:8},parts=[{start:0,end:4},{start:5,end:9}];
+const source={size:1200,format:'mp4',duration:10},parts=[{start:0,end:4},{start:5,end:9}];
 const layer=G.create('text','title',.5,{id:'one',text:'VIRAL TITLE',start:.5,end:3.5});
 assert.equal(layer.motion.enter.type,'none');
 for(const type of M.motionTypes){
