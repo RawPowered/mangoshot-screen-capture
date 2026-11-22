@@ -211,9 +211,28 @@ function drawStroke(stroke){
   }
   pen.restore();
 }
+function draftTextLayer(){
+ if(!textDraft||!inlineInput)return null;
+ const existing=textDraft.index>=0?strokes[textDraft.index]:null;
+ const value=String(inlineInput.value||'');
+ if(!value)return null;
+ const visibleSize=Math.max(12,Number(textFontSize?.value||48));
+ const scale=existing?.scaleY||1;
+ return existing?{...existing,text:value,fontSize:visibleSize/scale,fontFamily:textFontFamily?.value||'sans',
+   styleId:textPreset,color:color.value}:
+  {type:'text',text:value,points:[{x:textDraft.x,y:textDraft.y,p:1}],
+   fontSize:visibleSize,scaleX:1,scaleY:1,styleId:textPreset,
+   fontFamily:textFontFamily?.value||'sans',color:color.value,effects:typeEffects?.initial?.()};
+}
 function redraw(){
  pen.clearRect(0,0,ink.width,ink.height);
- for(const stroke of strokes)drawStroke(stroke);
+ const preview=draftTextLayer();
+ for(let i=0;i<strokes.length;i++){
+  // Replacing the existing text in-place preserves its layer order as the user types.
+  if(textDraft?.index===i){if(preview)drawStroke(preview);}
+  else drawStroke(strokes[i]);
+ }
+ if(textDraft?.index===-1&&preview)drawStroke(preview);
  drawStroke(active);updateSelectionBox();updateImageSelectionBox();
 }
 function cloneStrokes(value){return JSON.parse(JSON.stringify(value));}
@@ -324,15 +343,22 @@ function updateSelectedText(patch){
 function deleteSelectedText(){return selectedStroke()?removeLayerAt(selectedText):false;}
 function cancelInline(){
  textDraft=null;if(inline)inline.hidden=true;
- updateEditorControls();updateSelectionBox();
+ redraw();updateEditorControls();updateSelectionBox();
 }
 function positionInline(pointValue){
  if(!inline||!ink.width||!ink.height)return;
- inline.style.left=100*Math.max(0,Math.min(ink.width,pointValue.x))/ink.width+'%';
- inline.style.top=100*Math.max(0,Math.min(ink.height,pointValue.y))/ink.height+'%';
+ // Keep the edit field NEXT to the rendered text instead of hiding its live preview.
  const screenScale=ink.getBoundingClientRect?.().width/ink.width||1;
- const textPx=Math.max(16,Number(textFontSize?.value||48)*screenScale);
- inlineInput.style.fontSize=textPx+'px';
+ const nativePanelWidth=350/Math.max(.05,screenScale);
+ const draft=draftTextLayer();
+ const box=draft?(typeEffects?.bounds?.(pen,draft)||editorCore?.textMetrics?.(pen,draft)):null;
+ const right=pointValue.x+(box?.width||80)+24/Math.max(.05,screenScale);
+ const left=pointValue.x-nativePanelWidth-20/Math.max(.05,screenScale);
+ let x=right+nativePanelWidth<=ink.width?right:left>=0?left:Math.max(0,pointValue.x);
+ if(x+nativePanelWidth>ink.width&&ink.width>nativePanelWidth)x=ink.width-nativePanelWidth;
+ inline.style.left=100*Math.max(0,x)/ink.width+'%';
+ inline.style.top=100*Math.max(0,Math.min(ink.height-1,pointValue.y))/ink.height+'%';
+ inlineInput.style.fontSize=Math.max(14,Math.min(24,Number(textFontSize?.value||48)*screenScale))+'px';
 }
 function beginInline(pos,index=-1){
  if(!ready||!inline||!inlineInput)return;
@@ -349,13 +375,13 @@ function beginInline(pos,index=-1){
   color.value=existing.color||color.value;
  }
  inlineInput.value=existing?.text||'';
- positionInline(pos);inline.hidden=false;updateEditorControls();updateSelectionBox();
+ positionInline(pos);inline.hidden=false;updateEditorControls();redraw();
  inlineInput.focus?.({preventScroll:true});
  if(existing)inlineInput.select?.();
 }
 function commitInline(){
  if(!textDraft)return false;
- const value=(inlineInput?.value||'').trim(),draft=textDraft;
+ const value=String(inlineInput?.value||'').replace(/\r\n/g,'\n').trim(),draft=textDraft;
  if(!value){cancelInline();label('Empty text was not added.');return false;}
  const old=draft.index>=0?strokes[draft.index]:null;
  snapshot();
@@ -703,6 +729,7 @@ textContent?.addEventListener?.('change',()=>{
 color.addEventListener('change',()=>{
  if(selectedStroke())updateSelectedText({color:color.value});
 });
+inlineInput?.addEventListener?.('input',()=>{if(textDraft){scheduleRedraw();}});
 inlineInput?.addEventListener?.('keydown',event=>{
  if(event.key==='Escape'){event.preventDefault();event.stopPropagation();cancelInline();return;}
  if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){
