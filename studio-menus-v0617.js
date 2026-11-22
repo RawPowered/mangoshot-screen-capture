@@ -69,12 +69,28 @@
    closeAll();event.preventDefault?.();
   }
  },true);
+ function updateAvailability(){
+  const can=root.MangoImageActions?.available;
+  if(typeof can!=='function')return;
+  for(const button of menuBar.querySelectorAll?.('[data-studio-action]')||[]){
+   const id=button.dataset.studioAction;
+   button.disabled=!can(id);
+  }
+  const state=root.MangoImageActions?.state?.();
+  if(state?.layerSelected){
+   for(const item of menuBar.querySelectorAll?.('[data-studio-action="layerLock"]')||[])
+    item.textContent=state.locked?'Unlock selected layer':'Lock selected layer';
+   for(const item of menuBar.querySelectorAll?.('[data-studio-action="layerVisibility"]')||[])
+    item.textContent=state.visible?'Hide selected layer':'Show selected layer';
+  }
+ }
  function refresh(keys){
   for(const el of menuBar.querySelectorAll?.('[data-key-for]')||[]){
    const id=el.dataset.keyFor,value=keys?.[id]||'';
    el.textContent=root.MangoShortcutCoreV0617?.display?.(value)||value||'—';
   }
+  updateAvailability();
  }
- root.MangoStudioMenusV0617={closeAll,focusMenu,refresh};
+ root.MangoStudioMenusV0617={closeAll,focusMenu,refresh,updateAvailability};
  refresh(root.MangoShortcutsV0617?.keys?.());
 })(typeof globalThis!=='undefined'?globalThis:this);
