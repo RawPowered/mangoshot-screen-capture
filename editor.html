@@ -152,7 +152,19 @@
     <label id="image-stroke-color-label">Stroke color <input id="color" type="color" value="#ffb100"></label>
     <label>Stroke width <input id="size" type="range" min="1" max="48" value="4"><output id="image-size-value">4 px</output></label>
     <label>Opacity <input id="image-tool-opacity" type="range" min="5" max="100" value="100"><output id="image-tool-opacity-value">100%</output></label>
-    <div id="image-shape-style" class="image-shape-style">
+    
+<section id="image-eraser-options" class="image-eraser-options" hidden aria-label="Eraser controls">
+ <div class="image-pane-title"><strong>Eraser mode</strong><span>Original screenshot preserved</span></div>
+ <div class="image-erase-modes" role="group" aria-label="Eraser behavior">
+  <button type="button" data-erase-mode="erase-brush">◌ Brush erase <small>Remove portions of ink</small></button>
+  <button type="button" data-erase-mode="erase-stroke">⌫ Whole stroke <small>Remove touched annotations</small></button>
+ </div>
+ <p id="image-erase-description" class="inspector-hint">Erase portions of visible annotations. Screenshot pixels are unchanged.</p>
+ <label id="image-eraser-hardness-row">Edge hardness <input id="image-eraser-hardness" type="range" min="10" max="100" value="80"><output id="image-eraser-hardness-value">80%</output></label>
+</section>
+<label id="image-pen-pressure-row" class="image-check-row"><input id="image-pen-pressure" type="checkbox" checked> Use pen pressure for brush width</label>
+<label id="image-eraser-tip-row" class="image-check-row"><input id="image-eraser-tip" type="checkbox" checked> Detect the tablet's physical eraser tip</label>
+<div id="image-shape-style" class="image-shape-style">
       <label class="image-check-row"><input id="image-shape-fill-enabled" type="checkbox"> Fill shape</label>
       <label>Fill color <input id="image-shape-fill" type="color" value="#ffb100"></label>
       <label>Outline style <select id="image-shape-line-style"><option value="solid">Solid</option><option value="dashed">Dashed</option><option value="dotted">Dotted</option></select></label>
