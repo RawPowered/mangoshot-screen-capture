@@ -1,5 +1,52 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MangoShot · Image Studio</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="studio.css"><link rel="stylesheet" href="branding-v069.css"><link rel="stylesheet" href="image-studio-v0611.css"><link rel="stylesheet" href="image-studio-v0612.css"><link rel="stylesheet" href="image-studio-v0613.css"><link rel="stylesheet" href="image-studio-v0614.css"><link rel="stylesheet" href="image-studio-v0615.css"><link rel="stylesheet" href="image-studio-v0616.css"></head>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MangoShot · Image Studio</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="studio.css"><link rel="stylesheet" href="branding-v069.css"><link rel="stylesheet" href="image-studio-v0611.css"><link rel="stylesheet" href="image-studio-v0612.css"><link rel="stylesheet" href="image-studio-v0613.css"><link rel="stylesheet" href="image-studio-v0614.css"><link rel="stylesheet" href="image-studio-v0615.css"><link rel="stylesheet" href="image-studio-v0616.css"><link rel="stylesheet" href="studio-v0617.css"></head>
 <body class="studio studio-image"><header class="studio-appbar"><div class="studio-identity"><span class="studio-mark"><img class="v069-app-icon" src="assets/mangoshot-icon.webp" alt=""></span><div><strong>MangoShot</strong><small>IMAGE STUDIO</small></div></div><nav class="studio-tabs" aria-label="Studio workspaces"><a class="studio-tab" href="recorder.html">Record</a><a class="studio-tab" href="clip-studio.html">Edit video</a><span class="studio-tab is-active" aria-current="page">Annotate</span><a class="studio-tab v069-resource-tab" href="resources.html">Resources</a></nav><span class="studio-local"><span class="local-dot"></span>LOCAL · NO CLOUD</span></header>
+<nav class="v06-menu-bar v0617-menu-bar" aria-label="Image Studio application menu">
+ <details class="v06-menu"><summary>File</summary><div class="v06-menu-pop" aria-label="File menu">
+  <button type="button" data-studio-action="importImage">Import image <kbd data-key-for="importImage"></kbd></button>
+  <button type="button" data-studio-action="editClipboard">Edit clipboard image <kbd data-key-for="editClipboard"></kbd></button>
+  <div class="v06-menu-separator"></div>
+  <button type="button" data-studio-action="copyImage">Copy annotated image <kbd data-key-for="copyImage"></kbd></button>
+  <button type="button" data-studio-action="exportPng">Export PNG <kbd data-key-for="exportPng"></kbd></button>
+  <button type="button" data-studio-action="exportPdf">Export PDF <kbd data-key-for="exportPdf"></kbd></button>
+ </div></details>
+ <details class="v06-menu"><summary>Edit</summary><div class="v06-menu-pop" aria-label="Edit menu">
+  <button type="button" data-studio-action="undo">Undo <kbd data-key-for="undo"></kbd></button>
+  <button type="button" data-studio-action="redo">Redo <kbd data-key-for="redo"></kbd></button>
+  <div class="v06-menu-separator"></div>
+  <button type="button" data-studio-action="duplicateLayer">Duplicate selected layer <kbd data-key-for="duplicateLayer"></kbd></button>
+  <button type="button" data-studio-action="deleteLayer">Delete selected layer <kbd data-key-for="deleteLayer"></kbd></button>
+  <button type="button" data-studio-action="clearAnnotations">Clear all annotations…</button>
+ </div></details>
+ <details class="v06-menu"><summary>Layer</summary><div class="v06-menu-pop" aria-label="Layer menu">
+  <button type="button" data-studio-action="layerForward">Bring forward <kbd data-key-for="layerForward"></kbd></button>
+  <button type="button" data-studio-action="layerBackward">Send backward <kbd data-key-for="layerBackward"></kbd></button>
+  <button type="button" data-studio-action="layerVisibility">Show / Hide selected layer</button>
+  <button type="button" data-studio-action="layerLock">Lock / Unlock selected layer</button>
+ </div></details>
+ <details class="v06-menu"><summary>View</summary><div class="v06-menu-pop" aria-label="View menu">
+  <button type="button" data-studio-action="zoomFit">Fit canvas <kbd data-key-for="zoomFit"></kbd></button>
+  <button type="button" data-studio-action="zoomActual">Actual size (100%) <kbd data-key-for="zoomActual"></kbd></button>
+  <button type="button" data-studio-action="penDiagnostics">Wacom pen diagnostic <kbd data-key-for="penDiagnostics"></kbd></button>
+ </div></details>
+ <details class="v06-menu"><summary>Tools</summary><div class="v06-menu-pop" aria-label="Tool menu">
+  <button type="button" data-studio-action="select">Select / Move <kbd data-key-for="select"></kbd></button>
+  <button type="button" data-studio-action="pen">Pen <kbd data-key-for="pen"></kbd></button>
+  <button type="button" data-studio-action="highlighter">Highlighter <kbd data-key-for="highlighter"></kbd></button>
+  <button type="button" data-studio-action="brushErase">Brush Erase <kbd data-key-for="brushErase"></kbd></button>
+  <button type="button" data-studio-action="strokeErase">Whole Stroke Erase <kbd data-key-for="strokeErase"></kbd></button>
+  <button type="button" data-studio-action="text">Text <kbd data-key-for="text"></kbd></button>
+  <div class="v06-menu-separator"></div>
+  <button type="button" data-studio-action="brushSmaller">Decrease brush width <kbd data-key-for="brushSmaller"></kbd></button>
+  <button type="button" data-studio-action="brushLarger">Increase brush width <kbd data-key-for="brushLarger"></kbd></button>
+ </div></details>
+ <details class="v06-menu"><summary>Help</summary><div class="v06-menu-pop" aria-label="Help menu">
+  <button type="button" data-studio-action="commandPalette">Search all commands <kbd data-key-for="commandPalette"></kbd></button>
+  <button type="button" data-studio-action="showShortcuts">Keyboard shortcuts & preferences <kbd data-key-for="showShortcuts"></kbd></button>
+ </div></details>
+ <span class="v0617-menu-spacer"></span>
+ <button type="button" class="v0617-menu-quick" data-studio-action="commandPalette" title="Search commands">Commands <kbd data-key-for="commandPalette"></kbd></button>
+ <button type="button" class="v0617-menu-quick" data-studio-action="showShortcuts" title="Customize shortcuts">Keys <kbd data-key-for="showShortcuts"></kbd></button>
+</nav>
 <div class="studio-transport"><strong class="stage-label">CAPTURED IMAGE</strong><span class="panel-muted">Non-destructive annotations until export</span><div class="studio-export-actions"><button id="image-import" type="button" title="Import an image as an editable layer">+ Image</button><input id="image-import-file" type="file" accept="image/png,image/jpeg,image/webp" hidden><button id="clipboard-import" title="Open the latest clipboard image in a new Image Studio tab">Edit clipboard</button><button id="copy-image" class="primary" disabled title="Copy the full annotated screenshot as a PNG image">Copy image</button><button id="png" disabled>Export PNG</button><button id="pdf" disabled>Export PDF</button></div><span id="status" class="status studio-live-status" role="status" aria-live="polite">Preparing capture…</span></div>
 <div class="image-layout"><aside class="studio-toolrail image-toolrail" aria-label="Image drawing tools"><span class="toolrail-heading">TOOLS</span><button data-studio-tool="select" aria-pressed="false" title="Select and move text annotations (V)">↖<small>Select</small></button><button data-studio-tool="pen" class="is-active" aria-pressed="true" title="Freehand pen">✎<small>Pen</small></button><button data-studio-tool="highlighter" aria-pressed="false" title="Highlight with pen">▤<small>Highlight</small></button><button data-studio-tool="erase-brush" aria-pressed="false" title="Soft brush eraser for annotations">◌<small>Brush Erase</small></button><button data-studio-tool="erase-stroke" aria-pressed="false" title="Erase entire strokes and shapes">⌫<small>Stroke Erase</small></button><button data-studio-tool="arrow" aria-pressed="false" title="Draw an arrow">➜<small>Arrow</small></button><button data-studio-tool="rectangle" aria-pressed="false" title="Draw rectangle · shape options in Tools">▢<small>Shape</small></button>
 <button data-studio-tool="ellipse" aria-pressed="false" title="Draw editable ellipse">◯<small>Oval</small></button>
@@ -223,4 +270,10 @@
 <button role="menuitem" type="button" data-image-action="redo">Redo annotation</button>
 <button role="menuitem" type="button" data-image-action="delete">Delete selected annotation</button>
 </div>
-<script src="pdf-export.js"></script><script src="capture-store.js"></script><script src="capture-output-v0614.js"></script><script src="image-editor-core-v0611.js"></script><script src="image-layers-v0612.js"></script><script src="image-type-effects-v0613.js"></script><script src="image-vector-v0615.js"></script><script src="pen-input-v0616.js"></script><script src="editor.js"></script></body></html>
+<dialog id="image-shortcuts-dialog" class="v0617-shortcuts-dialog" aria-label="Image Studio keyboard shortcut settings">
+ <div class="v0617-dialog-header"><h2>Keyboard Shortcuts <small>IMAGE STUDIO</small></h2>
+ <button type="button" class="v0617-close" data-shortcuts-close>✕ Close</button></div>
+</dialog>
+<dialog id="studio-command-palette" class="v0617-command-dialog" aria-label="Search MangoShot commands"></dialog>
+<script src="pdf-export.js"></script><script src="capture-store.js"></script><script src="capture-output-v0614.js"></script><script src="image-editor-core-v0611.js"></script><script src="image-layers-v0612.js"></script><script src="image-type-effects-v0613.js"></script><script src="image-vector-v0615.js"></script><script src="pen-input-v0616.js"></script><script src="editor.js"></script><script src="shortcut-core-v0617.js"></script><script src="studio-shortcuts-v0617.js"></script><script src="studio-menus-v0617.js"></script>
+</body></html>

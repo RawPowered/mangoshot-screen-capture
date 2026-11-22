@@ -68,6 +68,6 @@ for(const name of ['typeEffects.resize(','typeEffects.applyResize(','window.addE
  'typeEffects?.draw','typeEffects?.bounds']){
  assert.ok(editor.includes(name),'Missing integration '+name);
 }
-assert.equal(JSON.parse(read('manifest.json')).version,'0.6.16');
+assert.equal(JSON.parse(read('manifest.json')).version,'0.6.17');
 assert.deepEqual(JSON.parse(read('manifest.json')).permissions,['activeTab','scripting','clipboardWrite']);
 console.log('PASS: 7 editable text looks, Canvas overlays/shadows/glow, shared bounds, default locked and Shift-stretch transforms');
