@@ -1,3 +1,5 @@
+> **MangoShot v0.6 development preview:** this branch adds a professional Clip Studio shell and local media registry. Secondary media is STAGED ONLY, not composited or exported. Use [v0.5.7-preview.1](https://github.com/RawPowered/mangoshot-screen-capture/releases/tag/v0.5.7-preview.1) for the published recorder.
+
 <div align="center">
 
 <img src="assets/branding/mangoshot-banner.svg" width="100%" alt="MangoShot: orange mango with center record button and white focus frame, chrome gunmetal Mango wordmark, neon lime Shot wordmark" />

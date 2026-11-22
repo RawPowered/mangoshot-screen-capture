@@ -1,13 +1,76 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MangoShot · Clip Studio</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="studio.css"></head><body class="studio studio-clip">
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MangoShot · Clip Studio</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="studio.css"><link rel="stylesheet" href="studio-v06.css"></head><body class="studio studio-clip">
 <header class="studio-appbar"><div class="studio-identity"><span class="studio-mark">M</span><div><strong>MangoShot</strong><small>CLIP STUDIO</small></div></div><nav class="studio-tabs" aria-label="Studio workspaces"><a class="studio-tab" href="recorder.html">Record</a><span class="studio-tab is-active" aria-current="page">Edit</span><a class="studio-tab" href="popup.html">Capture</a></nav><span class="studio-local"><span class="local-dot"></span>LOCAL · NO CLOUD</span></header>
+<nav class="v06-menu-bar" aria-label="Clip Studio menu bar">
+ <details class="v06-menu"><summary>File</summary><div class="v06-menu-pop" role="group" aria-label="File commands">
+  <button type="button" data-command="file">Import primary video</button>
+  <button type="button" data-command="v06-media-input">Import image / video / audio</button>
+  <button type="button" data-command="save-project">Save legacy project</button>
+  <button type="button" data-command="v06-save-project">Save project v2</button>
+  <button type="button" data-command="v06-open-project">Open project v2</button>
+  <div class="v06-menu-separator"></div><button type="button" data-command="export-webm">Export WebM</button><button type="button" data-command="export-mp4">Export MP4</button>
+ </div></details>
+ <details class="v06-menu"><summary>Edit</summary><div class="v06-menu-pop" role="group" aria-label="Edit commands">
+  <button type="button" data-command="undo">Undo · Ctrl+Z</button><button type="button" data-command="redo">Redo · Ctrl+Shift+Z</button>
+  <button type="button" data-command="split">Split at playhead · C</button><button type="button" data-command="ripple-delete">Ripple Delete</button>
+  <button type="button" data-command="reset">Restore original edits</button>
+ </div></details>
+ <details class="v06-menu"><summary>Layer</summary><div class="v06-menu-pop" role="group" aria-label="Layer commands">
+  <button type="button" data-command="add-text">New title</button><button type="button" data-command="add-callout">New callout</button>
+  <button type="button" data-command="v06-media-input">Import secondary media</button>
+ </div></details>
+ <details class="v06-menu"><summary>View</summary><div class="v06-menu-pop" role="group" aria-label="View commands">
+  <button type="button" data-command="make-thumbnails">Generate frame thumbnails</button><button type="button" data-command="analyze-audio">Analyze audio waveform</button>
+  <button type="button" data-command="autocut-toggle">AutoCut panel</button>
+ </div></details>
+ <span class="v06-menu-status">V0.6 WORKSPACE · DEVELOPMENT</span>
+</nav>
+
 <div class="studio-transport"><div class="transport-actions"><label class="file-pick clip-open-file">＋ Import video<input type="file" id="file" accept="video/*,.webm,.mp4"></label><button id="open-last">Open latest recording</button><button id="forget-last">Forget stored recording</button></div><div class="workspace-switch" role="group" aria-label="Clip Studio layout"><button type="button" data-workspace="edit" aria-pressed="true" title="Balanced editing layout (Shift+1)">Edit</button><button type="button" data-workspace="graphics" aria-pressed="false" title="Larger graphics inspector (Shift+2)">Graphics</button><button type="button" data-workspace="timeline" aria-pressed="false" title="Expanded timeline (Shift+3)">Timeline</button></div><span id="workspace-status" class="workspace-status" aria-live="polite">Workspace: Edit</span><span id="status" class="status studio-live-status" role="status" aria-live="polite">Import a video or open the latest recorded session.</span></div>
 <main class="clip-layout">
-<aside class="clip-bin studio-panel"><div class="panel-heading">PROJECT BIN <span class="panel-muted">LOCAL ASSETS</span></div><div class="inspector-section"><h3>Source</h3><span id="source-format" class="clip-format" aria-live="polite">No media selected</span><span class="inspector-hint">Your source is never changed by trimming or cutting. Video edits are local.</span></div><div class="inspector-section"><h3>Graphics / Layers</h3>
+<aside class="v06-rail" role="toolbar" aria-label="Clip Studio editing tools">
+ <span class="v06-rail-heading">TOOLS</span>
+ <button type="button" data-v06-tool="tool-select" aria-pressed="true" title="Selection tool · V" aria-label="Select tool">↖<small>V</small></button>
+ <button type="button" data-v06-tool="tool-razor" aria-pressed="false" title="Razor tool · C" aria-label="Razor tool">✂<small>C</small></button>
+ <button type="button" data-v06-tool="range-tool" aria-pressed="false" title="Range selection · R" aria-label="Range tool">▧<small>R</small></button>
+ <div class="v06-rail-divider"></div>
+ <button type="button" data-v06-tool="add-text" aria-pressed="false" title="Create text graphic" aria-label="Add title graphic">T<small>TEXT</small></button>
+ <button type="button" data-v06-tool="add-callout" aria-pressed="false" title="Create callout" aria-label="Add callout">◇<small>NOTE</small></button>
+ <button type="button" data-v06-tool="autocut-toggle" aria-pressed="false" title="AutoCut studio" aria-label="Open AutoCut">⚡<small>AUTO</small></button>
+</aside>
+
+<aside class="clip-bin studio-panel"><div class="panel-heading">MEDIA / PROJECT <span class="panel-muted">LOCAL ASSETS</span></div>
+<section class="v06-section" aria-labelledby="v06-media-title">
+ <h3 id="v06-media-title">MEDIA BIN <span id="v06-count" class="v06-badge">0 assets</span></h3>
+ <label class="v06-upload-label">＋ Import local media
+  <input id="v06-media-input" type="file" accept="image/png,image/jpeg,image/webp,image/avif,image/gif,video/mp4,video/webm,video/ogg,video/quicktime,audio/*,.mov,.ogv,.m4a" multiple aria-label="Import local media files">
+ </label>
+ <div id="v06-asset-list" class="v06-asset-list" role="group" aria-label="Imported media files"></div>
+ <div id="v06-asset-preview" class="v06-inspector" aria-live="polite">Select a local media asset to inspect it.</div>
+ <div class="v06-bin-actions">
+  <button id="v06-stage-asset" type="button" title="Stage a secondary clip for future multi-source rendering">Stage V2 / A2</button>
+  <button id="v06-remove-asset" type="button">Remove</button>
+  <button id="v06-relink-asset" type="button">Relink file</button>
+  <input id="v06-relink-input" type="file" hidden aria-label="Select replacement media file">
+ </div>
+ <div class="v06-staging-note">Secondary assets are staged for the v2 timeline. They are NOT yet composited or included in exports.</div>
+ <div id="v06-staged-list" class="v06-staged-list" aria-label="Staged secondary clips"></div>
+</section>
+<section class="v06-section" aria-labelledby="v06-project-title">
+ <h3 id="v06-project-title">PROJECT V2 <span class="v06-badge">BETA</span></h3>
+ <div class="v06-project-buttons">
+  <button id="v06-save-project" type="button">Save project v2 JSON</button>
+  <label>Open project v2 JSON<input id="v06-open-project" type="file" accept=".json,application/json" style="position:absolute;width:1px;height:1px;opacity:0" aria-label="Open v2 project file"></label>
+  <button id="v06-restore-project" type="button">Restore primary timeline</button>
+ </div>
+ <p class="v06-hint">V2 project files contain edit decisions and media references, not the original media bytes. Relink matching files when reopening.</p>
+</section>
+<p id="v06-media-note" role="status" aria-live="polite">Local media preview and staging ready. No cloud upload.</p>
+<div class="inspector-section"><h3>Source</h3><span id="source-format" class="clip-format" aria-live="polite">No media selected</span><span class="inspector-hint">Your source is never changed by trimming or cutting. Video edits are local.</span></div><div class="inspector-section"><h3>Graphics / Layers</h3>
   <div class="layer-create-row"><button id="add-text" disabled>+ Text</button><button id="add-callout" disabled>+ Callout</button></div>
   <label class="clip-label">Default style <select id="create-preset"><option value="none">None · Custom</option><option value="title">Bold Title</option><option value="lowerThird">Lower Third</option><option value="callout">Callout Bubble</option><option value="spotlight">Spotlight</option></select></label>
   <div class="layer-list" id="layer-list" aria-label="Graphics layers">No graphics yet</div>
   <p class="inspector-hint">Tracks G2 and G3 render above V1. Select a layer to edit text, styling, time and position.</p>
- </div><div class="inspector-section"><h3>Markers</h3><button id="add-marker" disabled>+ Add marker at playhead · M</button><div id="marker-list" class="marker-list">No markers</div></div><div class="inspector-section"><h3>Project actions</h3><button id="save-project" disabled>Save edit project · JSON</button><label class="file-pick project-open">Open edit project<input type="file" id="open-project" accept=".json,application/json"></label><span class="inspector-hint">Project files store edit decisions and graphics, not footage. Reopen with the same source video.</span><span class="inspector-hint">I / O · Mark range</span><span class="inspector-hint">J · Step backward</span><span class="inspector-hint">K · Pause</span><span class="inspector-hint">L · Play</span><span class="inspector-hint">Ctrl+Z · Undo edit</span></div></aside>
+ </div><div class="inspector-section"><h3>Markers</h3><button id="add-marker" disabled>+ Add marker at playhead · M</button><div id="marker-list" class="marker-list">No markers</div></div><div class="inspector-section"><h3>Project actions</h3><button id="save-project" disabled>Save edit project · JSON</button><label class="file-pick project-open">Open edit project<input type="file" id="open-project" accept=".json,application/json"></label><span class="inspector-hint">Project files store edit decisions and graphics, not footage. Reopen with the same source video.</span><span class="inspector-hint">I / O · Mark range</span><span class="inspector-hint">J · Step backward</span><span class="inspector-hint">K · Pause</span><span class="inspector-hint">L · Play</span><span class="inspector-hint">Ctrl+Z · Undo edit</span></div><div class="v06-divider" data-resizer="left" role="separator" aria-label="Resize Media Bin"></div></aside>
 <section class="clip-program studio-monitor-panel"><div class="panel-heading">SOURCE / PROGRAM MONITOR <span class="panel-muted">NON-DESTRUCTIVE PREVIEW</span></div><div class="clip-preview"><div class="clip-preview-frame" id="clip-preview-frame">
  <video id="video" playsinline preload="metadata"></video>
  <canvas id="graphics-preview" aria-label="Editable text and callout graphics over video"></canvas>
@@ -32,8 +95,8 @@
  <p>For high-end Windows PCs: save a MangoShot project JSON, keep the matching original video and run the bundled Node + FFmpeg helper. GPU H.264 encoding is attempted when available. This separate tool cannot render text/callout layers and refuses those projects.</p>
  <code>node tools/fast-render.mjs --source "input.mp4" --project "MangoShot-Project.json" --output "edited.mp4" --encoder auto</code>
  <p>Needs Node.js and FFmpeg on your PC. This local helper may render faster than real time; the browser exporter remains real-time.</p>
- </details><progress id="progress" value="0" max="100" hidden></progress></div></aside>
-<section class="clip-timeline-panel studio-panel" aria-label="Clip editing timeline"><div class="panel-heading"><span>TIMELINE · G3 / G2 / V1 / A1</span><span class="panel-muted">Graphics: drag to move · grab ends to trim · drag between G2/G3 · source unmodified</span></div><div class="timeline-tools"><div class="editor-tools" role="group" aria-label="Timeline editing tools">
+ </details><progress id="progress" value="0" max="100" hidden></progress></div><div class="v06-divider" data-resizer="right" role="separator" aria-label="Resize Properties panel"></div></aside>
+<section class="clip-timeline-panel studio-panel" aria-label="Clip editing timeline"><div class="panel-heading"><span>TIMELINE · G3 / G2 / V1 / A1</span><span class="panel-muted">Graphics: drag to move · grab ends to trim · drag between G2/G3 · source unmodified</span></div><div class="timeline-tools v06-compact-tools"><div class="editor-tools" role="group" aria-label="Timeline editing tools">
  <button id="tool-select" aria-pressed="true" title="Selection (V)">↖ Select · V</button>
  <button id="tool-razor" aria-pressed="false" title="Razor: click V1 to split (C)">✂ Razor · C</button>
  <button id="autocut-toggle" class="autocut-launch" title="Detect long silences or still-screen sections, review and ripple delete them">⚡ AutoCut</button><button id="ripple-delete" disabled title="Ripple-delete selected V1 clip, or a selected In/Out range (Alt+Backspace)">Ripple delete</button><button id="range-tool" title="Shift+drag on ruler to select time range">Select range · R</button><button id="clear-range" title="Clear selection" disabled>Clear selection</button><button id="quick-text" title="Add editable text above video; import a video first">+ Title</button><button id="quick-callout" title="Add editable callout above video; import a video first">+ Callout</button><button id="graphics-snap" type="button" aria-pressed="true" title="Toggle snapping to playhead and layer edges">🧲 Snap: ON</button>
@@ -56,4 +119,4 @@
  <div class="graphic-track" data-track="2"><span class="track-name">G2</span><div class="graphic-track-items" id="graphic-track-2"></div></div>
  </div><div class="thumbnail-strip" id="thumbnail-strip" aria-label="Frame thumbnails"></div><div class="clip-timeline" id="timeline" role="group" aria-label="Retained video segments"></div><div class="waveform-strip"><span class="track-name">A1</span><canvas id="audio-waveform" width="960" height="46" aria-label="Local audio waveform if supported"></canvas></div><div class="timeline-playhead" id="timeline-playhead" role="slider" aria-label="Drag video playhead" tabindex="0"></div></div></div><div id="segments" class="segment-list" aria-live="polite"></div><div class="timeline-footer"><span>V1 · Select clip → Ripple Delete / Shift+drag ruler → Select range / C Razor / Ctrl+Z Undo</span><span>A1 · Audio retained when browser codec permits</span></div></section>
 </main>
-<script src="clip-timeline.js"></script><script src="sequence-media.js"></script><script src="sequence-preview.js"></script><script src="clip-edit-ops.js"></script><script src="clip-graphics.js"></script><script src="sequence-operations.js"></script><script src="auto-cut.js"></script><script src="auto-cut-analysis.js"></script><script src="layer-timeline-ops.js"></script><script src="clip-project.js"></script><script src="media-format.js"></script><script src="clip-store.js"></script><script src="clip-studio.js"></script><script src="clip-timeline-ui.js"></script><script src="clip-graphics-ui.js"></script><script src="studio-workspaces.js"></script><script src="auto-cut-ui.js"></script></body></html>
+<script src="clip-timeline.js"></script><script src="sequence-media.js"></script><script src="sequence-preview.js"></script><script src="clip-edit-ops.js"></script><script src="clip-graphics.js"></script><script src="sequence-operations.js"></script><script src="auto-cut.js"></script><script src="auto-cut-analysis.js"></script><script src="layer-timeline-ops.js"></script><script src="clip-project.js"></script><script src="media-assets.js"></script><script src="project-v2.js"></script><script src="media-format.js"></script><script src="clip-store.js"></script><script src="clip-studio.js"></script><script src="clip-timeline-ui.js"></script><script src="clip-graphics-ui.js"></script><script src="studio-workspaces.js"></script><script src="auto-cut-ui.js"></script><script src="clip-media-bin.js"></script><script src="clip-workspace-ui.js"></script></body></html>
