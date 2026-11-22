@@ -100,6 +100,7 @@ api.runtime.onMessage.addListener((message,sender,respond)=>{
   }
   if(message.type==='MANGO_AREA_COMMIT')return reply((async()=>{
     const entry=sessions.get(sender.tab?.id),r=message.rect,v=message.viewport;
+    try{
     if(!validSource(sender,entry)||entry.id!==message.captureId||entry.mode!=='area'||entry.meta)
       throw Error('Selection session expired or was already completed.');
     if(Date.now()-entry.started>120000)throw Error('Area selection timed out.');
@@ -118,6 +119,11 @@ api.runtime.onMessage.addListener((message,sender,respond)=>{
       selection:{x:r.x,y:r.y,width:r.width,height:r.height}};
     entry.frames=[{index:0,scrollY:0,dataUrl}];entry.nextIndex=1;
     await complete(entry);return {captured:true};
+    }catch(error){
+      if(entry&&sessions.get(entry.source)===entry)
+        await complete(entry,error.message).catch(()=>{});
+      throw error;
+    }
   })(),respond);
   if(['MANGO_SOURCE_FRAME','MANGO_SOURCE_DONE','MANGO_SOURCE_ERROR'].includes(message.type)){
     return reply((async()=>{
