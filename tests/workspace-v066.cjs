@@ -17,7 +17,7 @@ assert.ok(css.includes('--v066-side')&&css.includes('--v066-top')&&css.includes(
 assert.ok(css.includes('.v066-splitter-side')&&css.includes('.v066-splitter-top')&&css.includes('.v066-splitter-dock'),'Resize affordances missing');
 assert.ok(css.includes('.v066-layout-menu')&&js.includes('Reset current workspace sizes'),'Layout presets and restore missing');
 assert.ok(presets.includes('Studio II · 8')&&presets.includes('setCollection')&&presets.includes("source.click()"),'Preset filtering / one-click add missing');
-assert.ok(menu.includes("geometry.import")&&menu.includes("geometry.export")||menu.includes("geometry.import")&&menu.includes("geometry[icon]"),'Vector icon controls missing');
+assert.ok(menu.includes("import:[")&&menu.includes("export:[")&&menu.includes("geometry[icon]"),'Vector icon controls missing');
 assert.ok(media.includes('if(stamp===lastAssetSignature)return'),'Unnecessary media bin rerenders not gated');
 assert.ok(media.includes('updateControls();\n  if(stamp===lastAssetSignature)return'),'Media buttons must remain current even when rows are cached');
 console.log('PASS: source-aware resize handles, persistence, quick preset collection, icon polish and optimized Media Bin');
