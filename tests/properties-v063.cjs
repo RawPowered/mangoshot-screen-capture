@@ -8,7 +8,7 @@ assert.ok(html.indexOf('clip-workspace-v062.js')<html.indexOf('zoom-hud-v063.js'
 for(const id of ['graphic-font','graphic-weight','graphic-size','graphic-preset','graphic-x','graphic-y','graphic-in','graphic-out','graphic-fade-in','graphic-fade-out','v061-zoom-x','v061-zoom-y','v061-zoom-add','v061-zoom-reset'])assert.ok(html.includes('id="'+id+'"'),'Removed legacy input '+id);
 for(const font of ['rounded','condensed','display','handwritten'])assert.ok(html.includes('value="'+font+'"')&&graphic.includes(font+':'),'Font preview must have matching canvas-rendered font '+font);
 assert.ok(zoom.includes("frame.setPointerCapture")&&zoom.includes("pointermove")&&zoom.includes("getBoundingClientRect"),'HUD drag missing');
-assert.ok(zoom.includes("video.addEventListener('seeked'")&&zoom.includes("drawImage(video"),'HUD must draw current local video frame');
+assert.ok(zoom.includes("for(const event of ['seeked','timeupdate'")&&zoom.includes("drawImage(video"),'HUD must draw current local video frame');
 assert.ok(zoom.includes("view().addZoomRange")&&core.includes('addZoomRange(')&&core.includes('updateZoomKeyframe('),'Camera In/Out/editor update must be wired');
 assert.ok(type.includes("el('graphic-preset')")&&type.includes("fire('graphic-preset')")||type.includes("input('graphic-preset')")&&type.includes("fire('graphic-preset')"),'Preset cards must target original change handler');
 assert.ok(type.includes("input('graphic-font').value=name;fire('graphic-font')"),'Font cards must update real graphic font');
