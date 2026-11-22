@@ -7,6 +7,21 @@ const call=(fn,...args)=>new Promise((resolve,reject)=>{
   catch(error){reject(error);}
 });
 let busy=false;
+const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+function transientPortError(error){
+ return /message port closed|receiving end does not exist|could not establish connection|no response/i.test(String(error?.message||error));
+}
+async function initializeFullPage(tab,captureId){
+ const init={type:'MANGO_POPUP_INIT',source:tab.id,windowId:tab.windowId,mode:'full',captureId};
+ for(let attempt=0;attempt<2;attempt++){
+  try{return await call(api.runtime.sendMessage.bind(api.runtime),init);}
+  catch(error){
+   if(!transientPortError(error))throw error;
+   if(attempt===1)throw new Error('The MangoShot capture service is not responding. Reload the extension from your browser extensions page and try again. If it continues, inspect its service worker for errors.');
+   await pause(180);
+  }
+ }
+}
 async function capture(mode){
   if(busy)return;busy=true;
   const buttons=['visible','full'].map(id=>document.getElementById(id));
@@ -31,8 +46,7 @@ async function capture(mode){
         [{index:0,scrollY:0,dataUrl}]);
       await call(api.tabs.create.bind(api.tabs),{url:api.runtime.getURL('editor.html')+'?stored='+encodeURIComponent(id),active:true});
     }else{
-      const init=await call(api.runtime.sendMessage.bind(api.runtime),
-        {type:'MANGO_POPUP_INIT',source:tab.id,mode:'full',captureId:id});
+      const init=await initializeFullPage(tab,id);
       if(!init?.ok)throw new Error(init?.error||'Could not initialize full-page capture.');
       registered=true;
       await call(api.scripting.executeScript.bind(api.scripting),{target:{tabId:tab.id},files:['content.js']});
