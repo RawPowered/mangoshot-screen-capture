@@ -705,10 +705,22 @@ for(const button of document.querySelectorAll?.('[data-text-preset]')||[]){
   syncSelectedText();
  });
 }
+let sizeGesture=null;
 textFontSize?.addEventListener?.('input',()=>{
  const output=document.getElementById('text-size-readout');
  if(output)output.textContent=textFontSize.value+' px';
- if(textDraft)positionInline(textDraft);
+ if(textDraft){positionInline(textDraft);scheduleRedraw();return;}
+ const selected=selectedStroke();
+ if(!selected||selected.locked)return;
+ if(!sizeGesture||sizeGesture.index!==selectedText){
+  snapshot();
+  sizeGesture={index:selectedText,base:cloneStrokes([selected])[0]};
+ }
+ const initial=sizeGesture.base,originalSize=Math.max(1,(initial.fontSize||48)*(initial.scaleY??1));
+ const ratio=Math.max(.05,Math.min(25,Number(textFontSize.value)/originalSize));
+ strokes[selectedText]={...selected,scaleX:Math.max(.08,Math.min(25,(initial.scaleX??1)*ratio)),
+  scaleY:Math.max(.08,Math.min(25,(initial.scaleY??1)*ratio))};
+ scheduleRedraw();
 });
 function updateVisualFontSize(value){
  const layer=selectedStroke();if(!layer)return false;
@@ -718,13 +730,40 @@ function updateVisualFontSize(value){
   scaleY:Math.max(.08,Math.min(25,(layer.scaleY??1)*ratio))});
 }
 textFontSize?.addEventListener?.('change',()=>{
- if(selectedStroke())updateVisualFontSize(Number(textFontSize.value));
+ if(textDraft){scheduleRedraw();return;}
+ if(sizeGesture){sizeGesture=null;setReady(ready);syncSelectedText();}
+ else if(selectedStroke())updateVisualFontSize(Number(textFontSize.value));
 });
 textFontFamily?.addEventListener?.('change',()=>{
  if(selectedStroke())updateSelectedText({fontFamily:textFontFamily.value});
 });
+// The inspector editor is live. One continuous typing session = one Undo step.
+let textTyping=null;
+textContent?.addEventListener?.('focus',()=>{textTyping=null;});
+textContent?.addEventListener?.('input',()=>{
+ const selected=selectedStroke();if(!selected||selected.locked||textDraft)return;
+ if(selected.text===textContent.value)return;
+ if(!textTyping||textTyping.index!==selectedText){
+  snapshot();textTyping={index:selectedText,original:selected.text};
+ }
+ strokes[selectedText]={...selected,text:String(textContent.value).slice(0,1000)};
+ scheduleRedraw();
+});
+textContent?.addEventListener?.('blur',()=>{
+ if(!textTyping)return;
+ if(textTyping.index===selectedText&&!String(textContent.value||'').trim()){
+  strokes[selectedText]={...strokes[selectedText],text:textTyping.original};
+  history.pop();redraw();
+  label('Blank text was not saved. Use Delete to remove the text layer.');
+ }
+ textTyping=null;setReady(ready);syncSelectedText();
+});
 textContent?.addEventListener?.('change',()=>{
- if(selectedStroke()&&textContent.value.trim())updateSelectedText({text:textContent.value.trim()});
+ // Legacy scripted change events still update content, without duplicating typed history.
+ if(textTyping)return;
+ const selected=selectedStroke();
+ if(selected&&!selected.locked&&textContent.value.trim()&&selected.text!==textContent.value)
+  updateSelectedText({text:textContent.value});
 });
 color.addEventListener('change',()=>{
  if(selectedStroke())updateSelectedText({color:color.value});
