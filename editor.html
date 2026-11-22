@@ -1,23 +1,77 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MangoShot · Image Studio</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="studio.css"><link rel="stylesheet" href="branding-v069.css"><link rel="stylesheet" href="image-studio-v0611.css"></head>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MangoShot · Image Studio</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="studio.css"><link rel="stylesheet" href="branding-v069.css"><link rel="stylesheet" href="image-studio-v0611.css"><link rel="stylesheet" href="image-studio-v0612.css"></head>
 <body class="studio studio-image"><header class="studio-appbar"><div class="studio-identity"><span class="studio-mark"><img class="v069-app-icon" src="assets/mangoshot-icon.webp" alt=""></span><div><strong>MangoShot</strong><small>IMAGE STUDIO</small></div></div><nav class="studio-tabs" aria-label="Studio workspaces"><a class="studio-tab" href="recorder.html">Record</a><a class="studio-tab" href="clip-studio.html">Edit video</a><span class="studio-tab is-active" aria-current="page">Annotate</span><a class="studio-tab v069-resource-tab" href="resources.html">Resources</a></nav><span class="studio-local"><span class="local-dot"></span>LOCAL · NO CLOUD</span></header>
-<div class="studio-transport"><strong class="stage-label">CAPTURED IMAGE</strong><span class="panel-muted">Non-destructive annotations until export</span><div class="studio-export-actions"><button id="copy-image" class="primary" disabled title="Copy the full annotated screenshot as a PNG image">Copy image</button><button id="png" disabled>Export PNG</button><button id="pdf" disabled>Export PDF</button></div><span id="status" class="status studio-live-status" role="status" aria-live="polite">Preparing capture…</span></div>
-<div class="image-layout"><aside class="studio-toolrail image-toolrail" aria-label="Image drawing tools"><span class="toolrail-heading">TOOLS</span><button data-studio-tool="select" aria-pressed="false" title="Select and move text annotations (V)">↖<small>Select</small></button><button data-studio-tool="pen" class="is-active" aria-pressed="true" title="Freehand pen">✎<small>Pen</small></button><button data-studio-tool="highlighter" aria-pressed="false" title="Highlight with pen">▤<small>Highlight</small></button><button data-studio-tool="eraser" aria-pressed="false" title="Erase annotations">⌫<small>Eraser</small></button><button data-studio-tool="arrow" aria-pressed="false" title="Draw an arrow">➜<small>Arrow</small></button><button data-studio-tool="rectangle" aria-pressed="false" title="Draw a rectangle">▢<small>Shape</small></button><button data-studio-tool="redact" aria-pressed="false" title="Solid redaction">▨<small>Redact</small></button><button data-studio-tool="text" aria-pressed="false" title="Add text">T<small>Text</small></button></aside>
+<div class="studio-transport"><strong class="stage-label">CAPTURED IMAGE</strong><span class="panel-muted">Non-destructive annotations until export</span><div class="studio-export-actions"><button id="image-import" type="button" title="Import an image as an editable layer">+ Image</button><input id="image-import-file" type="file" accept="image/png,image/jpeg,image/webp" hidden><button id="copy-image" class="primary" disabled title="Copy the full annotated screenshot as a PNG image">Copy image</button><button id="png" disabled>Export PNG</button><button id="pdf" disabled>Export PDF</button></div><span id="status" class="status studio-live-status" role="status" aria-live="polite">Preparing capture…</span></div>
+<div class="image-layout"><aside class="studio-toolrail image-toolrail" aria-label="Image drawing tools"><span class="toolrail-heading">TOOLS</span><button data-studio-tool="select" aria-pressed="false" title="Select and move text annotations (V)">↖<small>Select</small></button><button data-studio-tool="pen" class="is-active" aria-pressed="true" title="Freehand pen">✎<small>Pen</small></button><button data-studio-tool="highlighter" aria-pressed="false" title="Highlight with pen">▤<small>Highlight</small></button><button data-studio-tool="eraser" aria-pressed="false" title="Erase annotations">⌫<small>Eraser</small></button><button data-studio-tool="arrow" aria-pressed="false" title="Draw an arrow">➜<small>Arrow</small></button><button data-studio-tool="rectangle" aria-pressed="false" title="Draw a rectangle">▢<small>Shape</small></button><button data-studio-tool="redact" aria-pressed="false" title="Solid redaction">▨<small>Redact</small></button><button data-studio-tool="text" aria-pressed="false" title="Add text">T<small>Text</small></button><span class="toolrail-divider"></span><button data-studio-tool="mask-erase" aria-pressed="false" title="Erase imported image mask">◌<small>Mask −</small></button><button data-studio-tool="mask-restore" aria-pressed="false" title="Restore imported image mask">◉<small>Mask +</small></button></aside>
 <section class="studio-monitor-panel image-monitor"><div class="panel-heading"><span>IMAGE CANVAS</span><span class="panel-muted" id="image-meta">Screenshot workspace · Wacom pressure enabled</span></div><main id="workspace" class="workspace"><div class="canvas-wrap" id="canvas-wrap"><canvas id="base" aria-label="Captured webpage"></canvas><canvas id="ink" class="overlay" aria-label="Screenshot annotation surface"></canvas>
-<div id="text-selection-box" class="image-text-selection" hidden aria-hidden="true"></div>
+<div id="text-selection-box" class="image-text-selection" hidden aria-hidden="true"></div><div id="image-layer-selection-box" class="image-layer-selection" hidden aria-hidden="true"></div>
 <div id="text-inline" class="image-text-inline" hidden>
 <textarea id="text-inline-input" rows="2" maxlength="1000" placeholder="Type text here…" aria-label="Write annotation text"></textarea>
 <div class="image-inline-actions"><span>Enter to place · Shift+Enter line break</span><button type="button" id="text-inline-cancel">Cancel</button><button type="button" class="primary" id="text-inline-place">Place text</button></div>
 </div></div></main><div class="monitor-controls"><div class="monitor-tools"><label>Zoom <select id="zoom"><option value="fit">Fit</option><option value="1">100%</option><option value="0.75">75%</option><option value="0.5">50%</option><option value="1.5">150%</option><option value="2">200%</option></select></label><span id="img-zoom-readout" class="control-readout">Fit</span></div><span class="panel-muted" id="image-hint">Choose Text, then click directly on the screenshot to type. Right-click for Copy image.</span></div></section>
-<aside class="studio-inspector image-inspector"><div class="panel-heading">PROPERTIES <span class="panel-muted">IMAGE</span></div><div class="inspector-section"><h3>Active tool</h3><label>Tool <select id="tool"><option value="select">Select / Move</option><option value="pen">Pen</option><option value="highlighter">Highlighter</option><option value="eraser">Eraser</option><option value="arrow">Arrow</option><option value="rectangle">Rectangle</option><option value="redact">Redact</option><option value="text">Text</option></select></label><label>Color <input id="color" type="color" value="#ffb100"></label>
-<div id="draw-properties"><label>Stroke width <input id="size" type="range" min="1" max="24" value="4"></label></div>
-<div id="text-properties" hidden>
- <label for="text-content">Text content</label><textarea id="text-content" maxlength="1000" rows="3" placeholder="Click the screenshot to create text"></textarea>
- <div class="image-text-quick" role="group" aria-label="Text style"><button type="button" data-text-preset="plain" aria-pressed="true">Text</button><button type="button" data-text-preset="title" aria-pressed="false">Title</button><button type="button" data-text-preset="label" aria-pressed="false">Label</button><button type="button" data-text-preset="callout" aria-pressed="false">Callout</button></div>
- <label>Text size <input id="text-font-size" type="range" min="14" max="160" value="48"><output id="text-size-readout">48 px</output></label>
- <label>Font <select id="text-font-family"><option value="sans">Modern sans</option><option value="serif">Editorial serif</option><option value="mono">Monospace</option></select></label>
- <p class="inspector-hint">Click to place, drag to move, double-click to edit. Select keeps text movable after creation.</p>
-</div>
-<input id="text-value" type="hidden" value=""></div><div class="inspector-section"><h3>Edit history</h3><div class="inspector-actions"><button id="undo" disabled>↶ Undo</button><button id="redo" disabled>↷ Redo</button><button id="clear" disabled>Clear</button></div><span class="inspector-hint">Ctrl+Z undo · Ctrl+Shift+Z redo · 80 action history</span></div><div class="inspector-section"><h3>Annotation objects</h3><div id="stroke-list" class="stroke-list"><span class="inspector-hint">Objects will appear here after drawing.</span></div><span class="inspector-hint">Select text to edit or move. Remove deletes only that annotation; Ctrl+Z restores it.</span></div><div class="inspector-section"><h3>Export</h3><span class="inspector-hint">PNG and paginated PDF flatten annotations. Keep the original capture until you are satisfied with the result.</span></div></aside></div>
+<aside class="studio-inspector image-inspector">
+ <div class="panel-heading">PROPERTIES <span class="panel-muted" id="image-inspector-state">IMAGE STUDIO</span></div>
+ <div class="image-inspector-tabs" role="tablist" aria-label="Image editor settings">
+  <button type="button" role="tab" data-image-tab="layers" aria-selected="true">Layers</button>
+  <button type="button" role="tab" data-image-tab="type" aria-selected="false">Type</button>
+  <button type="button" role="tab" data-image-tab="tools" aria-selected="false">Tools</button>
+  <button type="button" role="tab" data-image-tab="mask" aria-selected="false">Mask</button>
+ </div>
+ <section id="image-panel-layers" class="image-inspector-page" role="tabpanel" aria-label="Layers">
+  <div class="image-pane-title"><strong>Layer stack</strong><span>Top = front</span></div>
+  <div class="image-layer-toolbar"><button type="button" id="image-add-layer">+ Image</button><button type="button" id="image-add-text">+ Text</button><button type="button" id="image-duplicate-layer">Duplicate</button></div>
+  <div id="stroke-list" class="stroke-list image-layer-stack" aria-label="Editable annotation and image layers"><span class="inspector-hint">Draw, add text or import an image.</span></div>
+  <div id="image-layer-properties" class="image-layer-properties" hidden>
+   <div class="image-pane-title"><strong>Selected layer</strong><span id="image-selected-layer-name"></span></div>
+   <label>Opacity <input id="image-layer-opacity" type="range" min="0" max="100" value="100"><output id="image-opacity-readout">100%</output></label>
+   <div class="image-layer-buttons"><button type="button" id="image-layer-front">Move up</button><button type="button" id="image-layer-back">Move down</button><button type="button" id="image-layer-remove">Delete</button></div>
+   <details class="image-transform-details"><summary>Advanced size & position</summary>
+    <div class="image-transform-grid"><label>X <input id="image-layer-x" type="number"></label><label>Y <input id="image-layer-y" type="number"></label><label>Width <input id="image-layer-width" type="number" min="1"></label><label>Height <input id="image-layer-height" type="number" min="1"></label></div>
+   </details>
+  </div>
+  <details class="image-history-panel"><summary>History & clear</summary>
+   <div class="inspector-actions"><button id="undo" disabled>↶ Undo</button><button id="redo" disabled>↷ Redo</button><button id="clear" disabled>Clear annotations</button></div>
+   <span class="inspector-hint">Ctrl+Z Undo · Ctrl+Shift+Z Redo · 80 action steps</span>
+  </details>
+ </section>
+ <section id="image-panel-type" class="image-inspector-page" role="tabpanel" aria-label="Typography" hidden>
+  <div class="image-pane-title"><strong>Typography</strong><span>Canvas-first editor</span></div>
+  <p class="inspector-hint">Click + Text to place new lettering. Drag it to move, double-click to edit.</p>
+  <div id="text-properties">
+   <label for="text-content">Text content</label><textarea id="text-content" maxlength="1000" rows="3" placeholder="Select a text layer, or add text."></textarea>
+   <div class="image-text-quick" role="group" aria-label="Text style">
+    <button type="button" data-text-preset="plain" aria-pressed="true">Text</button><button type="button" data-text-preset="title" aria-pressed="false">Title</button><button type="button" data-text-preset="label" aria-pressed="false">Label</button><button type="button" data-text-preset="callout" aria-pressed="false">Callout</button>
+   </div>
+   <div class="image-type-presets" role="group" aria-label="Text size presets"><button type="button" data-text-size="32">Small</button><button type="button" data-text-size="56">Medium</button><button type="button" data-text-size="96">Headline</button></div>
+   <label>Text size <input id="text-font-size" type="range" min="14" max="200" value="48"><output id="text-size-readout">48 px</output></label>
+   <label>Font <select id="text-font-family"><option value="sans">Modern Sans</option><option value="serif">Editorial Serif</option><option value="mono">Monospace</option><option value="display">Bold Display</option><option value="rounded">Rounded</option><option value="classic">Classic Serif</option></select></label>
+   <label>Text color <input id="text-fill-color" type="color" value="#ffffff"></label>
+   <p class="inspector-hint">Use the floating editor: Enter to place · Shift+Enter for a new line.</p>
+  </div>
+ </section>
+ <section id="image-panel-tools" class="image-inspector-page" role="tabpanel" aria-label="Drawing tools" hidden>
+  <div class="image-pane-title"><strong>Drawing & shapes</strong><span>Wacom supported</span></div>
+  <label>Tool <select id="tool"><option value="select">Select / Move</option><option value="pen">Pen</option><option value="highlighter">Highlighter</option><option value="eraser">Eraser</option><option value="arrow">Arrow</option><option value="rectangle">Rectangle</option><option value="redact">Redact</option><option value="text">Text</option><option value="mask-erase">Mask Erase</option><option value="mask-restore">Mask Restore</option></select></label>
+  <label>Color <input id="color" type="color" value="#ffb100"></label>
+  <div id="draw-properties"><label>Stroke width <input id="size" type="range" min="1" max="48" value="4"></label></div>
+  <input id="text-value" type="hidden" value="">
+  <p class="inspector-hint">Select a tool from the left rail, or choose it here. Mask brushes work only on imported image layers.</p>
+ </section>
+ <section id="image-panel-mask" class="image-inspector-page" role="tabpanel" aria-label="Mask controls" hidden>
+  <div class="image-pane-title"><strong>Image masking</strong><span>Non-destructive</span></div>
+  <p class="inspector-hint">Select an imported image layer. Paint to hide or restore parts without erasing source pixels.</p>
+  <div class="image-layer-buttons"><button type="button" id="image-mask-erase">− Erase mask</button><button type="button" id="image-mask-restore">+ Restore mask</button></div>
+  <label>Brush width <input id="image-mask-brush" type="range" min="4" max="200" value="35"><output id="image-mask-brush-readout">35 px</output></label>
+  <label>Edge softness <input id="image-mask-feather" type="range" min="0" max="12" value="0"><output id="image-mask-feather-readout">0 px</output></label>
+  <div class="image-layer-buttons"><button type="button" id="image-mask-undo">Undo mask stroke</button><button type="button" id="image-mask-reset">Reset mask</button></div>
+  <div class="image-pane-title"><strong>Quick Cutout</strong><span>Flat backgrounds · beta</span></div>
+  <label>Color tolerance <input id="image-cutout-tolerance" type="range" min="5" max="85" value="30"><output id="image-cutout-tolerance-readout">30</output></label>
+  <div class="image-layer-buttons"><button type="button" id="image-quick-cutout">Remove flat background</button><button type="button" id="image-clear-cutout">Clear cutout</button></div>
+  <p class="inspector-hint">Quick Cutout removes edge-connected, near-solid colors only. It is not AI segmentation. Keep the mask brushes for hair, product edges and corrections.</p>
+  <details class="image-transform-details"><summary>Professional AI background removal</summary>
+   <p class="inspector-hint">Not bundled in this alpha. A licensed segmentation model with locally cached weights and privacy controls is needed for remove.bg-class results. No image is uploaded.</p>
+  </details>
+ </section>
+ </aside></div>
 <div id="image-context-menu" class="image-context-menu" role="menu" aria-label="Screenshot actions" hidden>
 <button role="menuitem" type="button" data-image-action="copy">Copy full image with annotations</button>
 <button role="menuitem" type="button" data-image-action="copy-original">Copy original image</button>
@@ -29,4 +83,4 @@
 <button role="menuitem" type="button" data-image-action="redo">Redo annotation</button>
 <button role="menuitem" type="button" data-image-action="delete">Delete selected annotation</button>
 </div>
-<script src="pdf-export.js"></script><script src="capture-store.js"></script><script src="image-editor-core-v0611.js"></script><script src="editor.js"></script></body></html>
+<script src="pdf-export.js"></script><script src="capture-store.js"></script><script src="image-editor-core-v0611.js"></script><script src="image-layers-v0612.js"></script><script src="editor.js"></script></body></html>
