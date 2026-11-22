@@ -173,6 +173,26 @@
       <label data-shape-option="arrow">Arrowheads <select id="image-shape-heads"><option value="end">End</option><option value="both">Both</option><option value="start">Start</option><option value="none">None</option></select></label>
     </div>
   </div>
+
+<details id="pen-diagnostics" class="image-pen-diagnostics">
+ <summary>Wacom / Browser Pen Test <span>Local diagnostic</span></summary>
+ <div class="image-pen-diagnostics-body">
+  <p>Draw with your pen below, vary pressure, then flip to the eraser end. This checks what the browser receives, not the tablet's hardware identity.</p>
+  <canvas id="pen-test-pad" width="320" height="148" aria-label="Draw here to test browser pressure sensitivity and eraser-tip events.">Pen testing requires Canvas.</canvas>
+  <div class="image-pen-stats">
+   <span>Device</span><strong id="pen-test-type">none</strong>
+   <span>Current pressure</span><strong id="pen-test-pressure">0.000</strong>
+   <span>Pressure range</span><strong id="pen-test-range">No pen contact yet</strong>
+   <span>Tilt X / Y</span><strong id="pen-test-tilt">0° / 0°</strong>
+   <span>Twist</span><strong id="pen-test-twist">0°</strong>
+   <span>Eraser tip</span><strong id="pen-test-eraser">Not detected</strong>
+   <span>Events</span><strong id="pen-test-events">0 samples</strong>
+  </div>
+  <p id="pen-test-status" role="status" aria-live="polite">No pen contact observed yet.</p>
+  <div class="image-layer-buttons"><button type="button" id="pen-test-clear">Reset test</button><button type="button" id="pen-test-copy">Copy diagnostic report</button></div>
+  <p class="inspector-hint">If pressure stays constant, check the tablet driver and browser. Automatic erasing requires a pen-eraser event; manual erase tools work without that signal.</p>
+ </div>
+</details>
   <input id="text-value" type="hidden" value="">
   <p class="inspector-hint" id="image-tool-hint">Choose a tool and drag directly on the canvas. Select a vector layer to edit its appearance without flattening it.</p>
  </section>
