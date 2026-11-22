@@ -83,6 +83,16 @@ def build(out,release_tag):
                     if dep not in clip:raise ValueError('Clip Studio active tool surface missing')
                 if b'function topLayerAt(' not in z.read('editor.js'):
                     raise ValueError('Topmost image/vector selection not connected')
+            if version == '0.6.16':
+                for dep in ('pen-input-v0616.js','image-studio-v0616.css'):
+                    if dep not in z.namelist():raise ValueError('Missing Wacom runtime '+dep)
+                for dep in (b'pen-input-v0616.js',b'image-studio-v0616.css',
+                            b'data-studio-tool="erase-brush"',b'data-studio-tool="erase-stroke"',
+                            b'pen-test-pad',b'image-eraser-hardness',b'image-pen-pressure'):
+                    if dep not in editor:raise ValueError('Wacom/eraser editor UI missing')
+                for dep in (b'function eraseEntireAt(',b'penInput?.paintEraser?.(pen,stroke)',
+                            b'penInput?.eraserTip?.(event)',b'penInput?.createDiagnostic?.('):
+                    if dep not in z.read('editor.js'):raise ValueError('Wacom/eraser integration missing')
             if b'<iframe' in z.read('resources.html').lower():
                 raise ValueError('Resource directory must not embed provider frames')
     print(f'OK {target.name}: {len(files)} files; SHA-256 {hashlib.sha256(target.read_bytes()).hexdigest()}')
