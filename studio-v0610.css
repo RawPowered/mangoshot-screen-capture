@@ -42,3 +42,9 @@ body.popup #full:focus-visible{outline:2px solid #d4ffa4}
  body.studio-clip .v0610-quick-add{top:37px}
  body.studio-clip .v0610-quick-buttons{grid-template-columns:1fr}
 }
+
+body.studio-clip .v068-layers-dock{position:relative}
+body.studio-clip .v068-layers-dock>summary{padding-right:39px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+body.studio-clip .v068-layers-dock .v0610-delete-selected{position:absolute;right:8px;top:3px;z-index:2;display:grid;place-items:center;padding:0!important;width:25px;height:25px;min-height:25px;border:1px solid #a36254;background:#3b2523;color:#ffe0c6;font-size:17px;font-weight:800;border-radius:5px}
+body.studio-clip .v068-layers-dock .v0610-delete-selected:disabled{opacity:.3;cursor:not-allowed}
+body.studio-clip .v068-layers-dock .v0610-delete-selected:hover:not(:disabled){border-color:#f0a58a;background:#65332e}
