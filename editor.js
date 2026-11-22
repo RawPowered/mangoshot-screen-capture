@@ -11,10 +11,22 @@ const call=(fn,...args)=>new Promise((resolve,reject)=>{
   catch(error){reject(error);}
 });
 let meta,frames=[],ready=false,drawing=false,active=null,strokes=[],renderPending=false,history=[],redoHistory=[];
+const editorCore=globalThis.MangoImageEditorCore;
+const selectedBox=document.getElementById('text-selection-box'),inline=document.getElementById('text-inline'),
+ inlineInput=document.getElementById('text-inline-input'),contextMenu=document.getElementById('image-context-menu');
+const textFontSize=document.getElementById('text-font-size'),textFontFamily=document.getElementById('text-font-family'),
+ textContent=document.getElementById('text-content');
+let selectedText=-1,textDraft=null,dragText=null,textPreset='plain';
 function label(message){status.textContent=message;}
 function activate(){call(api.tabs.getCurrent.bind(api.tabs)).then(tab=>
   tab?.id&&call(api.tabs.update.bind(api.tabs),tab.id,{active:true})).catch(()=>{});}
-function setReady(value){ready=value;for(const id of ['png','pdf','clear'])document.getElementById(id).disabled=!value;document.getElementById('undo').disabled=!value||!history.length;const redo=document.getElementById('redo');if(redo)redo.disabled=!value||!redoHistory.length;renderStrokeList();}
+function setReady(value){
+ ready=value;
+ for(const id of ['png','pdf','clear','copy-image']){const button=document.getElementById(id);if(button)button.disabled=!value;}
+ document.getElementById('undo').disabled=!value||!history.length;
+ const redo=document.getElementById('redo');if(redo)redo.disabled=!value||!redoHistory.length;
+ renderStrokeList();updateEditorControls();
+}
 function image(dataUrl){return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error('Screenshot image failed to decode.'));img.src=dataUrl;});}
 function zoom(){if(!base.width)return;const selected=document.querySelector('#zoom').value;
   const factor=selected==='fit'?Math.min(1,(workspace.clientWidth-44)/base.width):Number(selected);
@@ -103,15 +115,23 @@ function drawStroke(stroke){
     pen.moveTo(finish.x,finish.y);pen.lineTo(finish.x-head*Math.cos(angle-.55),finish.y-head*Math.sin(angle-.55));
     pen.moveTo(finish.x,finish.y);pen.lineTo(finish.x-head*Math.cos(angle+.55),finish.y-head*Math.sin(angle+.55));pen.stroke();
   }else if(stroke.type==='text'){
-    pen.globalAlpha=1;pen.fillStyle=stroke.color;pen.font='bold '+Math.max(14,stroke.size*5)+'px system-ui';
-    pen.fillText(stroke.text||'Note',start.x,start.y);
+    if(editorCore?.drawText)editorCore.drawText(pen,stroke);
+    else{pen.globalAlpha=1;pen.fillStyle=stroke.color;pen.font='bold '+Math.max(14,stroke.size*5)+'px system-ui';
+      pen.fillText(stroke.text||'Note',start.x,start.y);}
   }
   pen.restore();
 }
-function redraw(){pen.clearRect(0,0,ink.width,ink.height);for(const stroke of strokes)drawStroke(stroke);drawStroke(active);}
-function snapshot(){history.push(strokes.slice());if(history.length>80)history.shift();redoHistory=[];}
-function undo(){if(!history.length)return;redoHistory.push(strokes.slice());strokes=history.pop();redraw();setReady(ready);}
-function redo(){if(!redoHistory.length)return;history.push(strokes.slice());strokes=redoHistory.pop();redraw();setReady(ready);}
+function redraw(){
+ pen.clearRect(0,0,ink.width,ink.height);
+ for(const stroke of strokes)drawStroke(stroke);
+ drawStroke(active);updateSelectionBox();
+}
+function cloneStrokes(value){return JSON.parse(JSON.stringify(value));}
+function snapshot(){history.push(cloneStrokes(strokes));if(history.length>80)history.shift();redoHistory=[];}
+function undo(){if(!history.length)return;redoHistory.push(cloneStrokes(strokes));strokes=history.pop();
+ selectedText=Math.min(selectedText,strokes.length-1);redraw();setReady(ready);syncSelectedText();}
+function redo(){if(!redoHistory.length)return;history.push(cloneStrokes(strokes));strokes=redoHistory.pop();
+ selectedText=Math.min(selectedText,strokes.length-1);redraw();setReady(ready);syncSelectedText();}
 function renderStrokeList(){const list=document.getElementById('stroke-list');if(!list||typeof document.createElement!=='function'||typeof list.replaceChildren!=='function')return;list.replaceChildren();if(!strokes.length){list.textContent='No annotations yet';return;}
   strokes.forEach((stroke,i)=>{const row=document.createElement('div');row.className='stroke-entry';const title=document.createElement('span');title.textContent=String(i+1).padStart(2,'0')+' · '+stroke.type;const remove=document.createElement('button');remove.textContent='Remove';remove.title='Remove annotation '+(i+1);remove.onclick=()=>{snapshot();strokes.splice(i,1);redraw();setReady(ready);};row.append(title,remove);list.appendChild(row);});}
 const toolButtons=[...(document.querySelectorAll?.('[data-studio-tool]')||[])];function syncTool(){for(const button of toolButtons){const selected=button.dataset.studioTool===tool.value;button.classList.toggle('is-active',selected);button.setAttribute('aria-pressed',String(selected));}}
