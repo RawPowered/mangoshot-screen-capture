@@ -559,6 +559,14 @@ inlineInput?.addEventListener?.('keydown',event=>{
 document.getElementById('text-inline-place')?.addEventListener?.('click',commitInline);
 document.getElementById('text-inline-cancel')?.addEventListener?.('click',cancelInline);
 function scheduleRedraw(){if(renderPending)return;renderPending=true;requestAnimationFrame(()=>{renderPending=false;redraw();});}
+function imageIndexAt(x,y){
+ if(!layerCore)return -1;
+ for(let i=strokes.length-1;i>=0;i--){
+  const l=strokes[i];
+  if(l.visible!==false&&l.type==='image'&&layerCore.hit(l,x,y))return i;
+ }
+ return -1;
+}
 ink.addEventListener('pointerdown',event=>{
  if(!ready||event.button!==0)return;
  const p=point(event);
@@ -570,17 +578,43 @@ ink.addEventListener('pointerdown',event=>{
   beginInline(index>=0?strokes[index].points[0]:p,index);
   return;
  }
+ if(type==='mask-erase'||type==='mask-restore'){
+  const l=selectedImageStroke();
+  if(!l||l.locked||!layerCore){label('Select an unlocked imported image layer before masking.');return;}
+  if(!layerCore.hit(l,p.x,p.y,0))return;
+  event.preventDefault();ink.setPointerCapture?.(event.pointerId);
+  const brush=Number(document.getElementById('image-mask-brush')?.value||35);
+  const b=layerCore.bounds(l);
+  const path={mode:type==='mask-restore'?'restore':'erase',
+   radius:Math.max(.001,Math.min(.5,brush/Math.min(b.width,b.height)/2)),
+   points:[layerCore.normalize(l,p.x,p.y)]};
+  snapshot();
+  if(!l.mask)l.mask={paths:[],feather:0};
+  l.mask.paths.push(path);maskDraw={index:selectedImage,path};
+  scheduleRedraw();return;
+ }
  if(type==='select'){
   const index=textIndexAt(p.x,p.y);
-  selectText(index);
-  if(index<0)return;
-  event.preventDefault();
-  ink.setPointerCapture?.(event.pointerId);
-  const anchor=strokes[index].points[0];
-  dragText={index,start:p,origin:{x:anchor.x,y:anchor.y},moved:false};
-  return;
+  if(index>=0){
+   selectText(index);if(strokes[index].locked)return;
+   event.preventDefault();ink.setPointerCapture?.(event.pointerId);
+   const anchor=strokes[index].points[0];
+   dragText={index,start:p,origin:{x:anchor.x,y:anchor.y},moved:false};
+   return;
+  }
+  const imageIndex=imageIndexAt(p.x,p.y);
+  if(imageIndex>=0){
+   selectImage(imageIndex);
+   if(strokes[imageIndex].locked)return;
+   event.preventDefault();ink.setPointerCapture?.(event.pointerId);
+   const anchor=strokes[imageIndex].points[0];
+   dragImage={index:imageIndex,start:p,origin:{x:anchor.x,y:anchor.y},moved:false};
+   return;
+  }
+  selectedText=-1;selectedImage=-1;selectedObject=-1;
+  syncSelectedText();redraw();renderStrokeList();return;
  }
- selectedText=-1;syncSelectedText();
+ selectedText=-1;selectedImage=-1;selectedObject=-1;syncSelectedText();
  event.preventDefault();ink.setPointerCapture?.(event.pointerId);
  active={type,points:[p],size:Number(size.value)*(ink.width/ink.getBoundingClientRect().width),
   color:color.value,text:''};
@@ -588,9 +622,27 @@ ink.addEventListener('pointerdown',event=>{
 });
 ink.addEventListener('pointermove',event=>{
  const p=point(event);
+ if(maskDraw){
+  const target=strokes[maskDraw.index];
+  if(!target||target.locked||target.type!=='image')return;
+  maskDraw.path.points.push(layerCore.normalize(target,p.x,p.y));
+  scheduleRedraw();event.preventDefault();return;
+ }
+ if(dragImage){
+  const drag=dragImage,l=strokes[drag.index];
+  if(!l||l.type!=='image'||l.locked)return;
+  const dx=p.x-drag.start.x,dy=p.y-drag.start.y;
+  if(!drag.moved&&Math.hypot(dx,dy)<3)return;
+  if(!drag.moved){snapshot();drag.moved=true;}
+  const b=layerCore.bounds(l);
+  l.points[0]={...l.points[0],
+   x:Math.max(0,Math.min(ink.width-b.width,drag.origin.x+dx)),
+   y:Math.max(0,Math.min(ink.height-b.height,drag.origin.y+dy))};
+  redraw();event.preventDefault();return;
+ }
  if(dragText){
   const drag=dragText,stroke=strokes[drag.index];
-  if(!stroke||stroke.type!=='text')return;
+  if(!stroke||stroke.type!=='text'||stroke.locked)return;
   const dx=p.x-drag.start.x,dy=p.y-drag.start.y;
   if(!drag.moved&&Math.hypot(dx,dy)<3)return;
   if(!drag.moved){snapshot();drag.moved=true;}
@@ -605,6 +657,15 @@ ink.addEventListener('pointermove',event=>{
  scheduleRedraw();event.preventDefault();
 });
 function finishStroke(event){
+ if(maskDraw){
+  maskDraw=null;redraw();setReady(ready);
+  label('Mask painted · source image preserved. Ctrl+Z restores mask stroke.');return;
+ }
+ if(dragImage){
+  const drag=dragImage;dragImage=null;
+  if(drag.moved){redraw();setReady(ready);label('Image layer moved. Ctrl+Z restores position.');}
+  return;
+ }
  if(dragText){
   const drag=dragText;dragText=null;
   if(drag.moved){redraw();setReady(ready);label('Text moved. Ctrl+Z restores its position.');}
@@ -612,15 +673,15 @@ function finishStroke(event){
  }
  if(!drawing)return;
  drawing=false;
- if(active){
-  snapshot();strokes.push(active);active=null;redraw();setReady(true);
- }
+ if(active){snapshot();strokes.push(active);selectedObject=strokes.length-1;active=null;redraw();setReady(true);}
 }
 for(const event of ['pointerup','pointercancel','lostpointercapture'])ink.addEventListener(event,finishStroke);
 ink.addEventListener('dblclick',event=>{
  if(!ready||event.button!==0||textDraft)return;
  const p=point(event),index=textIndexAt(p.x,p.y);
  if(index>=0){event.preventDefault();beginInline(strokes[index].points[0],index);}
+ else{const imageIndex=imageIndexAt(p.x,p.y);
+  if(imageIndex>=0){selectImage(imageIndex);switchInspectorTab('mask');}}
 });
 document.querySelector('#undo').addEventListener('click',undo);document.getElementById('redo')?.addEventListener('click',redo);
 document.querySelector('#clear').addEventListener('click',()=>{if(strokes.length){snapshot();strokes=[];redraw();setReady(true);}});
