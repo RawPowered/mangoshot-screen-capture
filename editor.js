@@ -1333,6 +1333,7 @@ window.addEventListener('keydown',event=>{
   if(contextMenu&&!contextMenu.hidden){event.preventDefault();closeContextMenu();}
   return;
  }
+ if(globalThis.MangoShortcutsV0617?.active)return;
  if(isTyping(event.target))return;
  if((event.key==='Delete'||event.key==='Backspace')&&selectedAnyStroke()&&!event.ctrlKey&&!event.metaKey){
   event.preventDefault();removeLayerAt(selectedAnyIndex());return;
@@ -1435,4 +1436,76 @@ async function exportFile(type){if(!ready)return;if(textDraft)commitInline();doc
 }
 document.querySelector('#png').addEventListener('click',()=>exportFile('png'));
 document.querySelector('#pdf').addEventListener('click',()=>exportFile('pdf'));
+/* Shared v0.6.17 menu/shortcut command dispatcher uses the same existing editor
+ * operations as toolbar and context menu: no duplicate drawing implementation.
+ */
+const imageToolActions={
+ select:'select',pen:'pen',highlighter:'highlighter',
+ brushErase:'erase-brush',strokeErase:'erase-stroke',
+ arrow:'arrow',rectangle:'rectangle',ellipse:'ellipse',line:'line',star:'star',
+ text:'text',maskErase:'mask-erase',maskRestore:'mask-restore'
+};
+function imageCommand(id){
+ if(imageToolActions[id]){chooseImageTool(imageToolActions[id]);return true;}
+ const button=id=>document.getElementById(id);
+ const click=id=>{const b=button(id);if(!b||b.disabled)return false;b.click();return true;};
+ if(id==='showShortcuts')return globalThis.MangoShortcutsV0617?.open?.()===true;
+ if(id==='commandPalette')return globalThis.MangoShortcutsV0617?.openPalette?.()===true;
+ if(id==='undo'){if(!history.length)return false;undo();return true;}
+ if(id==='redo'||id==='redoAlternate'){if(!redoHistory.length)return false;redo();return true;}
+ if(id==='deleteLayer')return removeLayerAt(selectedAnyIndex());
+ if(id==='duplicateLayer')return duplicateSelectedLayer();
+ if(id==='layerForward')return moveLayerAt(selectedAnyIndex(),1);
+ if(id==='layerBackward')return moveLayerAt(selectedAnyIndex(),-1);
+ if(id==='layerVisibility'||id==='layerLock'){
+  const index=selectedAnyIndex(),l=strokes[index];if(!l)return false;
+  snapshot();strokes[index]={...l,[id==='layerLock'?'locked':'visible']:
+   id==='layerLock'?!l.locked:l.visible===false};
+  redraw();setReady(ready);syncLayerProperties();
+  label(id==='layerLock'?(strokes[index].locked?'Layer locked.':'Layer unlocked.'):
+   (strokes[index].visible?'Layer shown.':'Layer hidden.'));
+  return true;
+ }
+ if(id==='brushSmaller'||id==='brushLarger'){
+  const input=button('size');if(!input)return false;
+  const next=Math.max(Number(input.min)||1,
+   Math.min(Number(input.max)||240,Number(input.value||4)+(id==='brushLarger'?3:-3)));
+  input.value=String(next);
+  input.dispatchEvent?.(new Event('input',{bubbles:true}));
+  label('Brush width: '+next+' px');return true;
+ }
+ if(id==='copyImage')return click('copy-image');
+ if(id==='importImage')return click('image-import');
+ if(id==='editClipboard')return click('clipboard-import');
+ if(id==='exportPng')return click('png');
+ if(id==='exportPdf')return click('pdf');
+ if(id==='zoomFit'||id==='zoomActual'){
+  const zoomSelect=button('zoom');if(!zoomSelect)return false;
+  zoomSelect.value=id==='zoomFit'?'fit':'1';zoom();
+  return true;
+ }
+ if(id==='penDiagnostics'){
+  switchInspectorTab('tools');
+  const diagnostic=button('pen-diagnostics');
+  if(!diagnostic)return false;
+  diagnostic.open=true;
+  diagnostic.querySelector?.('summary')?.scrollIntoView?.({block:'nearest'});
+  return true;
+ }
+ if(id==='focusCanvas'){ink.tabIndex=0;ink.focus?.();return true;}
+ if(id==='clearAnnotations'){
+  if(!ready||!strokes.length)return false;
+  if(typeof window.confirm==='function'&&!window.confirm('Clear all annotation layers? The original screenshot will remain unchanged.'))return false;
+  snapshot();strokes=[];selectedText=-1;selectedImage=-1;selectedObject=-1;
+  redraw();setReady(true);return true;
+ }
+ return false;
+}
+globalThis.MangoImageActions={run:imageCommand,available:id=>{
+ if(imageToolActions[id])return true;
+ if(['deleteLayer','duplicateLayer','layerForward','layerBackward','layerVisibility','layerLock'].includes(id))
+  return !!selectedAnyStroke();
+ if(['undo','redo','redoAlternate'].includes(id))return id==='undo'?history.length>0:redoHistory.length>0;
+ return ready;
+}};
 begin();
