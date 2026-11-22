@@ -6,6 +6,7 @@ const tool=document.querySelector('#tool'),size=document.querySelector('#size'),
 const params=new URLSearchParams(location.search),source=Number(params.get('source'));
 const mode=params.get('mode')==='full'?'full':'visible',captureId=crypto.randomUUID();
 const stored=params.get('stored'),captureError=params.get('capture_error');
+const clipboardMode=params.get('clipboard')==='1',captureOutput=globalThis.MangoCaptureOutputV0614;
 const call=(fn,...args)=>new Promise((resolve,reject)=>{
   try{fn(...args,value=>{const error=api.runtime.lastError;error?reject(new Error(error.message)):resolve(value);});}
   catch(error){reject(error);}
@@ -40,6 +41,16 @@ document.querySelector('#zoom').addEventListener('change',zoom);
 window.addEventListener('resize',()=>{if(document.querySelector('#zoom').value==='fit')zoom();});
 async function assemble(){
   if(!meta || frames.length!==meta.frames || frames.some(f=>!f?.dataUrl))throw new Error('Missing screenshot frames.');
+  if(meta.selection){
+    if(!captureOutput?.compose)throw Error('Selected-area compositor is not available.');
+    await captureOutput.compose(meta,frames,base);
+    ink.width=base.width;ink.height=base.height;
+    frames=[];setReady(true);zoom();
+    label('Selected screenshot ready · '+base.width+' × '+base.height+' px');
+    const info=document.getElementById('image-meta');
+    if(info)info.textContent=base.width+' × '+base.height+' px · original preserved';
+    activate();return;
+  }
   const first=await image(frames[0].dataUrl),scale=first.naturalWidth/meta.width;
   const width=first.naturalWidth,height=Math.round(meta.pageHeight*scale);
   if(width>16384||height>30000||width*height>48000000)throw new Error('Screenshot is too large to edit safely.');
@@ -73,6 +84,13 @@ api.runtime.onMessage.addListener((message,sender,reply)=>{
 });
 async function begin(){
   try{
+    if(clipboardMode){
+      const landing=document.getElementById('image-clipboard-landing');
+      if(landing)landing.hidden=false;
+      label('Open an image from your clipboard. Select Paste image or press Ctrl+V.');
+      document.getElementById('clipboard-paste-zone')?.focus?.({preventScroll:true});
+      return;
+    }
     if(captureError){label('Capture failed: '+captureError);return;}
     if(!stored)throw new Error('No completed capture was provided. Open MangoShot from a webpage.');
     label('Loading screenshot from private local storage…');
@@ -86,6 +104,72 @@ async function begin(){
     await globalThis.MangoCaptureStore.remove(stored).catch(()=>{});
   }catch(error){label('Capture failed: '+error.message);}
 }
+
+/* Explicit clipboard import: never read in the background or on page load.
+ * User click and Ctrl+V event are both permitted; no blanket clipboardRead permission. */
+async function loadClipboardImage(blob){
+ if(!captureOutput?.blobImage)throw Error('Image clipboard module is unavailable.');
+ if(ready&&strokes.length)throw Error('Finish or export the current annotated image before replacing it.');
+ const next=await captureOutput.blobImage(blob);
+ if(next.width*next.height>48000000)throw Error('The clipboard image is too large.');
+ base.width=next.width;base.height=next.height;
+ ink.width=next.width;ink.height=next.height;
+ ctx.clearRect(0,0,next.width,next.height);ctx.drawImage(next,0,0);
+ meta={width:next.width,height:next.height,pageHeight:next.height,dpr:1,frames:1,full:false};
+ strokes=[];history=[];redoHistory=[];selectedText=-1;selectedImage=-1;selectedObject=-1;
+ const landing=document.getElementById('image-clipboard-landing');
+ if(landing)landing.hidden=true;
+ setReady(true);zoom();redraw();
+ const info=document.getElementById('image-meta');
+ if(info)info.textContent=next.width+' × '+next.height+' px · clipboard image';
+ label('Clipboard image imported · '+next.width+' × '+next.height+' px. Start annotating.');
+}
+async function clipboardAction(action){
+ const message=document.getElementById('clipboard-status');
+ if(message)message.textContent='Reading image…';
+ try{
+  const blob=await action();
+  await loadClipboardImage(blob);
+ }catch(error){
+  if(message)message.textContent=error.message+' You can also paste with Ctrl+V.';
+  label('Clipboard import: '+error.message);
+ }
+}
+document.getElementById('clipboard-read')?.addEventListener?.('click',()=>{
+ void clipboardAction(()=>captureOutput.read());
+});
+document.getElementById('clipboard-focus')?.addEventListener?.('click',()=>{
+ document.getElementById('clipboard-paste-zone')?.focus?.();
+ const message=document.getElementById('clipboard-status');
+ if(message)message.textContent='Press Ctrl+V to paste an image.';
+});
+document.getElementById('clipboard-open-file')?.addEventListener?.('click',()=>{
+ document.getElementById('clipboard-file')?.click?.();
+});
+document.getElementById('clipboard-file')?.addEventListener?.('change',event=>{
+ const blob=event.target.files?.[0];
+ if(blob)void clipboardAction(()=>Promise.resolve(blob));
+ event.target.value='';
+});
+document.addEventListener?.('paste',event=>{
+ const landing=document.getElementById('image-clipboard-landing');
+ if(!landing||landing.hidden||ready)return;
+ const items=Array.from(event.clipboardData?.items||[]);
+ const match=items.find(x=>['image/png','image/jpeg','image/webp'].includes(x.type));
+ if(!match){
+  const msg=document.getElementById('clipboard-status');
+  if(msg)msg.textContent='Clipboard has no image. Copy an image and press Ctrl+V.';
+  return;
+ }
+ event.preventDefault();
+ const blob=match.getAsFile?.();
+ if(blob)void clipboardAction(()=>Promise.resolve(blob));
+});
+document.getElementById('clipboard-import')?.addEventListener?.('click',()=>{
+ const url=api.runtime.getURL('editor.html')+'?clipboard=1';
+ void call(api.tabs.create.bind(api.tabs),{url,active:true})
+   .catch(error=>label('Could not open clipboard editor: '+error.message));
+});
 
 function point(event){const rect=ink.getBoundingClientRect();return {x:(event.clientX-rect.left)*ink.width/rect.width,
   y:(event.clientY-rect.top)*ink.height/rect.height,p:event.pointerType==='pen'?Math.max(.2,event.pressure||.5):1};}
