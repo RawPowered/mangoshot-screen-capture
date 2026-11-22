@@ -241,10 +241,89 @@ function commitInline(){
  label(old?'Text updated. Drag to reposition; double-click to edit.':'Text placed. Drag to move; double-click to edit.');
  return true;
 }
-function renderStrokeList(){const list=document.getElementById('stroke-list');if(!list||typeof document.createElement!=='function'||typeof list.replaceChildren!=='function')return;list.replaceChildren();if(!strokes.length){list.textContent='No annotations yet';return;}
-  strokes.forEach((stroke,i)=>{const row=document.createElement('div');row.className='stroke-entry';const title=document.createElement('span');title.textContent=String(i+1).padStart(2,'0')+' · '+stroke.type;const remove=document.createElement('button');remove.textContent='Remove';remove.title='Remove annotation '+(i+1);remove.onclick=()=>{snapshot();strokes.splice(i,1);redraw();setReady(ready);};row.append(title,remove);list.appendChild(row);});}
-const toolButtons=[...(document.querySelectorAll?.('[data-studio-tool]')||[])];function syncTool(){for(const button of toolButtons){const selected=button.dataset.studioTool===tool.value;button.classList.toggle('is-active',selected);button.setAttribute('aria-pressed',String(selected));}}
-tool.addEventListener('change',syncTool);for(const button of toolButtons)button.addEventListener('click',()=>{tool.value=button.dataset.studioTool;syncTool();});syncTool();
+function renderStrokeList(){
+ const list=document.getElementById('stroke-list');
+ if(!list||typeof document.createElement!=='function'||typeof list.replaceChildren!=='function')return;
+ list.replaceChildren();
+ if(!strokes.length){list.textContent='No annotations yet';return;}
+ strokes.forEach((stroke,i)=>{
+  const row=document.createElement('div');row.className='stroke-entry'+(selectedText===i?' is-selected':'');
+  const title=document.createElement('button');title.type='button';title.className='image-object-select';
+  title.textContent=String(i+1).padStart(2,'0')+' · '+(stroke.type==='text'?(stroke.text||'Text').slice(0,28):stroke.type);
+  title.title='Select '+stroke.type+' annotation';title.setAttribute('aria-label','Select annotation '+(i+1));
+  title.addEventListener('click',()=>{
+   if(stroke.type==='text'){tool.value='select';syncTool();selectText(i);}
+   else selectText(-1);
+  });
+  row.append(title);
+  if(stroke.type==='text'){
+   const edit=document.createElement('button');edit.type='button';edit.textContent='Edit';
+   edit.title='Edit text';edit.addEventListener('click',()=>beginInline(stroke.points[0],i));
+   row.append(edit);
+  }
+  const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.className='image-object-remove';
+  remove.title='Delete annotation '+(i+1)+' (Undo restores it)';
+  remove.setAttribute('aria-label','Delete annotation '+(i+1));
+  remove.addEventListener('click',()=>{
+   snapshot();strokes.splice(i,1);
+   if(selectedText===i)selectedText=-1;else if(selectedText>i)selectedText--;
+   redraw();setReady(ready);syncSelectedText();
+  });
+  row.append(remove);list.append(row);
+ });
+}
+const toolButtons=[...(document.querySelectorAll?.('[data-studio-tool]')||[])];
+function syncTool(){
+ for(const button of toolButtons){
+  const selected=button.dataset.studioTool===tool.value;
+  button.classList.toggle('is-active',selected);button.setAttribute('aria-pressed',String(selected));
+ }
+ ink.style.cursor=tool.value==='text'?'text':tool.value==='select'?'default':'crosshair';
+ updateEditorControls();
+}
+tool.addEventListener('change',()=>{
+ if(textDraft)commitInline();
+ if(tool.value!=='select'&&tool.value!=='text')selectedText=-1;
+ syncTool();syncSelectedText();
+});
+for(const button of toolButtons)button.addEventListener('click',()=>{
+ if(textDraft)commitInline();
+ tool.value=button.dataset.studioTool;
+ if(tool.value!=='select'&&tool.value!=='text')selectedText=-1;
+ syncTool();syncSelectedText();
+});
+syncTool();
+for(const button of document.querySelectorAll?.('[data-text-preset]')||[]){
+ button.addEventListener('click',()=>{
+  textPreset=button.dataset.textPreset;
+  if(selectedStroke())updateSelectedText({styleId:textPreset});
+  syncSelectedText();
+ });
+}
+textFontSize?.addEventListener?.('input',()=>{
+ const output=document.getElementById('text-size-readout');
+ if(output)output.textContent=textFontSize.value+' px';
+});
+textFontSize?.addEventListener?.('change',()=>{
+ if(selectedStroke())updateSelectedText({fontSize:Number(textFontSize.value)});
+});
+textFontFamily?.addEventListener?.('change',()=>{
+ if(selectedStroke())updateSelectedText({fontFamily:textFontFamily.value});
+});
+textContent?.addEventListener?.('change',()=>{
+ if(selectedStroke()&&textContent.value.trim())updateSelectedText({text:textContent.value.trim()});
+});
+color.addEventListener('change',()=>{
+ if(selectedStroke())updateSelectedText({color:color.value});
+});
+inlineInput?.addEventListener?.('keydown',event=>{
+ if(event.key==='Escape'){event.preventDefault();event.stopPropagation();cancelInline();return;}
+ if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){
+  event.preventDefault();event.stopPropagation();commitInline();
+ }
+});
+document.getElementById('text-inline-place')?.addEventListener?.('click',commitInline);
+document.getElementById('text-inline-cancel')?.addEventListener?.('click',cancelInline);
 function scheduleRedraw(){if(renderPending)return;renderPending=true;requestAnimationFrame(()=>{renderPending=false;redraw();});}
 ink.addEventListener('pointerdown',event=>{
   if(!ready||event.button!==0)return;
