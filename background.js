@@ -68,7 +68,7 @@ api.runtime.onMessage.addListener((message,sender,respond)=>{
     const entry=sessions.get(sender.tab?.id);
     respond(validSource(sender,entry)?{ok:true,captureId:entry.id,mode:'full'}:
       {ok:false,error:'Capture session expired. Try starting again from the toolbar.'});
-    return;
+    return false;
   }
   if(message.type==='MANGO_SOURCE_START'){
     const entry=sessions.get(sender.tab?.id),m=message.meta;
