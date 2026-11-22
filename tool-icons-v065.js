@@ -62,6 +62,15 @@
   }
   if(toggle){const icon=toggle.querySelector('svg');if(icon)icon.replaceWith(svgFor(document.body.classList.contains('v065-bin-collapsed')?'expand':'collapse'));}
  }
+ const menu=document.querySelector('.v06-menu-bar'),status=document.querySelector('.v06-menu-status');
+ if(menu){
+  const shortcut=document.createElement('button');shortcut.type='button';shortcut.id='v065-shortcut-launch';
+  shortcut.className='v065-keys-launch';shortcut.title='Manage keyboard shortcuts · ?';
+  shortcut.setAttribute('aria-label','Open keyboard shortcut preferences');
+  shortcut.append(svgFor('keyboard'),document.createTextNode('Keys'));
+  shortcut.addEventListener('click',()=>root.MangoShortcuts?.open?.());
+  if(status)status.before(shortcut);else menu.append(shortcut);
+ }
  root.MangoToolIcons={refresh,svgFor};
  refresh({});
 })(typeof globalThis!=='undefined'?globalThis:this);
