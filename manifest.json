@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "MangoShot",
-  "version": "0.6.11",
-  "description": "MangoShot: full annotated screenshot clipboard copy, custom context menu and professional inline text editing.",
+  "version": "0.6.12",
+  "description": "MangoShot Layer Studio: editable imported image layers, visual typography, non-destructive masks and quick flat-color cutout.",
   "permissions": [
     "activeTab",
     "scripting"
