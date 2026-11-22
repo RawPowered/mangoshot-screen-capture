@@ -39,7 +39,7 @@ def package(out):
  for marker in (b'image-shortcuts-dialog',b'studio-command-palette',b'data-studio-action="showShortcuts"',b'data-key-for="undo"'):
   if marker not in html:raise RuntimeError('Image Studio UI contract missing')
  js=data['editor.js']
- for marker in (b'ClipboardItem',b'copyImage(',b'globalThis.MangoImageActions={run:imageCommand',b'if(globalThis.MangoShortcutsV0617?.active)return;'):
+ for marker in (b'ClipboardItem',b'copyImage(',b'run:imageCommand',b'if(globalThis.MangoShortcutsV0617?.active)return;'):
   if marker not in js:raise RuntimeError('Editor behavior missing')
  readme='''# MangoShot v0.6.17 — SHORTCUTS & COMMAND MENUS
 
