@@ -1,42 +1,41 @@
-# MangoShot versioning and updates
+# MangoShot Releases and Updates
 
-## Official distribution
+## Public distributions
 
-Source repository and update catalog: https://github.com/RawPowered/mangoshot-screen-capture
+MangoShot publishes preview and future stable releases from the existing [official GitHub repository](https://github.com/RawPowered/mangoshot-screen-capture) under [GitHub Releases](https://github.com/RawPowered/mangoshot-screen-capture/releases). Each version has a tag, browser-extension ZIP, source/tools ZIP, SHA-256 checksums and release notes.
 
-User download page: https://github.com/RawPowered/mangoshot-screen-capture/releases
+## Version channels
 
-MangoShot uses the existing **public GitHub repository** as its source and release repository. A second forked codebase is unnecessary. Each version gets a tag, release notes, checksums and downloadable ZIPs.
+- **Preview:** `vX.Y.Z-preview.N` — local-first engineering preview. Cross-browser behavior and Wacom/codec integration are still under test.
+- **Stable:** `vX.Y.Z` — only after manual Chrome/Edge/Firefox release gates pass. No store-certified stable release has yet been published.
 
-## Channels
+The manifest version is the core `X.Y.Z`, without the GitHub prerelease suffix.
 
-- **Preview**: `vX.Y.Z-preview.N` — public engineering/test-drive release; identified as a GitHub prerelease.
-- **Stable**: `vX.Y.Z` — only after Windows Chrome, Edge and Firefox release gates pass. No stable release has been certified yet.
+## Publishing future previews
 
-The current manifest version remains `0.5.6`; the preview suffix is the GitHub packaging/release identifier.
+1. Make changes in a new feature branch, preserving the last published tag.
+2. Run all `tests/*.cjs`; complete real-browser screenshots and recordings with native hardware and check playable outputs.
+3. Create a `release/vX.Y.Z-preview.N` branch from the tested source and update `manifest.json` and `docs/releases/vX.Y.Z-preview.N.md`.
+4. Commit to the release branch. The `Publish MangoShot Preview` GitHub Actions workflow runs all tests, builds the extension ZIP and source ZIP, verifies them, creates checksums, and publishes a prerelease.
+5. Read back release metadata, file sizes and checksums. Never rewrite a published tag or overwrite versioned assets.
+6. Only after the release exists and the files are verified, update the README and `updates/preview.json` on `main`.
 
-## Releasing future previews
+A passing CI workflow is not a substitute for full Windows, Wacom and browser-device qualification.
 
-1. Develop on an isolated feature branch and keep the previous release intact.
-2. Run the full Node regression suite, test an actual extension install, and verify video/audio output.
-3. Create a branch named `release/vX.Y.Z-preview.N` from the exact approved commit; update `manifest.json` for core version changes.
-4. Add versioned notes in `docs/releases`, update the release workflow's notes path/title for the new version, and push the release branch.
-5. GitHub Actions runs regressions, builds the extension ZIP and full-source ZIP, produces SHA256 checksums, and publishes a GitHub prerelease.
-6. Verify the published release assets, URLs, download hashes, and version before distributing links. Never overwrite published versioned binaries.
-7. Update the preview channel feed at `updates/preview.json` only after the new release is confirmed.
+## Updating unpacked extensions
 
-**Workflow prerequisites:** Repository Actions must be enabled; the release job needs `contents: write`. If GitHub blocks automated publication, a maintainer can create the release manually using the matching tag and upload the verified artifacts. Do not claim publication on branch creation alone.
+1. Export videos and current projects. Preserve Recovery Library data before removing or replacing your installation.
+2. Download the new **Extension.zip** asset, extract it, and back up the prior extension directory.
+3. **Chrome/Edge:** replace files in the *same original unpacked directory* and click Reload in `chrome://extensions` or `edge://extensions`. Changing folder identity can isolate the extension's prior IndexedDB data.
+4. **Firefox:** load `manifest.json` again using `about:debugging#/runtime/this-firefox`. Temporary add-ons do not persist through a browser restart.
+5. Verify visible-page screenshot, full-page screenshot, recorder, and Clip Studio behavior before deleting backups.
 
-## Installing/updating unpacked extensions
+The preview update catalog at `updates/preview.json` is informational; **there is no automatic install/update from GitHub** in unpacked development versions.
 
-- Chrome: `chrome://extensions` → Developer mode → Load unpacked, or Reload for existing install.
-- Edge: `edge://extensions` → Developer mode → Load unpacked, or Reload.
-- Firefox: `about:debugging#/runtime/this-firefox` → Load Temporary Add-on. A signed Firefox add-on is needed for persistent store-style installation.
+## Release integrity
 
-**Preserve your local recordings.** First export any video in Recovery Library or Clip Studio. For Chromium unpacked builds, replace files in the same original path and reload rather than loading a new copy from an unrelated folder: a new extension ID can isolate stored recordings.
+Published assets include `SHA256SUMS.txt`. To check on a Unix-like system, run `sha256sum -c SHA256SUMS.txt` in the directory with the two ZIPs. On Windows, `Get-FileHash <filename> -Algorithm SHA256` in PowerShell can calculate each digest for comparison. Keep ZIPs and checksums from the same version.
 
-Unpacked extensions do not silently self-update from GitHub. This catalog is for human-guided version checks, not a claim of Chrome Web Store or Mozilla Add-ons publication.
+## Known current limits
 
-## Integrity and release gating
-
-Every published version must have: a passing regression report; unpacked ZIP with `manifest.json`; matching SHA256SUMS; public release/tag; installation instructions; and release notes. A preview is not a substitute for manual browser certification.
+A preview does not imply signed browser-store distribution, universal audio capture, native cross-browser MP4 transcoding or frame-exact video editing. An interrupted MP4 stream may be unrecoverable; do not treat temporary fragments as a verified final download.
