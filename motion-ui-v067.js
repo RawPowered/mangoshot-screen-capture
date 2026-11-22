@@ -60,7 +60,7 @@
  clipRow.append(number('Duration (seconds)','v067-transition-duration',.08,2,.05),select('Easing','v067-transition-ease',easy));clipBody.append(clipRow);
  const note=document.createElement('p');note.className='inspector-hint';
  note.textContent='Select the second or later V1 clip to apply an opening cut treatment. Single-decoder effects are not two-source crossfades. Audio follows existing hard-cut edit boundaries.';
- clipBody.append(note);clipPanel.append(clipBody);side.insertBefore(clipPanel,inspector.nextSibling);
+ clipBody.append(note);clipPanel.append(clipBody);inspector.after(clipPanel);
  const ids=['v067-enter-type','v067-enter-duration','v067-enter-ease','v067-exit-type','v067-exit-duration','v067-exit-ease',
   'v067-number-type','v067-number-from','v067-number-to','v067-number-duration','v067-number-decimals','v067-number-prefix','v067-number-suffix'];
  const textLayer=()=>view()?.layers?.().find(l=>l.id===view()?.selectedLayer?.());
