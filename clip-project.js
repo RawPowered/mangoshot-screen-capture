@@ -39,8 +39,18 @@
   const transitions=root.MangoMotion?.checkTransitions?.(data.transitions||[])||[];
   const boundaries=new Set(segments.slice(1).map((p,i)=>segments[i].end.toFixed(5)+':'+p.start.toFixed(5)));
   if(transitions.some(t=>!boundaries.has(t.fromEnd.toFixed(5)+':'+t.toStart.toFixed(5))))fail('transition boundary');
-  return {segments,layers,markers,transitions};
+  const captionInput=data.captions??[];
+  if(captionInput.length&&!root.MangoCaptionsV072)fail('caption module unavailable');
+  let captions=[],captionStyle={preset:'classic'};
+  try{
+   captions=root.MangoCaptionsV072?root.MangoCaptionsV072.check(captionInput,length):[];
+   captionStyle=root.MangoCaptionsV072?root.MangoCaptionsV072.style(data.captionStyle||{preset:'classic'}):{preset:'classic'};
+  }catch(error){fail('caption data: '+error.message);}
+  if(data.burnCaptions!=null&&typeof data.burnCaptions!=='boolean')fail('caption render mode');
+  return {segments,layers,markers,transitions,captions,captionStyle,burnCaptions:data.burnCaptions!==false};
  }
- function pack(source,segments,layers,markers=[],transitions=[]){return {schema:'mangoshot.project.v1',created:new Date().toISOString(),source,segments,layers,markers,transitions};}
+ function pack(source,segments,layers,markers=[],transitions=[],captions=[],captionStyle={preset:'classic'},burnCaptions=true){
+  return {schema:'mangoshot.project.v1',created:new Date().toISOString(),source,segments,layers,markers,transitions,captions,captionStyle,burnCaptions};
+ }
  root.MangoProject={check,pack};
 })(typeof globalThis!=='undefined'?globalThis:this);
