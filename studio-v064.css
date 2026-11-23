@@ -1,0 +1,82 @@
+/* MangoShot v0.6.4 — visual-first clip and camera properties.
+   Preserve the underlying event handlers, source media and edit decisions. */
+body.studio-clip.v062-workspace #v062-camera-panel{min-width:0}
+body.studio-clip.v062-workspace .v063-zoom-hud{gap:9px;margin-bottom:8px}
+body.studio-clip.v062-workspace .v063-hud-frame{position:relative;touch-action:none;cursor:crosshair}
+body.studio-clip.v062-workspace .v064-frame-status{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;text-align:center;padding:12px;box-sizing:border-box;background:#132023dd;color:#d5efcc;font-size:11px;font-weight:600;line-height:1.4;z-index:1}
+body.studio-clip.v062-workspace .v064-frame-status[hidden]{display:none!important}
+body.studio-clip.v062-workspace .v063-hud-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:fill;pointer-events:none}
+body.studio-clip.v062-workspace .v063-hud-active{z-index:3;position:absolute;outline-offset:2px}
+body.studio-clip.v062-workspace .v063-hud-live{z-index:2;pointer-events:none}
+body.studio-clip.v062-workspace .v064-resize-handle{position:absolute;display:block;width:16px;height:16px;box-sizing:border-box;background:#e7ffb6;border:2px solid #1d2b19;border-radius:3px;box-shadow:0 0 0 1px #ccf586;touch-action:none;pointer-events:auto}
+body.studio-clip.v062-workspace .v064-handle-nw{left:-7px;top:-7px;cursor:nwse-resize}
+body.studio-clip.v062-workspace .v064-handle-ne{right:-7px;top:-7px;cursor:nesw-resize}
+body.studio-clip.v062-workspace .v064-handle-sw{left:-7px;bottom:-7px;cursor:nesw-resize}
+body.studio-clip.v062-workspace .v064-handle-se{right:-7px;bottom:-7px;cursor:nwse-resize}
+body.studio-clip.v062-workspace .v063-hud-active[data-scale]:after{content:attr(data-scale);position:absolute;bottom:5px;left:50%;transform:translateX(-50%);padding:2px 5px;font-size:10px;font-weight:800;color:#182816;background:#d7ff98df;border-radius:3px;pointer-events:none;white-space:nowrap}
+body.studio-clip.v062-workspace .v064-camera-presets{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+body.studio-clip.v062-workspace .v064-camera-presets .v064-zoom-chip{min-height:29px;padding:4px 2px!important;background:#273d32;color:#ecfbe5;border:1px solid #608d65;border-radius:5px;font-size:11px;font-weight:750;cursor:pointer}
+body.studio-clip.v062-workspace .v064-camera-presets .v064-zoom-chip[aria-pressed=true]{background:#baf16c;color:#1b301a;border-color:#d3fca2}
+body.studio-clip.v062-workspace .v064-zoom-markers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0}
+body.studio-clip.v062-workspace .v064-time-item{display:flex;flex-direction:column;gap:5px;align-items:stretch;min-width:0;background:#1d302c;border:1px solid #46614f;border-radius:6px;padding:7px}
+body.studio-clip.v062-workspace .v064-time-caption{font-size:10px;font-weight:800;letter-spacing:.4px;color:#b6d8a2}
+body.studio-clip.v062-workspace .v064-time-value{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;color:#fff8e5}
+body.studio-clip.v062-workspace .v064-mark-button{background:#314838;color:#e8f6df;border:1px solid #63886b;min-height:31px;border-radius:4px;font-size:11px;font-weight:750}
+body.studio-clip.v062-workspace .v063-zoom-hud>.v064-primary{background:#b8f365;color:#183119;font-weight:850;min-height:37px;border:1px solid #d6faa4;border-radius:5px}
+body.studio-clip.v062-workspace .v064-camera-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+body.studio-clip.v062-workspace .v064-camera-action{min-height:32px;background:#2e4036;border:1px solid #66806c;color:#f1fae9;font-size:11px;border-radius:5px;white-space:normal;padding:3px 6px}
+body.studio-clip.v062-workspace .v064-tech-details{border:1px solid #3f6155;background:#1a2929;border-radius:6px;overflow:hidden;margin-top:2px}
+body.studio-clip.v062-workspace .v064-tech-details>summary{padding:9px 10px;color:#b2d9ba;cursor:pointer;font-size:11px;font-weight:700;list-style:none}
+body.studio-clip.v062-workspace .v064-tech-details>summary:before{content:'▸';margin-right:7px;color:#baf171}
+body.studio-clip.v062-workspace .v064-tech-details[open]>summary:before{content:'▾'}
+body.studio-clip.v062-workspace .v064-tech-body{display:grid;gap:8px;padding:10px;border-top:1px solid #3d584c}
+body.studio-clip.v062-workspace .v064-tech-body label{display:flex;flex-wrap:wrap;align-items:center;gap:6px;color:#c8dfd0;font-size:11px}
+body.studio-clip.v062-workspace .v064-tech-body input,
+body.studio-clip.v062-workspace .v064-tech-body select{max-width:100%;background:#142323;border:1px solid #537262;color:#f0fbe7;border-radius:4px;padding:5px}
+body.studio-clip.v062-workspace .v064-tech-body .v061-creative-row{display:grid!important;grid-template-columns:1fr 1fr;gap:7px}
+body.studio-clip.v062-workspace .v064-tech-body .v061-creative-row button{display:none}
+body.studio-clip.v062-workspace .v064-tech-body .v063-hud-range{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+body.studio-clip.v062-workspace .v064-tech-body .v063-hud-range>button{display:none}
+body.studio-clip.v062-workspace .v064-coordinates{display:flex;justify-content:space-between;font-size:10px;color:#a5cdbc}
+
+/* Linked V1/A1 is edited visually, with fine times behind Advanced. */
+body.studio-clip.v062-workspace .v064-clip-visual{padding:12px 10px;display:grid;gap:11px;min-width:0}
+body.studio-clip.v062-workspace .v064-clip-heading{display:flex;flex-direction:column;gap:3px}
+body.studio-clip.v062-workspace .v064-clip-heading strong{font-size:12px;color:#d7f59e}
+body.studio-clip.v062-workspace .v064-clip-heading span{font-size:10px;color:#a9beb0;line-height:1.35}
+body.studio-clip.v062-workspace .v064-clip-preview{position:relative;width:100%;height:82px;background:#1b2d2d;border:1px solid #64896a;border-radius:6px;overflow:hidden;touch-action:none;cursor:crosshair;box-sizing:border-box;isolation:isolate}
+body.studio-clip.v062-workspace .v064-clip-frames{position:absolute;inset:0;display:flex;pointer-events:none;overflow:hidden;background:linear-gradient(90deg,#344e47,#223d3c)}
+body.studio-clip.v062-workspace .v064-frame{flex:1 1 0;min-width:0;background-size:cover;background-position:center;border-right:1px solid #a5cda1c4;background-color:#344b46}
+body.studio-clip.v062-workspace .v064-frame-pending{background:repeating-linear-gradient(40deg,#304941 0px,#304941 5px,#4f6f58 5px,#4f6f58 10px)}
+body.studio-clip.v062-workspace .v064-no-frames{align-self:center;text-align:center;font-size:11px;color:#c9e3d1;width:100%;padding:10px;box-sizing:border-box}
+body.studio-clip.v062-workspace .v064-clip-mask{position:absolute;inset:0;pointer-events:none;z-index:1}
+body.studio-clip.v062-workspace .v064-clip-selection{position:absolute;top:0;bottom:0;z-index:2;box-sizing:border-box;border-top:2px solid #c9ff7d;border-bottom:2px solid #c9ff7d;background:#b9ed7423;pointer-events:none}
+body.studio-clip.v062-workspace .v064-grip{position:absolute;top:0;bottom:0;width:14px;background:#d2fb93;border:2px solid #20381f;border-radius:3px;box-sizing:border-box;cursor:ew-resize;pointer-events:auto;touch-action:none}
+body.studio-clip.v062-workspace .v064-grip:after{content:'⋮';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#213b1c;font-weight:900;font-size:19px}
+body.studio-clip.v062-workspace .v064-grip-in{left:-7px}
+body.studio-clip.v062-workspace .v064-grip-out{right:-7px}
+body.studio-clip.v062-workspace .v064-clip-playhead{position:absolute;top:0;bottom:0;width:2px;background:#ffbe59;z-index:3;pointer-events:none;box-shadow:0 0 3px #783e11}
+body.studio-clip.v062-workspace .v064-clip-markers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+body.studio-clip.v062-workspace .v064-clip-marker{display:grid;gap:5px;padding:8px;border:1px solid #43644f;border-radius:6px;background:#1c2e29}
+body.studio-clip.v062-workspace .v064-clip-marker>span{font-size:10px;color:#abd1a3;font-weight:800}
+body.studio-clip.v062-workspace .v064-clip-time{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums;color:#f0ffd6}
+body.studio-clip.v062-workspace .v064-marker-button{min-height:32px;background:#31463b;border:1px solid #608967;border-radius:4px;color:#eafaed;font-size:11px}
+body.studio-clip.v062-workspace .v064-marker-button:hover{background:#425948;border-color:#b6fa73}
+body.studio-clip.v062-workspace .v064-clip-info{font-size:10px;line-height:1.5;color:#b1c5b8}
+body.studio-clip.v062-workspace #v064-clip-advanced .inspector-section{display:grid;gap:5px;padding:4px 0;border:0}
+body.studio-clip.v062-workspace #v064-clip-advanced .inspector-section h3{font-size:11px}
+body.studio-clip.v062-workspace #v064-clip-advanced .inspector-section label{display:grid;gap:4px}
+
+/* Original buttons, including listeners, moved to icon toolbar or Edit menu. */
+body.studio-clip.v062-workspace .v064-rail-actions{display:grid;justify-items:stretch;gap:4px;width:100%;padding:3px 3px 10px;box-sizing:border-box}
+body.studio-clip.v062-workspace .v06-rail .v064-rail-button{width:100%;min-width:0;min-height:36px;padding:3px!important;color:#ebfbde;background:#293b38;border:1px solid #587e6e;border-radius:5px;font-size:19px;line-height:1.1;cursor:pointer}
+body.studio-clip.v062-workspace .v06-rail .v064-rail-button:hover{background:#355947;border-color:#b7ef7a}
+body.studio-clip.v062-workspace .v06-rail .v064-rail-button:disabled{opacity:.42;cursor:not-allowed}
+body.studio-clip.v062-workspace .v06-rail{overflow-y:auto;overflow-x:hidden;scrollbar-width:thin}
+body.studio-clip.v062-workspace .v06-menu-pop>button.v062-menu-command{font:12px system-ui;padding:7px 11px;text-align:left;min-height:29px}
+@media(max-width:740px){
+ body.studio-clip.v062-workspace .v064-clip-preview{height:76px}
+ body.studio-clip.v062-workspace .v064-grip{width:17px}
+ body.studio-clip.v062-workspace .v064-tech-details summary{line-height:1.5}
+ body.studio-clip.v062-workspace .v064-camera-presets{gap:4px}
+}

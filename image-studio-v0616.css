@@ -1,0 +1,69 @@
+/* MangoShot 0.6.16 · Wacom pressure & dual annotation eraser controls.
+ * Active eraser is distinct; hardware test runs only on local sample pad. */
+.studio-image [data-studio-tool="erase-brush"][aria-pressed=true],
+.studio-image [data-studio-tool="erase-stroke"][aria-pressed=true]{
+ background:linear-gradient(145deg,#d3f7ae,#9cdf73)!important;
+ border-color:#f0ffc7!important;color:#1d3d26!important
+}
+.studio-image #image-eraser-options{
+ display:flex;flex-direction:column;gap:9px;
+ border:1px solid #5c916d;border-radius:9px;padding:10px;
+ background:#1c342b
+}
+.studio-image #image-eraser-options[hidden],
+.studio-image #image-eraser-hardness-row[hidden]{display:none!important}
+.studio-image .image-erase-modes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.studio-image .image-erase-modes button{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;
+ text-align:center;background:#223d30;border:1px solid #638d68;color:#e9f8e4;padding:8px 5px;
+ font:780 11px/1.35 system-ui;min-height:59px;white-space:normal}
+.studio-image .image-erase-modes button small{font:600 9px/1.35 system-ui;color:#bdd3c0}
+.studio-image .image-erase-modes button.is-active{
+ border-color:#d7ff9d;background:#b7f582;color:#1a331b;
+ box-shadow:inset 0 0 0 1px #ddffc2
+}
+.studio-image .image-erase-modes button.is-active small{color:#31512a}
+.studio-image #image-erase-description{margin:0;color:#cbdfce}
+.studio-image #image-eraser-hardness-row{
+ display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;
+ font:700 11px system-ui;color:#deefde
+}
+.studio-image #image-eraser-hardness-row input{grid-column:1/-1;width:100%;accent-color:#b6eb80}
+.studio-image #image-eraser-hardness-row output{color:#cfffac}
+.studio-image #image-pen-pressure-row,.studio-image #image-eraser-tip-row{
+ display:flex!important;align-items:center;flex-direction:row;gap:9px;
+ padding:8px;background:#1c3228;border:1px solid #53745b;border-radius:8px;
+ white-space:normal;line-height:1.45;cursor:pointer
+}
+.studio-image #image-pen-pressure-row input,.studio-image #image-eraser-tip-row input{
+ flex:0 0 auto;width:16px;height:16px;accent-color:#b4e878
+}
+.studio-image .image-pen-diagnostics{
+ border:1px solid #6c9270;background:#142a21;border-radius:8px;overflow:hidden
+}
+.studio-image .image-pen-diagnostics summary{
+ padding:11px 12px;cursor:pointer;background:#203c2e;
+ color:#def2d6;font:780 11px/1.3 system-ui
+}
+.studio-image .image-pen-diagnostics summary span{font:650 9px system-ui;color:#b8d6bd;margin-left:5px}
+.studio-image .image-pen-diagnostics[open] summary{border-bottom:1px solid #456b4b}
+.studio-image .image-pen-diagnostics-body{padding:12px;display:flex;flex-direction:column;gap:10px}
+.studio-image .image-pen-diagnostics p{margin:0;color:#c5d9c7;font:550 11px/1.55 system-ui}
+.studio-image #pen-test-pad{
+ box-sizing:border-box;display:block;width:100%;height:148px;
+ border-radius:8px;border:1px dashed #b0e77f;
+ background:repeating-linear-gradient(0deg,#10271f,#10271f 19px,#204133 20px),
+  repeating-linear-gradient(90deg,transparent,transparent 19px,#3a5640 20px);
+ touch-action:none;cursor:crosshair;box-shadow:inset 0 0 20px #04140c
+}
+.studio-image .image-pen-stats{
+ display:grid;grid-template-columns:minmax(90px,.8fr) minmax(0,1.2fr);
+ gap:5px 8px;align-items:start;padding:9px;background:#1f3429;border-radius:8px;
+ border:1px solid #517457;font:600 10px/1.35 system-ui
+}
+.studio-image .image-pen-stats span{color:#a8c7b0}
+.studio-image .image-pen-stats strong{
+ color:#e6ffe0;overflow-wrap:anywhere;font:760 10px/1.35 system-ui
+}
+.studio-image #pen-test-status{color:#ceeca8;font-weight:700}
+.studio-image .image-pen-diagnostics button{font-size:10px;min-height:36px}
+@media(max-width:500px){.studio-image .image-erase-modes{grid-template-columns:1fr 1fr}}

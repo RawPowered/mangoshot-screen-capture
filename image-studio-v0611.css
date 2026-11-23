@@ -1,0 +1,79 @@
+/* MangoShot v0.6.11 — professional image annotation workspace. */
+.studio-image .image-layout{grid-template-columns:68px minmax(0,1fr) 302px;gap:8px}
+.studio-image .image-monitor .panel-heading{gap:8px}
+.studio-image .image-inspector{min-width:0;overflow-y:auto;max-height:calc(100vh - 139px)}
+.studio-image .image-inspector>.inspector-section{padding:11px 13px;gap:9px}
+.studio-image .image-inspector h3{margin:0 0 8px;font-size:12px;letter-spacing:.025em}
+.studio-image .image-inspector #text-properties{display:grid;gap:10px;min-width:0}
+.studio-image .image-inspector #draw-properties{display:grid;gap:7px}
+.studio-image #text-properties[hidden],.studio-image #draw-properties[hidden],
+.studio-image .image-text-inline[hidden],.studio-image .image-text-selection[hidden],
+.studio-image .image-context-menu[hidden]{display:none!important}
+.studio-image .image-inspector #text-properties>label{display:grid;gap:5px;white-space:normal}
+.studio-image .image-inspector #text-content{resize:vertical;min-height:72px;max-height:160px;
+ width:100%;border-radius:7px;border:1px solid #607d67;background:#101d1d;
+ color:#edf9e9;font:500 12px/1.4 system-ui;padding:9px}
+.studio-image .image-inspector #text-font-size{width:100%;min-width:0}
+.studio-image .image-inspector #text-font-family{width:100%;min-width:0}
+.studio-image .image-inspector #text-size-readout{color:#d1fda7;font-size:11px;font-variant-numeric:tabular-nums}
+.studio-image .image-text-quick{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+.studio-image .image-text-quick button{font-size:10px;padding:6px 3px;min-height:31px;border:1px solid #56735d;
+ border-radius:7px;background:#23352e;color:#dfecde;min-width:0}
+.studio-image .image-text-quick button[aria-pressed=true]{background:#b5ee68;color:#142315;border-color:#d4ff9a}
+.studio-image #copy-image{background:linear-gradient(180deg,#c0f38c,#9fe15b);color:#182915;font-weight:800}
+.studio-image .image-toolrail button[data-studio-tool=text]{border:1px solid #648955}
+.studio-image .image-toolrail button[data-studio-tool=select]{border:1px solid #507a6a}
+.studio-image .image-toolrail button[aria-pressed=true]{border-color:#cfff9a;box-shadow:inset 0 0 0 1px #9ce7585e}
+.studio-image #image-hint{font-size:11px;line-height:1.35;max-width:590px}
+.studio-image .image-text-selection{position:absolute;z-index:5;pointer-events:none;
+ border:2px solid #bdff72;outline:1px solid #172e19;
+ border-radius:5px;box-shadow:0 0 0 1px #bdff72a3;
+ background:#a0e65b18}
+.studio-image .image-text-selection:after{content:'Drag to move · Double-click to edit';
+ position:absolute;left:0;bottom:100%;white-space:nowrap;font:700 10px/1.4 system-ui;
+ background:#21352a;color:#e9ffe2;border:1px solid #a9f477;
+ border-radius:5px;padding:3px 6px;max-width:230px}
+.studio-image .image-text-inline{position:absolute;z-index:20;min-width:220px;width:min(340px,90%);
+ max-width:calc(100% - 10px);background:#152521;border:1px solid #b6fa7f;border-radius:9px;
+ padding:7px;box-shadow:0 10px 32px #07160de0;line-height:1.3}
+.studio-image .image-text-inline textarea{display:block;min-height:86px;max-height:220px;
+ width:100%;box-sizing:border-box;border:1px solid #577a5c;border-radius:6px;
+ background:#10211c;color:#f7fff4;resize:both;padding:9px;font:600 18px/1.3 system-ui;
+ white-space:pre-wrap;overflow:auto}
+.studio-image .image-inline-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center;
+ justify-content:flex-end;margin-top:6px}
+.studio-image .image-inline-actions span{font:500 10px/1.4 system-ui;color:#aec5b6;flex:1 1 140px}
+.studio-image .image-inline-actions button{font:700 11px system-ui;min-height:30px;padding:5px 9px}
+.studio-image .stroke-entry{padding:5px;gap:5px}
+.studio-image .stroke-entry.is-selected{border:1px solid #baff78;background:#334638}
+.studio-image .stroke-entry .image-object-select{flex:1;min-width:0;white-space:nowrap;
+ text-overflow:ellipsis;overflow:hidden;text-align:left;font-size:11px;background:transparent;border:0;padding:6px 4px}
+.studio-image .stroke-entry .image-object-remove{background:#482a2b;color:#ffd4c9;
+ border:1px solid #9b625a;font-size:17px;font-weight:800;padding:2px 7px}
+.studio-image .stroke-entry .image-object-remove:hover{background:#753a3e;border-color:#e6a098}
+.studio-image .image-context-menu{position:fixed;z-index:99999;width:265px;max-width:calc(100vw - 16px);
+ padding:5px;background:#192622;color:#e9fae9;border:1px solid #64866b;border-radius:11px;
+ box-shadow:0 14px 42px #020805ef, inset 0 1px 0 #8cbf7840}
+.studio-image .image-context-menu button{display:block;width:100%;min-height:35px;padding:8px 10px;
+ text-align:left;background:transparent;color:#e0f4df;border:0;border-radius:6px;font:650 12px system-ui}
+.studio-image .image-context-menu button:hover:not(:disabled),
+.studio-image .image-context-menu button:focus-visible{background:#355140;color:#f2ffed;outline:2px solid #b5f77d;outline-offset:-1px}
+.studio-image .image-context-menu button:disabled{opacity:.38}
+.studio-image .image-context-divider{height:1px;margin:5px 3px;background:#486452}
+.studio-image .image-inspector .inspector-hint{white-space:normal}
+.studio-image .studio-export-actions{gap:6px}
+@media(max-width:1100px){
+ .studio-image .image-layout{grid-template-columns:65px minmax(0,1fr)}
+ .studio-image .image-inspector{max-height:none;grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+ .studio-image .image-inspector>.panel-heading{grid-column:1/-1}
+}
+@media(max-width:680px){
+ .studio-image .image-layout{display:flex;flex-direction:column}
+ .studio-image .image-toolrail{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+ .studio-image .image-toolrail .toolrail-heading{display:none}
+ .studio-image .image-toolrail button{min-height:49px}
+ .studio-image .image-inspector{display:flex;flex-direction:column}
+ .studio-image .image-inline-actions span{display:none}
+ .studio-image .image-text-inline{min-width:180px;max-width:calc(100% - 8px)}
+ .studio-image .image-text-selection:after{font-size:9px}
+}

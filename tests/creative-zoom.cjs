@@ -1,0 +1,10 @@
+const assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs'),path=require('node:path');
+const ctx={};ctx.globalThis=ctx;
+vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..','creative-zoom.js'),'utf8'),ctx);
+const z=ctx.MangoCreativeZoom,events=[{id:'a',start:2,duration:1,scale:2,x:.8,y:.3},{id:'b',start:6,duration:1,scale:1,x:.5,y:.5}];
+assert.equal(z.at(events,2.5).scale,1.5);assert.equal(z.at(events,4).scale,2);assert.equal(z.at(events,6.5).scale,1.5);
+assert.deepEqual(Array.from(z.ripple(events,1,3),e=>e.start),[4]);
+const v={style:{}};z.preview(v,events,4);assert.equal(v.style.transform,'scale(2)');
+let seen=[];const canvas={save(){},translate(){},scale(a,b){seen.push([a,b])},drawImage(){},restore(){}};
+z.draw(canvas,{},events,4,1920,1080);assert.deepEqual(seen,[[2,2]]);
+console.log('PASS: zoom interpolation, camera pan, ripple and canvas/preview parity');

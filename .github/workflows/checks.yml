@@ -1,0 +1,59 @@
+name: MangoShot regression gates
+on:
+  push:
+  pull_request:
+jobs:
+  browser-extension-unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Manifest, editor, recorder and export regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test in auto-cut auto-cut-ui sequence-media sequence-preview timeline-media-ui native-fast-render sequence-operations static routing editor-protocol timeline-camera sequence-operations recorder-controls stop-safety clip-studio-mock clip-timeline-ui clip-store-handoff repeat-recording ui-structure media-format layered-editing graphic-layer-gestures project-format studio-workspaces pdf; do
+            node "tests/${test}.cjs"
+          done
+          node tests/motion-v067.cjs
+          node tests/visual-inspector-v068.cjs
+          node tests/premium-v069.cjs
+          node tests/full-capture-v0610.cjs
+          node tests/popup-full-v0610.cjs
+          node tests/ux-v0610.cjs
+          node tests/image-editor-v0611.cjs
+          node tests/image-layers-v0612.cjs
+          node tests/image-typefx-v0613.cjs
+          node tests/capture-output-v0614.cjs
+          node tests/area-capture-v0614.cjs
+          node tests/image-vector-v0615.cjs
+          node tests/clip-tools-v0615.cjs
+          node tests/pen-wacom-v0616.cjs
+          node tests/shortcuts-v0617.cjs
+          node tests/menus-v0617.cjs
+          node tests/layers-v0618.cjs
+          node tests/editor-core-v070.cjs
+          node tests/professional-uix-v070.cjs
+          node tests/viewport-cursors-v071.cjs
+          for src in studio-control-core-v070.js studio-professional-v070.js precision-cursors-v071.js image-tool-groups-v071.js image-canvas-viewport-v071.js; do node --check "$src"; done
+      - name: Package MangoShot v0.7.1 precision tools development preview
+        if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.1-viewport-precision-tools'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/package-extension.py --out dist --version v0.6.18-uix-b1-preview
+          unzip -t dist/MangoShot-v0.6.18-uix-b1-preview-Extension.zip
+          unzip -l dist/MangoShot-v0.6.18-uix-b1-preview-Extension.zip | grep studio-professional-v070.js
+          unzip -l dist/MangoShot-v0.6.18-uix-b1-preview-Extension.zip | grep studio-professional-v070.css
+          unzip -l dist/MangoShot-v0.6.18-uix-b1-preview-Extension.zip | grep studio-control-core-v070.js
+          unzip -l dist/MangoShot-v0.6.18-uix-b1-preview-Extension.zip | grep studio-viewport-v071.css
+          unzip -l dist/MangoShot-v0.6.18-uix-b1-preview-Extension.zip | grep precision-cursors-v071.js
+      - name: Upload development preview ZIP (not a release)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.1-viewport-precision-tools'
+        uses: actions/upload-artifact@v4
+        with:
+          name: MangoShot-v0.7.1-Precision-Tools-Preview
+          path: dist/MangoShot-v0.6.18-uix-b1-preview-Extension.zip
+          retention-days: 14

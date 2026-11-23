@@ -1,0 +1,66 @@
+name: MangoShot v0.6.5 Pinned Media Keyboard Alpha
+on:
+  push:
+    branches:
+      - feat/mangoshot-v0.6.5-docked-media-shortcuts
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-test-publish:
+    if: github.repository == 'RawPowered/mangoshot-screen-capture'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run all regression tests, including shortcut conflicts and dock geometry
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test in tests/*.cjs; do node "$test"; done
+          for source in clip-studio.js clip-timeline-ui.js studio-workspaces.js \
+            clip-workspace-v062.js media-dock-v065.js tool-icons-v065.js \
+            keyboard-shortcuts-v065.js; do node --check "$source"; done
+      - name: Package complete extension and strict v0.6.4 overlay
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/package-extension.py --out dist --version v0.6.5-dock-alpha.1
+          python3 tools/build-v065-overlay.py --out dist
+          unzip -t dist/MangoShot-v0.6.5-dock-alpha.1-Extension.zip
+          unzip -t dist/MangoShot-v0.6.5-dock-shortcuts-overlay-from-v0.6.4.zip
+          (cd dist && sha256sum MangoShot-*.zip > SHA256SUMS.txt)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MangoShot-v0.6.5-Pinned-Media-and-Keyboard-Alpha
+          path: |
+            dist/MangoShot-v0.6.5-dock-alpha.1-Extension.zip
+            dist/MangoShot-v0.6.5-dock-shortcuts-overlay-from-v0.6.4.zip
+            dist/SHA256SUMS.txt
+          retention-days: 14
+      - name: Publish immutable development prerelease
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          tag='v0.6.5-dock-alpha.1'
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release already exists; refusing to modify tagged artifacts."
+            exit 0
+          fi
+          gh release create "$tag" \
+            dist/MangoShot-v0.6.5-dock-alpha.1-Extension.zip \
+            dist/MangoShot-v0.6.5-dock-shortcuts-overlay-from-v0.6.4.zip \
+            dist/SHA256SUMS.txt \
+            --target "$GITHUB_SHA" \
+            --title 'MangoShot v0.6.5 — Pinned Media Library & Keyboard Shortcuts Alpha 6' \
+            --notes-file docs/V0.6.5-DOCK-KEYBOARD.md \
+            --prerelease --latest=false

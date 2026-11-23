@@ -1,0 +1,67 @@
+name: MangoShot v0.6.7 Motion & Transitions Alpha 1
+on:
+  push:
+    branches:
+      - feat/mangoshot-v0.6.7-motion-transitions
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-build-publish:
+    if: github.repository == 'RawPowered/mangoshot-screen-capture'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Full tests, source syntax and motion/transition checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test in tests/*.cjs; do node "$test"; done
+          for src in clip-studio.js clip-graphics.js type-hud-v063.js \
+            clip-media-bin.js workspace-resize-v066.js preset-pack-v066.js polish-icons-v066.js motion-core-v067.js motion-ui-v067.js; do
+            node --check "$src"
+          done
+      - name: Produce full extension and strict in-place overlay
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/package-extension.py --out dist --version v0.6.7-motion-alpha.1
+          python3 tools/build-v067-overlay.py --out dist
+          unzip -t dist/MangoShot-v0.6.7-motion-alpha.1-Extension.zip
+          unzip -t dist/MangoShot-v0.6.7-motion-overlay-from-v0.6.6.zip
+          (cd dist && sha256sum MangoShot-*.zip > SHA256SUMS.txt)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MangoShot-v0.6.7-Motion-Transitions
+          path: |
+            dist/MangoShot-v0.6.7-motion-alpha.1-Extension.zip
+            dist/MangoShot-v0.6.7-motion-overlay-from-v0.6.6.zip
+            dist/SHA256SUMS.txt
+          retention-days: 14
+      - name: Publish versioned development prerelease
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          tag='v0.6.7-motion-alpha.1'
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release tag exists; will not overwrite versioned assets."
+            exit 0
+          fi
+          gh release create "$tag" \
+            dist/MangoShot-v0.6.7-motion-alpha.1-Extension.zip \
+            dist/MangoShot-v0.6.7-motion-overlay-from-v0.6.6.zip \
+            dist/SHA256SUMS.txt \
+            --target "$GITHUB_SHA" \
+            --title 'MangoShot v0.6.7 — Motion Typography & Clip Transitions Alpha 1' \
+            --notes-file docs/V0.6.7-MOTION-RELEASE.md \
+            --prerelease --latest=false

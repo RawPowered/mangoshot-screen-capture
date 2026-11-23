@@ -1,0 +1,64 @@
+name: MangoShot v0.6.4 Visual Editor Alpha 5
+on:
+  push:
+    branches:
+      - feat/mangoshot-v0.6.4-visual-edit-controls
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-build-and-publish:
+    if: github.repository == 'RawPowered/mangoshot-screen-capture'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run all regression suites including zoom bitmap/ROI geometry
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test in tests/*.cjs; do node "$test"; done
+          for source in clip-studio.js zoom-hud-v063.js visual-controls-v064.js; do node --check "$source"; done
+      - name: Build and verify complete extension and exact base overlay
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/package-extension.py --out dist --version v0.6.4-visual-alpha.1
+          python3 tools/build-v064-overlay.py --out dist
+          unzip -t dist/MangoShot-v0.6.4-visual-alpha.1-Extension.zip
+          unzip -t dist/MangoShot-v0.6.4-visual-overlay-from-v0.6.3.zip
+          (cd dist && sha256sum MangoShot-*.zip > SHA256SUMS.txt)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MangoShot-v0.6.4-visual-editor-alpha5
+          path: |
+            dist/MangoShot-v0.6.4-visual-alpha.1-Extension.zip
+            dist/MangoShot-v0.6.4-visual-overlay-from-v0.6.3.zip
+            dist/SHA256SUMS.txt
+          retention-days: 14
+      - name: Publish immutable development prerelease
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          tag='v0.6.4-visual-alpha.1'
+          if gh release view "$tag" >/dev/null 2>&1;then
+            echo "Release already exists; not overwriting tagged assets."
+            exit 0
+          fi
+          gh release create "$tag" \
+            dist/MangoShot-v0.6.4-visual-alpha.1-Extension.zip \
+            dist/MangoShot-v0.6.4-visual-overlay-from-v0.6.3.zip \
+            dist/SHA256SUMS.txt \
+            --target "$GITHUB_SHA" \
+            --title 'MangoShot v0.6.4 — Visual Camera & Clip Editor Alpha 5' \
+            --notes-file docs/V0.6.4-VISUAL-CONTROLS.md \
+            --prerelease --latest=false
