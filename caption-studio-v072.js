@@ -45,6 +45,7 @@
     chip.style.left=(100*c.start/total)+'%';
     chip.style.width=Math.max(.5,100*(c.end-c.start)/total)+'%';
     chip.setAttribute('aria-label','Caption: '+c.text+' at '+fmt(c.start));
+    chip.dataset.start=String(c.start);chip.dataset.end=String(c.end);
     chip.setAttribute('aria-pressed',String(c.id===selected));
     chip.textContent=c.text.replace(/\s+/g,' ');chip.title=c.text;
     chip.onclick=()=>select(c.id);track.append(chip);
@@ -118,10 +119,10 @@
   }catch(error){message('Caption style not updated: '+error.message);}
  });
  function onPosition(time){
-  for(const chip of el('cc-track-cues').children){
-   const label=chip.getAttribute('aria-label'),c=view()?.captions?.().find(x=>label?.includes('Caption: '+x.text+' at '+fmt(x.start)));
-   chip.classList.toggle('is-at-playhead',!!c&&time>=c.start&&time<c.end);
-  }
+  // The transport can update 30-60 times a second. Use the chip's cached
+  // sequence bounds rather than re-scanning the full cue list per chip.
+  for(const chip of el('cc-track-cues').children)
+   chip.classList.toggle('is-at-playhead',time>=Number(chip.dataset.start)&&time<Number(chip.dataset.end));
  }
  el('caption-studio-panel').addEventListener('toggle',()=>{if(el('caption-studio-panel').open)refresh();});
  refresh();
