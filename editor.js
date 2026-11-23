@@ -17,6 +17,7 @@ const layerCore=globalThis.MangoImageLayersV0612;
 const typeEffects=globalThis.MangoImageTypeV0613;
 const vectorCore=globalThis.MangoImageVectorV0615;
 const penInput=globalThis.MangoPenInputV0616;
+const layerOps=globalThis.MangoLayerOpsV0618;
 const selectedBox=document.getElementById('text-selection-box'),inline=document.getElementById('text-inline'),
  inlineInput=document.getElementById('text-inline-input'),contextMenu=document.getElementById('image-context-menu');
 const textFontSize=document.getElementById('text-font-size'),textFontFamily=document.getElementById('text-font-family'),
@@ -24,6 +25,7 @@ const textFontSize=document.getElementById('text-font-size'),textFontFamily=docu
 let selectedText=-1,textDraft=null,dragText=null,textPreset='plain';
 let selectedImage=-1,selectedObject=-1,dragImage=null,maskDraw=null,dragVector=null,inspectorTab='layers';
 let entireErase=null,lastEraserMode='erase-brush';
+let layerClipboard=null,styleClipboard=null,layerDrag=null,layerStackDrag=null,appearanceGesture=null;
 let resizeDrag=null;
 function label(message){status.textContent=message;}
 function activate(){call(api.tabs.getCurrent.bind(api.tabs)).then(tab=>
@@ -187,6 +189,11 @@ function pointerSamples(event){
  return parts.map(part=>point(part));
 }
 function drawStroke(stroke){
+ if(!stroke||stroke.visible===false)return;
+ if(layerOps?.apply)layerOps.apply(pen,stroke,()=>drawStrokeRaw(stroke));
+ else drawStrokeRaw(stroke);
+}
+function drawStrokeRaw(stroke){
   if(!stroke||stroke.visible===false)return;
   if(stroke.type==='image'){layerCore?.paint(pen,stroke);return;}
   if(penInput?.paintEraser?.(pen,stroke))return;
