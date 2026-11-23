@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const p=path.resolve(__dirname,'..'),read=x=>fs.readFileSync(path.join(p,x),'utf8');
 const html=read('clip-studio.html'),editor=read('clip-studio.js'),zoom=read('zoom-hud-v063.js'),ui=read('visual-controls-v064.js'),css=read('studio-v064.css');
-assert.equal(JSON.parse(read('manifest.json')).version,'0.6.17');
+assert.equal(JSON.parse(read('manifest.json')).version,'0.6.18');
 for(const x of ['studio-v064.css','visual-controls-v064.js'])assert.ok(html.includes(x),'Missing development asset '+x);
 assert.ok(html.indexOf('zoom-hud-v063.js')<html.indexOf('visual-controls-v064.js'),'Visual UI must attach after HUD exists');
 assert.ok(zoom.includes("if(canvas.height!==height)canvas.height=height"),'Canvas must resize only when needed');
