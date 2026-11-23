@@ -493,7 +493,8 @@ globalThis.MangoClipView={
  },
 };
 sequencePreview=MangoSequencePreview.create(video,()=>segments,
- output=>{previewSequenceTime=output;globalThis.MangoClipTimeline?.playhead?.();paintPreview();globalThis.MangoCreativeUI?.onPosition?.(output);},
+ output=>{previewSequenceTime=output;globalThis.MangoClipTimeline?.playhead?.();paintPreview();
+  globalThis.MangoCaptionUIV072?.onPosition?.(output);globalThis.MangoCreativeUI?.onPosition?.(output);},
  (playing,error)=>{globalThis.MangoCreativeUI?.onPlayback?.(playing);byId('program-play').textContent=playing?'❚❚ Pause':'▶ Play';if(error)label('Preview paused: '+error);});
 video.addEventListener('timeupdate',()=>{globalThis.MangoClipTimeline?.playhead?.();paintPreview();});
 video.addEventListener('seeked',()=>{previewSequenceTime=null;paintPreview();});
