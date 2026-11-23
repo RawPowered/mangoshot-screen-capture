@@ -19,9 +19,11 @@
   function stop(){++token;playing=false;busy=false;pausedForJump=false;cancel();video.pause();onState?.(false);}
   function seekOutput(seconds){const map=root.MangoSequenceMedia.atOutput(getParts(),seconds);
    if(!map)return false;active=map.index;lastOutput=map.output;
-   // Updating currentTime invalidates the prior cached frame and clears previous cut audio.
+   // Preserve the last decoded Program Monitor frame before the decoder jumps.
+   // The overlay holds that frame until the newly selected frame is ready.
+   onPosition?.(map.output);
    if(Math.abs(video.currentTime-map.source)>.002)video.currentTime=map.source;
-   onPosition?.(map.output);return true;
+   return true;
   }
   function loop(){if(!playing)return;
    cancel();nextFrame(()=>{if(!playing)return;
@@ -39,6 +41,7 @@
    video.pause();pausedForJump=true;
    try{
     active+=1;lastOutput=next.outputStart;
+    onPosition?.(next.outputStart); // keep last frame visible across the cut
     if(Math.abs(video.currentTime-next.sourceStart)>.002){
       const ready=new Promise((resolve,reject)=>{
        const timeout=setTimeout(()=>{cleanup();reject(new Error('Preview seek timeout'));},4500);
@@ -58,7 +61,7 @@
    if(lastOutput>=ranges[ranges.length-1].outputEnd-.025)lastOutput=0;
    // Don't resume within a deleted source interval after a manual edit.
    const mapped=root.MangoSequenceMedia.atSource(getParts(),video.currentTime);
-   const at=mapped?.output??lastOutput;
+   const at=lastOutput>0?lastOutput:(mapped?.output??lastOutput);
    seekOutput(at);playing=true;busy=false;pausedForJump=false;token++;const my=token;
    onState?.(true);
    try{await video.play();if(playing&&token===my)loop();}
@@ -66,7 +69,8 @@
   }
   function toggle(){if(playing){stop();return Promise.resolve();}return play();}
   function update(){const was=playing;if(was)stop();const map=root.MangoSequenceMedia.atSource(getParts(),video.currentTime);
-   const out=Math.max(0,Math.min(root.MangoSequenceMedia.duration(getParts())-.005,map?.output??lastOutput));
+   const length=root.MangoSequenceMedia.duration(getParts());
+   const out=Math.max(0,Math.min(Math.max(0,length-.005),map?.output??lastOutput));
    seekOutput(out);}
   return {play,toggle,stop,seekOutput,update,current,isPlaying:()=>playing};
  }
