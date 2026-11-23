@@ -14,7 +14,18 @@ def build(out,release_tag):
     files=sorted(set(p for ext in ('*.js','*.css','*.html','manifest.json') for p in BASE.glob(ext) if p.is_file()) |
                  set(p for p in (BASE/'icons').glob('*.png') if p.is_file()) |
                  set(p for p in (BASE/'assets').glob('*.webp') if p.is_file()) |
+                 set(p for p in (BASE/'asr-runtime').glob('*') if p.is_file()) |
                  set(p for p in (BASE/'LICENSE',BASE/'README.md') if p.is_file()))
+    if (BASE/'caption-whisper-v073.js').is_file():
+        names={p.relative_to(BASE).as_posix() for p in files}
+        for required_asr in ('asr-worker-v073.js',
+                             'asr-runtime/transformers.web.min.js',
+                             'asr-runtime/ort-wasm-simd-threaded.jsep.wasm',
+                             'asr-runtime/ort-wasm-simd-threaded.jsep.mjs',
+                             'asr-runtime/THIRD-PARTY-LICENSES.txt',
+                             'asr-runtime/RUNTIME-SHA256.json'):
+            if required_asr not in names:
+                raise ValueError('Bundled Whisper runtime missing: '+required_asr)
     required=['manifest.json','popup.html','capture-store.js','content.js','background.js','editor.js','recorder.js','clip-studio.js','pdf-export.js']
     for name in required:
         if name not in {p.name for p in files}:raise ValueError(f'Missing required extension file: {name}')

@@ -1,0 +1,9 @@
+{
+  "name": "mangoshot-browser-extension",
+  "version": "0.7.3-beta.1",
+  "private": true,
+  "description": "Development-only build tooling for local Whisper caption recognition; runtime script is bundled locally, media never uploaded.",
+  "devDependencies": {
+    "@huggingface/transformers": "3.8.1"
+  }
+}

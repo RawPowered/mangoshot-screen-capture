@@ -7,3 +7,6 @@ tests/sample.pdf
 tests/sample.png
 tests/editor-screenshot.png
 tests/page-*.png
+
+# Generated on-device Whisper executable assets (included only in preview ZIP)
+asr-runtime/
