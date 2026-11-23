@@ -278,7 +278,11 @@
    if(event.key==='Escape'){capturing=null;banner('Rebinding cancelled.');paint();return;}
    const combo=core.normalize(event);
    if(!combo||['Control','Shift','Alt','Meta'].includes(event.key))return;
-   const result=bind(capturing,combo);
+   // Store portable Ctrl-prefixed primary shortcuts when recording Command
+   // on macOS, leaving the keymap reusable on Windows/Linux.
+   const portable=core.platformName()==='mac'&&combo.startsWith('Meta+')
+    ?'Ctrl+'+combo.slice(5):combo;
+   const result=bind(capturing,portable);
    if(result.ok){banner('Assigned '+core.display(result.combo));capturing=null;}
    else banner(result.reason);
    paint();return;
@@ -295,16 +299,12 @@
   }
   if(isOpen(modal))return;
   if(event.target?.closest?.('dialog[open],.v06-menu-pop'))return;
-  if(core.editable(event.target))return;
-  if(event.target?.closest?.('button,a,summary,[role="button"]')&&
-    !event.ctrlKey&&!event.altKey&&!event.metaKey){
-   // A selected Image Studio layer is an editing context even if its row
-   // button still has keyboard focus. Never steal Space/Enter from controls.
-   const selected=image&&root.MangoImageActions?.state?.().layerSelected===true;
-   if(!selected||event.key===' '||event.key==='Enter')return;
-  }
-  const combo=core.normalize(event);
-  const id=Object.keys(keys).find(k=>keys[k]&&keys[k]===combo);
+  if(core.eventEditable(event))return;
+  // Layer rows may retain focus after canvas selection; preserve native
+  // button activation with Space/Enter and route other tools as commands.
+  const selected=image&&root.MangoImageActions?.state?.().layerSelected===true;
+  if(!core.focusedControlAllows(event,{image,selectedLayer:selected}))return;
+  const id=core.resolve(keys,event);
   if(!id)return;
   if(event.repeat&&!['jogBackward','jogForward','pause','brushSmaller','brushLarger'].includes(id))return;
   if(run(id)){event.preventDefault?.();event.stopImmediatePropagation?.();}

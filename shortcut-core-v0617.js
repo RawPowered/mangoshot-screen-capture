@@ -71,6 +71,16 @@
  const special=new Set(['Space','Backspace','Delete','ArrowLeft','ArrowRight',
   'ArrowUp','ArrowDown','Home','End','PageUp','PageDown','Insert','[',']','/','-','=',';','.',',']);
  const modifiers=new Set(['Ctrl','Alt','Shift','Meta']);
+ // Ctrl in existing portable profiles represents the primary editor modifier.
+ // Keep stored profiles intact while using Command physically on macOS.
+ function platformName(){
+  const name=String(root.navigator?.userAgentData?.platform||root.navigator?.platform||'').toLowerCase();
+  return /mac|iphone|ipad|ipod/.test(name)?'mac':'other';
+ }
+ function effective(combo,platform=platformName()){
+  return platform==='mac'&&typeof combo==='string'&&combo.startsWith('Ctrl+')
+   ?'Meta+'+combo.slice(5):combo;
+ }
  const validKey=k=>/^[A-Z0-9]$/.test(k)||special.has(k)||/^F([1-9]|10)$/.test(k);
  function canonical(raw){
   if(typeof raw!=='string'||raw.length>42)return null;
@@ -104,7 +114,7 @@
    event.shiftKey?'Shift':null,key].filter(Boolean).join('+');
  }
  function defaults(studio){return Object.fromEntries((definitions[studio]||[]).map(d=>[d.id,d.key]));}
- function check(bindings,studio,{allowMissing=true}={}){
+ function check(bindings,studio,{allowMissing=true,platform=platformName()}={}){
   const defs=definitions[studio]||[];
   if(!bindings||typeof bindings!=='object'||Array.isArray(bindings))return{ok:false,reason:'Invalid shortcut map'};
   const result=defaults(studio),used=new Map();
@@ -113,9 +123,10 @@
    const raw=Object.hasOwn(bindings,d.id)?bindings[d.id]:d.key;
    const value=canonical(raw);
    if(value===null)return{ok:false,reason:'Reserved or invalid shortcut for '+d.label};
-   if(value&&used.has(value))return{ok:false,reason:value+' is already assigned to '+used.get(value)+'.'};
+   const physical=effective(value,platform);
+   if(value&&used.has(physical))return{ok:false,reason:physical+' is already assigned to '+used.get(physical)+'.'};
    result[d.id]=value;
-   if(value)used.set(value,d.label);
+   if(value)used.set(physical,d.label);
   }
   if(Object.keys(bindings).some(id=>!defs.some(d=>d.id===id)))
    return{ok:false,reason:'Unknown shortcut action in imported settings'};
@@ -129,8 +140,30 @@
   return check({...current,[id]:value},studio,{allowMissing:true});
  }
  function editable(target){
-  return !!target?.closest?.('input,textarea,select,[contenteditable],[role="textbox"]');
+  return !!(target?.isContentEditable||target?.closest?.(
+   'input:not([type="hidden"]),textarea,select,[contenteditable],[role="textbox"],[role="combobox"],[role="searchbox"]'));
  }
- function display(key){return key==='Shift+/'?'?':key||'Unassigned';}
- root.MangoShortcutCoreV0617={definitions,reserved,canonical,normalize,defaults,check,rebind,editable,display};
+ function eventEditable(event){
+  const path=typeof event?.composedPath==='function'?event.composedPath():[event?.target];
+  return path.some(node=>editable(node)||(
+   ['INPUT','TEXTAREA','SELECT'].includes(node?.tagName)&&node?.type!=='hidden'));
+ }
+ function focusedControlAllows(event,{image=false,selectedLayer=false}={}){
+  const control=event?.target?.closest?.('button,a,summary,[role="button"],[role="menuitem"]');
+  if(!control||event.ctrlKey||event.metaKey||event.altKey)return true;
+  if(!image||!selectedLayer)return false;
+  return ![' ','Spacebar','Enter'].includes(event.key);
+ }
+ function resolve(bindings,event,platform=platformName()){
+  const combo=normalize(event);
+  if(!combo)return null;
+  return Object.keys(bindings||{}).find(id=>bindings[id]&&effective(bindings[id],platform)===combo)||null;
+ }
+ function display(key,platform=platformName()){
+  const physical=effective(key,platform);
+  if(physical==='Shift+/')return '?';
+  return physical?.startsWith('Meta+')?'Cmd+'+physical.slice(5):physical||'Unassigned';
+ }
+ root.MangoShortcutCoreV0617={definitions,reserved,canonical,normalize,defaults,check,rebind,editable,
+  eventEditable,focusedControlAllows,platformName,effective,resolve,display};
 })(typeof globalThis!=='undefined'?globalThis:this);
