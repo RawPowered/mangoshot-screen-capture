@@ -61,7 +61,7 @@
   return items.flatMap(c=>{
    const a=Math.max(c.start,start),b=Math.min(c.end,end);
    return b-a>=.04?[{...c,start:a-start,end:b-start}]:[];
-  });
+  }).sort((a,b)=>a.start-b.start||a.end-b.end);
  }
  function parseStamp(value){
   const m=String(value||'').trim().match(/^(?:(\d{1,3}):)?(\d{2}):(\d{2})[,.](\d{3})$/);
