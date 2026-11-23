@@ -9,6 +9,8 @@ function loadCore(){
 const core=loadCore();
 assert.equal(core.fieldsFor('image','rectangle').some(f=>f.id==='image-shape-fill-enabled'),true);
 assert.equal(core.fieldsFor('image','text').some(f=>f.id==='text-font-size'),true);
+assert.equal(core.fieldsFor('image','select',false,'TEXT LAYER').some(f=>f.id==='text-font-family'),true);
+assert.equal(core.fieldsFor('image','select',false,'IMAGE LAYER').some(f=>f.id==='image-layer-x'),true);
 assert.equal(core.fieldsFor('image','erase-brush').some(f=>f.id==='image-eraser-hardness'),true);
 assert.equal(core.fieldsFor('clip','razor').some(f=>f.id==='timeline-zoom'),true);
 assert.equal(core.fieldsFor('clip','select',true).some(f=>f.id==='graphic-opacity'),true);
