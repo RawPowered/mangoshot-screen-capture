@@ -167,9 +167,22 @@ function paintPreview(){
  const canvas=byId('graphics-preview');if(!canvas||!original)return;
  const w=video.videoWidth||1280,h=video.videoHeight||720;
  if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
- const ctx=canvas.getContext('2d');ctx.clearRect(0,0,w,h);
- const mapped=previewSequenceTime===null?MangoSequenceMedia.atSource(segments,video.currentTime)?.output??null:previewSequenceTime;
- if(mapped!==null){MangoCreativeZoom.preview(video,zoomEvents,mapped);MangoMotion.paintTransition(ctx,video,zoomEvents,segments,transitions,mapped,w,h);MangoGraphics.render(ctx,layers,mapped,w,h);}
+ const ctx=canvas.getContext('2d');
+ const mapped=previewSequenceTime===null?
+  (MangoSequenceMedia.atSource(segments,video.currentTime)?.output??sequencePreview?.current()??null):previewSequenceTime;
+ // Do NOT blank the entire graphics/video overlay while the HTMLVideoElement
+ // is seeking or is without a decoded frame. Selection and cut jumps can drop
+ // readyState below HAVE_CURRENT_DATA; the previous valid composite must stay.
+ if(!ctx||mapped===null||video.seeking||video.readyState<2)return;
+ ctx.clearRect(0,0,w,h);
+ MangoCreativeZoom.preview(video,zoomEvents,mapped);
+ // Make the overlay a complete decoded frame, not just transparent graphics.
+ // This avoids black/blank native-video frames during selection and scrubbing.
+ if(typeof ctx.drawImage==='function'){
+  if(!MangoMotion.paintTransition(ctx,video,zoomEvents,segments,transitions,mapped,w,h))
+   MangoCreativeZoom.draw(ctx,video,zoomEvents,mapped,w,h);
+ }else MangoMotion.paintTransition(ctx,video,zoomEvents,segments,transitions,mapped,w,h);
+ MangoGraphics.render(ctx,layers,mapped,w,h);
  globalThis.MangoLayerUI?.selectionOutline?.(ctx,mapped,w,h);
 }
 
@@ -236,10 +249,18 @@ async function exportClip(format){if(!original||!segments.length||exporting)retu
   const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
   const paint=canvas.getContext('2d',{alpha:false});
   let exportSequenceTime=0;
-  function draw(){paint.fillStyle='#000';paint.fillRect(0,0,width,height);
-   if(exportVideo.readyState>=2){if(!MangoMotion.paintTransition(paint,exportVideo,zoomEvents,segments,transitions,exportSequenceTime,width,height))MangoCreativeZoom.draw(paint,exportVideo,zoomEvents,exportSequenceTime,width,height);}
-   MangoGraphics.render(paint,layers,exportSequenceTime,width,height);
-   paintHandle=requestAnimationFrame(draw);}draw();
+  // Initialize once; never clear to black between AutoCut segments. A seek can
+  // remove decoded frames for 1-3 ticks even though the edit decision list has
+  // zero sequence-time gaps. Hold the previous frame until the decoder recovers.
+  paint.fillStyle='#000';paint.fillRect(0,0,width,height);
+  function draw(){
+   if(exportVideo.readyState>=2&&!exportVideo.seeking){
+    if(!MangoMotion.paintTransition(paint,exportVideo,zoomEvents,segments,transitions,exportSequenceTime,width,height))
+     MangoCreativeZoom.draw(paint,exportVideo,zoomEvents,exportSequenceTime,width,height);
+    MangoGraphics.render(paint,layers,exportSequenceTime,width,height);
+   }
+   paintHandle=requestAnimationFrame(draw);
+  }draw();
   if(!canvas.captureStream)throw new Error('Canvas encoding unavailable.');
   const profile=byId('performance-profile')?.value==='high'?'high':'balanced';
   const fps=profile==='high'?60:30,bitrate=profile==='high'?10000000:4500000;
@@ -255,7 +276,12 @@ async function exportClip(format){if(!original||!segments.length||exporting)retu
   if(!rec)throw new Error('Failed to initialize '+format.toUpperCase()+' encoder.');
   rec.ondataavailable=e=>{if(e.data.size)recorded.push(e.data);};
   const done=new Promise((resolve,reject)=>{rec.onstop=()=>resolve();rec.onerror=e=>reject(e.error||new Error('Encoding failed.'));});
-  await seek(segments[0].start,exportVideo);if(exportVideo.readyState>=2){if(!MangoMotion.paintTransition(paint,exportVideo,zoomEvents,segments,transitions,exportSequenceTime,width,height))MangoCreativeZoom.draw(paint,exportVideo,zoomEvents,exportSequenceTime,width,height);}
+  await seek(segments[0].start,exportVideo);
+  if(exportVideo.readyState>=2&&!exportVideo.seeking){
+   if(!MangoMotion.paintTransition(paint,exportVideo,zoomEvents,segments,transitions,exportSequenceTime,width,height))
+    MangoCreativeZoom.draw(paint,exportVideo,zoomEvents,exportSequenceTime,width,height);
+   MangoGraphics.render(paint,layers,exportSequenceTime,width,height);
+  }
   rec.start(800);
   await playRanges(segments,()=>cancelExport,(value,output)=>{byId('progress').value=value;exportSequenceTime=output;voiceExport?.sync?.(output,true);},exportVideo);
   if(rec.state!=='inactive')rec.stop();await done;
@@ -433,7 +459,13 @@ sequencePreview=MangoSequencePreview.create(video,()=>segments,
  output=>{previewSequenceTime=output;globalThis.MangoClipTimeline?.playhead?.();paintPreview();globalThis.MangoCreativeUI?.onPosition?.(output);},
  (playing,error)=>{globalThis.MangoCreativeUI?.onPlayback?.(playing);byId('program-play').textContent=playing?'❚❚ Pause':'▶ Play';if(error)label('Preview paused: '+error);});
 video.addEventListener('timeupdate',()=>{globalThis.MangoClipTimeline?.playhead?.();paintPreview();});
-video.addEventListener('seeked',paintPreview);video.addEventListener('loadeddata',paintPreview);
+video.addEventListener('seeked',()=>{previewSequenceTime=null;paintPreview();});
+video.addEventListener('loadeddata',paintPreview);
+video.addEventListener('canplay',paintPreview);
+if(typeof video.requestVideoFrameCallback==='function'){
+ const redrawFrame=()=>{if(!original)return;paintPreview();video.requestVideoFrameCallback(redrawFrame);};
+ video.requestVideoFrameCallback(redrawFrame);
+}
 
 // Premiere-style transport in place of native over-video controls, which are
 // obscured by the editable graphics canvas.
