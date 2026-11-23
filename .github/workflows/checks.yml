@@ -37,7 +37,9 @@ jobs:
           node tests/editor-core-v070.cjs
           node tests/professional-uix-v070.cjs
           node tests/viewport-cursors-v071.cjs
-          for src in studio-control-core-v070.js studio-professional-v070.js precision-cursors-v071.js image-tool-groups-v071.js image-canvas-viewport-v071.js; do node --check "$src"; done
+          node tests/captions-v072.cjs
+          node tests/preview-continuity-v072.cjs
+          for src in studio-control-core-v070.js studio-professional-v070.js precision-cursors-v071.js image-tool-groups-v071.js image-canvas-viewport-v071.js caption-core-v072.js caption-studio-v072.js sequence-preview.js clip-studio.js; do node --check "$src"; done
       - name: Package MangoShot v0.7.1 precision tools development preview
         if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.1-viewport-precision-tools'
         shell: bash
