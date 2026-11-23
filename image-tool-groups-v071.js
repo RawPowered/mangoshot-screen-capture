@@ -106,6 +106,10 @@
    flyout.append(item);
   }
   main.addEventListener('click',()=>activate(saved.get(g.id)||g.items[0]));
+  // Stylus barrel click / mouse right click opens variants, like a tool flyout.
+  main.addEventListener('contextmenu',event=>{
+   event.preventDefault();event.stopPropagation();more.click();
+  });
   more.addEventListener('click',()=>{
    if(open?.slot===slot){close();return;}
    close();flyout.hidden=false;more.setAttribute('aria-expanded','true');
