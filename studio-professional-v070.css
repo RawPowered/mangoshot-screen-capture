@@ -1,7 +1,7 @@
 /* MangoShot v0.7 Patch B — professional, compact tool options and workspaces.
  * Last stylesheet wins deliberately over versioned editor layout CSS. */
 .studio .v070-options-bar{
- position:relative;z-index:38;display:flex;align-items:center;gap:10px;
+ position:relative;z-index:38;display:flex;flex:0 0 auto;align-items:center;gap:10px;
  padding:6px 11px;min-height:49px;background:linear-gradient(180deg,#1c2928,#162320);
  border-bottom:1px solid #46564d;color:#e6f0e8;font:600 11px/1.3 system-ui,sans-serif;
 }
@@ -45,6 +45,18 @@
 .studio .v070-settings-range input{width:100%;accent-color:#b0e082}
 .studio .v070-settings-reset{width:100%;text-align:center}
 .studio .v070-settings-hint{margin:0;font-size:10px;line-height:1.55;color:#adc1b0}
+.studio .v070-profile-save{display:grid;grid-template-columns:minmax(0,1fr) 57px;gap:6px}
+.studio .v070-profile-save input{width:100%;min-width:0;min-height:32px;padding:5px 8px;
+ border-radius:3px;background:#101e18;border:1px solid #55725c;color:#eaf7ed;font-size:11px}
+.studio .v070-profile-add,.studio .v070-profile-load,.studio .v070-profile-remove{
+ background:#2a4335;border:1px solid #5a8163;border-radius:3px;color:#e5f8e4;
+ min-height:31px;padding:6px 8px;font:700 11px/1.2 system-ui}
+.studio .v070-profile-list{display:flex;flex-direction:column;gap:3px;max-height:142px;overflow-y:auto}
+.studio .v070-profile-row{display:grid;grid-template-columns:minmax(0,1fr) 31px;gap:5px}
+.studio .v070-profile-load{text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.studio .v070-profile-remove{color:#f3c7c0}
+.studio .v070-profile-empty{font-size:10px;color:#9eb4a5;padding:3px}
+
 .studio .studio-panel,.studio .studio-monitor-panel,.studio .studio-inspector{border-radius:3px}
 .studio .v070-options-bar :is(button,input,select,summary):focus-visible,
 .studio .v070-settings-menu button:focus-visible{outline:2px solid #d7fca7;outline-offset:2px}
@@ -85,11 +97,11 @@ body.studio-clip.v070-no-tools .v06-rail{display:none!important}
  body.studio-clip.v070-no-properties.v065-viewport .v062-media-dock{grid-column:2/4!important;}
  body.studio-clip.v070-no-properties .v066-splitter-side{display:none!important}
 }
-@media(min-width:901px) and (min-height:800px){
+@media(min-width:901px) and (min-height:601px){
  body.studio-clip.v070-dock-bottom.v065-viewport:not(.v070-no-properties) .clip-layout{
   grid-template-columns:52px minmax(0,1fr) 0!important;
-  grid-template-rows:minmax(125px,1fr) minmax(165px,1fr) minmax(32px,var(--v066-dock,95px))
-   minmax(160px,var(--v070-bottom,260px))!important;}
+  grid-template-rows:minmax(95px,1fr) minmax(110px,1fr) minmax(32px,var(--v066-dock,95px))
+   minmax(120px,var(--v070-bottom,260px))!important;}
  body.studio-clip.v070-dock-bottom.v070-no-tools.v065-viewport:not(.v070-no-properties) .clip-layout{
   grid-template-columns:0 minmax(0,1fr) 0!important;}
  body.studio-clip.v070-dock-bottom.v065-viewport:not(.v070-no-properties) .clip-program{
