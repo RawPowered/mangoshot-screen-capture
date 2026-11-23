@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "MangoShot",
-  "version": "0.6.17",
-  "description": "MangoShot unified keyboard shortcut controls, configurable editor keymaps, searchable command palette and accessible File/Edit/Layer menus.",
+  "version": "0.6.18",
+  "description": "MangoShot editable layer clipboard, layer-stack drag reorder, canvas Alt-drag cloning, live layer appearance and selection-aware keyboard shortcuts.",
   "permissions": [
     "activeTab",
     "scripting",

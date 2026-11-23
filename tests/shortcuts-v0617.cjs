@@ -126,5 +126,5 @@ assert.ok(imageHtml.includes('data-studio-action="showShortcuts"'));
 assert.ok(clipHtml.includes('data-studio-action="commandPalette"'));
 assert.ok(legacy.includes('root.MangoShortcutsV0617?.active'),'Legacy shortcut handler must yield to newer manager');
 assert.ok(read('editor.js').includes('run:imageCommand'));
-assert.equal(JSON.parse(read('manifest.json')).version,'0.6.17');
+assert.equal(JSON.parse(read('manifest.json')).version,'0.6.18');
 console.log('PASS: shared core, safe browser/typing rules, editable unique bindings, keymap migration, command palette and cross-studio menu wiring');

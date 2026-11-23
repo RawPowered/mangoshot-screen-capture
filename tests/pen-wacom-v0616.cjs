@@ -104,5 +104,5 @@ for(const k of ['penInput?.paintEraser?.(pen,stroke)','penInput.intersectIndices
  'penInput?.createDiagnostic?.(','lastEraserMode','snapshot();entireErase.changed=true']){
  assert.ok(editor.includes(k),'Missing pen/erase integration '+k);
 }
-assert.equal(JSON.parse(read('manifest.json')).version,'0.6.17');
+assert.equal(JSON.parse(read('manifest.json')).version,'0.6.18');
 console.log('PASS: pressure variation, eraser-tip button mapping, coalescing, both erasers and local diagnostic pad');

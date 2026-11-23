@@ -297,7 +297,12 @@
   if(event.target?.closest?.('dialog[open],.v06-menu-pop'))return;
   if(core.editable(event.target))return;
   if(event.target?.closest?.('button,a,summary,[role="button"]')&&
-    !event.ctrlKey&&!event.altKey&&!event.metaKey)return;
+    !event.ctrlKey&&!event.altKey&&!event.metaKey){
+   // A selected Image Studio layer is an editing context even if its row
+   // button still has keyboard focus. Never steal Space/Enter from controls.
+   const selected=image&&root.MangoImageActions?.state?.().layerSelected===true;
+   if(!selected||event.key===' '||event.key==='Enter')return;
+  }
   const combo=core.normalize(event);
   const id=Object.keys(keys).find(k=>keys[k]&&keys[k]===combo);
   if(!id)return;

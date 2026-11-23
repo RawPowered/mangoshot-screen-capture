@@ -74,6 +74,7 @@ assert.equal(core.hitText(ctx,stroke,105,125),true);
 assert.equal(core.hitText(ctx,stroke,10,10),false);
 assert.doesNotThrow(()=>core.drawText(ctx,stroke));
 vm.runInNewContext(read('pen-input-v0616.js'),context,{filename:'pen-input-v0616.js'});
+vm.runInNewContext(read('image-layer-ops-v0618.js'),context,{filename:'image-layer-ops-v0618.js'});
 vm.runInNewContext(read('editor.js'),context,{filename:'editor.js'});
 const get=id=>document.getElementById(id),fire=(id,type,e)=>get(id).fire(type,e);
 async function settle(){await new Promise(resolve=>setTimeout(resolve,15));}
@@ -162,6 +163,28 @@ async function settle(){await new Promise(resolve=>setTimeout(resolve,15));}
  assert.equal(get('stroke-list').children.length,3);
  fire('undo','click');
  assert.equal(get('stroke-list').children.length,2);
- console.log('PASS: live text, annotated clipboard, Wacom pressure, both eraser modes and Undo');
+ // Alt+drag clones an existing text layer once, then repositions the duplicate.
+ get('tool').value='select';fire('tool','change');
+ const beforeClone=get('stroke-list').children.length;
+ fire('ink','pointerdown',{button:0,pointerId:80,clientX:110,clientY:124,altKey:true,preventDefault(){}});
+ fire('ink','pointermove',{pointerId:80,clientX:170,clientY:158,preventDefault(){}});
+ fire('ink','pointerup',{pointerId:80});
+ assert.equal(get('stroke-list').children.length,beforeClone+1,'Alt+drag creates exactly one layer');
+ fire('undo','click');
+ assert.equal(get('stroke-list').children.length,beforeClone,'Alt+drag duplication is one undoable action');
+ // Select visible text via the layer list and copy/paste it without overriding Copy Image.
+ const firstRow=get('stroke-list').children[0];
+ const title=firstRow.children?.find?.(x=>x.className==='image-object-select');
+ title?.fire?.('click');
+ const api=context.globalThis.MangoImageActions;
+ assert.ok(api&&typeof api.run==='function');
+ assert.equal(api.run('copyLayer'),true,'Select-tool layer can be copied');
+ assert.equal(api.run('pasteLayer'),true,'Copied layer pastes as a separate object');
+ assert.equal(get('stroke-list').children.length,beforeClone+1);
+ assert.equal(api.run('nudgeRight'),true,'Selected layer responds to keyboard nudge command');
+ assert.equal(api.run('copyLayerStyle'),true,'Layer appearance copies');
+ assert.equal(api.run('pasteLayerStyle'),true,'Appearance pastes to selected editable layer');
+ fire('undo','click');
+ console.log('PASS: existing editor flows, Alt+drag, internal layer clipboard, nudge and style Undo');
 
 })().catch(error=>{console.error(error);process.exitCode=1});

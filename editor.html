@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MangoShot · Image Studio</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="studio.css"><link rel="stylesheet" href="branding-v069.css"><link rel="stylesheet" href="image-studio-v0611.css"><link rel="stylesheet" href="image-studio-v0612.css"><link rel="stylesheet" href="image-studio-v0613.css"><link rel="stylesheet" href="image-studio-v0614.css"><link rel="stylesheet" href="image-studio-v0615.css"><link rel="stylesheet" href="image-studio-v0616.css"><link rel="stylesheet" href="studio-v0617.css"></head>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MangoShot · Image Studio</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="studio.css"><link rel="stylesheet" href="branding-v069.css"><link rel="stylesheet" href="image-studio-v0611.css"><link rel="stylesheet" href="image-studio-v0612.css"><link rel="stylesheet" href="image-studio-v0613.css"><link rel="stylesheet" href="image-studio-v0614.css"><link rel="stylesheet" href="image-studio-v0615.css"><link rel="stylesheet" href="image-studio-v0616.css"><link rel="stylesheet" href="studio-v0617.css"><link rel="stylesheet" href="image-studio-v0618.css"></head>
 <body class="studio studio-image"><header class="studio-appbar"><div class="studio-identity"><span class="studio-mark"><img class="v069-app-icon" src="assets/mangoshot-icon.webp" alt=""></span><div><strong>MangoShot</strong><small>IMAGE STUDIO</small></div></div><nav class="studio-tabs" aria-label="Studio workspaces"><a class="studio-tab" href="recorder.html">Record</a><a class="studio-tab" href="clip-studio.html">Edit video</a><span class="studio-tab is-active" aria-current="page">Annotate</span><a class="studio-tab v069-resource-tab" href="resources.html">Resources</a></nav><span class="studio-local"><span class="local-dot"></span>LOCAL · NO CLOUD</span></header>
 <nav class="v06-menu-bar v0617-menu-bar" aria-label="Image Studio application menu">
  <details class="v06-menu"><summary>File</summary><div class="v06-menu-pop" aria-label="File menu">
@@ -13,7 +13,10 @@
   <button type="button" data-studio-action="undo">Undo <kbd data-key-for="undo"></kbd></button>
   <button type="button" data-studio-action="redo">Redo <kbd data-key-for="redo"></kbd></button>
   <div class="v06-menu-separator"></div>
-  <button type="button" data-studio-action="duplicateLayer">Duplicate selected layer <kbd data-key-for="duplicateLayer"></kbd></button>
+  <button type="button" data-studio-action="copyLayer">Copy selected layer <kbd data-key-for="copyLayer"></kbd></button>
+<button type="button" data-studio-action="cutLayer">Cut selected layer <kbd data-key-for="cutLayer"></kbd></button>
+<button type="button" data-studio-action="pasteLayer">Paste layer <kbd data-key-for="pasteLayer"></kbd></button>
+<button type="button" data-studio-action="duplicateLayer">Duplicate selected layer <kbd data-key-for="duplicateLayer"></kbd></button>
   <button type="button" data-studio-action="deleteLayer">Delete selected layer <kbd data-key-for="deleteLayer"></kbd></button>
   <button type="button" data-studio-action="clearAnnotations">Clear all annotations…</button>
  </div></details>
@@ -22,6 +25,9 @@
   <button type="button" data-studio-action="layerBackward">Send backward <kbd data-key-for="layerBackward"></kbd></button>
   <button type="button" data-studio-action="layerVisibility">Show / Hide selected layer</button>
   <button type="button" data-studio-action="layerLock">Lock / Unlock selected layer</button>
+<div class="v06-menu-separator"></div>
+<button type="button" data-studio-action="copyLayerStyle">Copy layer style</button>
+<button type="button" data-studio-action="pasteLayerStyle">Paste layer style</button>
  </div></details>
  <details class="v06-menu"><summary>View</summary><div class="v06-menu-pop" aria-label="View menu">
   <button type="button" data-studio-action="zoomFit">Fit canvas <kbd data-key-for="zoomFit"></kbd></button>
@@ -94,11 +100,35 @@
  </div>
  <section id="image-panel-layers" class="image-inspector-page" role="tabpanel" aria-label="Layers">
   <div class="image-pane-title"><strong>Layer stack</strong><span>Top = front</span></div>
-  <div class="image-layer-toolbar"><button type="button" id="image-add-layer">+ Image</button><button type="button" id="image-add-text">+ Text</button><button type="button" id="image-duplicate-layer">Duplicate</button></div>
+  <div class="image-layer-toolbar"><button type="button" id="image-add-layer">+ Image</button><button type="button" id="image-add-text">+ Text</button><button type="button" id="image-duplicate-layer">Duplicate</button></div><div class="image-layer-clipboard-tools" role="group" aria-label="Layer clipboard actions">
+<button type="button" id="image-copy-layer" title="Copy selected layer · Ctrl+C">Copy</button>
+<button type="button" id="image-cut-layer" title="Cut selected layer · Ctrl+X">Cut</button>
+<button type="button" id="image-paste-layer" title="Paste copied layer · Ctrl+V">Paste</button></div>
+<p class="image-layer-guidance">Drag a layer to reorder. Select and drag any mark on the canvas to move. Alt + drag clones the layer.</p>
   <div id="stroke-list" class="stroke-list image-layer-stack" aria-label="Editable annotation and image layers"><span class="inspector-hint">Draw, add text or import an image.</span></div>
   <div id="image-layer-properties" class="image-layer-properties" hidden>
    <div class="image-pane-title"><strong>Selected layer</strong><span id="image-selected-layer-name"></span></div>
    <label>Opacity <input id="image-layer-opacity" type="range" min="0" max="100" value="100"><output id="image-opacity-readout">100%</output></label>
+<div class="image-layer-style-controls" id="image-layer-style-controls">
+ <div class="image-pane-title"><strong>Layer appearance</strong><span>Editable · non-destructive</span></div>
+ <div class="image-style-presets" role="group" aria-label="Layer effect presets">
+ <button type="button" data-layer-preset="none">None</button>
+ <button type="button" data-layer-preset="shadow">Shadow</button>
+ <button type="button" data-layer-preset="glow">Glow</button>
+ <button type="button" data-layer-preset="floating">Floating</button>
+ <button type="button" data-layer-preset="crisp">Crisp</button></div>
+ <details id="image-layer-appearance-detail"><summary>Customize effect & blend</summary>
+ <div class="image-style-detail-grid">
+ <label>Effect <select id="image-layer-fx-kind"><option value="none">None</option><option value="shadow">Drop shadow</option><option value="glow">Outer glow</option></select></label>
+ <label>Color <input id="image-layer-fx-color" type="color" value="#000000"></label>
+ <label>Blur <input id="image-layer-fx-blur" type="range" min="0" max="80" value="0"><output id="image-layer-fx-blur-value">0 px</output></label>
+ <label>Horizontal offset <input id="image-layer-fx-x" type="range" min="-50" max="50" value="0"><output id="image-layer-fx-x-value">0 px</output></label>
+ <label>Vertical offset <input id="image-layer-fx-y" type="range" min="-50" max="50" value="0"><output id="image-layer-fx-y-value">0 px</output></label>
+ <label>Blend with annotations <select id="image-layer-fx-blend"><option value="source-over">Normal</option><option value="multiply">Multiply</option><option value="screen">Screen</option><option value="overlay">Overlay</option><option value="darken">Darken</option><option value="lighten">Lighten</option></select></label>
+ </div></details>
+ <div class="image-style-clipboard" role="group" aria-label="Layer style clipboard">
+ <button type="button" id="image-copy-style">Copy style</button><button type="button" id="image-paste-style">Paste style</button></div>
+ </div>
    <label class="image-aspect-toggle"><input id="image-keep-ratio" type="checkbox" checked> <span><strong>Lock proportions</strong><small>Drag a corner to resize · hold Shift to stretch</small></span></label><div id="image-transform-readout" role="status" aria-live="off">Drag corners to resize · hold Shift to stretch</div>
    <div class="image-layer-buttons"><button type="button" id="image-layer-front">Move up</button><button type="button" id="image-layer-back">Move down</button><button type="button" id="image-layer-remove">Delete</button></div>
    <details class="image-transform-details"><summary>Advanced size & position</summary>
@@ -268,6 +298,9 @@
 <div class="image-context-divider" role="separator"></div>
 <button role="menuitem" type="button" data-image-action="undo">Undo last annotation</button>
 <button role="menuitem" type="button" data-image-action="redo">Redo annotation</button>
+<button role="menuitem" type="button" data-image-action="copy-layer">Copy selected layer</button>
+<button role="menuitem" type="button" data-image-action="paste-layer">Paste layer</button>
+<button role="menuitem" type="button" data-image-action="duplicate-layer">Duplicate selected layer</button>
 <button role="menuitem" type="button" data-image-action="delete">Delete selected annotation</button>
 </div>
 <dialog id="image-shortcuts-dialog" class="v0617-shortcuts-dialog" aria-label="Image Studio keyboard shortcut settings">
@@ -275,5 +308,5 @@
  <button type="button" class="v0617-close" data-shortcuts-close>✕ Close</button></div>
 </dialog>
 <dialog id="studio-command-palette" class="v0617-command-dialog" aria-label="Search MangoShot commands"></dialog>
-<script src="pdf-export.js"></script><script src="capture-store.js"></script><script src="capture-output-v0614.js"></script><script src="image-editor-core-v0611.js"></script><script src="image-layers-v0612.js"></script><script src="image-type-effects-v0613.js"></script><script src="image-vector-v0615.js"></script><script src="pen-input-v0616.js"></script><script src="editor.js"></script><script src="shortcut-core-v0617.js"></script><script src="studio-shortcuts-v0617.js"></script><script src="studio-menus-v0617.js"></script>
+<script src="pdf-export.js"></script><script src="capture-store.js"></script><script src="capture-output-v0614.js"></script><script src="image-editor-core-v0611.js"></script><script src="image-layers-v0612.js"></script><script src="image-type-effects-v0613.js"></script><script src="image-vector-v0615.js"></script><script src="pen-input-v0616.js"></script><script src="image-layer-ops-v0618.js"></script><script src="editor.js"></script><script src="shortcut-core-v0617.js"></script><script src="studio-shortcuts-v0617.js"></script><script src="studio-menus-v0617.js"></script>
 </body></html>
