@@ -13,7 +13,10 @@
   <button type="button" data-studio-action="undo">Undo <kbd data-key-for="undo"></kbd></button>
   <button type="button" data-studio-action="redo">Redo <kbd data-key-for="redo"></kbd></button>
   <div class="v06-menu-separator"></div>
-  <button type="button" data-studio-action="duplicateLayer">Duplicate selected layer <kbd data-key-for="duplicateLayer"></kbd></button>
+  <button type="button" data-studio-action="copyLayer">Copy selected layer <kbd data-key-for="copyLayer"></kbd></button>
+<button type="button" data-studio-action="cutLayer">Cut selected layer <kbd data-key-for="cutLayer"></kbd></button>
+<button type="button" data-studio-action="pasteLayer">Paste layer <kbd data-key-for="pasteLayer"></kbd></button>
+<button type="button" data-studio-action="duplicateLayer">Duplicate selected layer <kbd data-key-for="duplicateLayer"></kbd></button>
   <button type="button" data-studio-action="deleteLayer">Delete selected layer <kbd data-key-for="deleteLayer"></kbd></button>
   <button type="button" data-studio-action="clearAnnotations">Clear all annotations…</button>
  </div></details>
@@ -22,6 +25,9 @@
   <button type="button" data-studio-action="layerBackward">Send backward <kbd data-key-for="layerBackward"></kbd></button>
   <button type="button" data-studio-action="layerVisibility">Show / Hide selected layer</button>
   <button type="button" data-studio-action="layerLock">Lock / Unlock selected layer</button>
+<div class="v06-menu-separator"></div>
+<button type="button" data-studio-action="copyLayerStyle">Copy layer style</button>
+<button type="button" data-studio-action="pasteLayerStyle">Paste layer style</button>
  </div></details>
  <details class="v06-menu"><summary>View</summary><div class="v06-menu-pop" aria-label="View menu">
   <button type="button" data-studio-action="zoomFit">Fit canvas <kbd data-key-for="zoomFit"></kbd></button>
@@ -292,6 +298,9 @@
 <div class="image-context-divider" role="separator"></div>
 <button role="menuitem" type="button" data-image-action="undo">Undo last annotation</button>
 <button role="menuitem" type="button" data-image-action="redo">Redo annotation</button>
+<button role="menuitem" type="button" data-image-action="copy-layer">Copy selected layer</button>
+<button role="menuitem" type="button" data-image-action="paste-layer">Paste layer</button>
+<button role="menuitem" type="button" data-image-action="duplicate-layer">Duplicate selected layer</button>
 <button role="menuitem" type="button" data-image-action="delete">Delete selected annotation</button>
 </div>
 <dialog id="image-shortcuts-dialog" class="v0617-shortcuts-dialog" aria-label="Image Studio keyboard shortcut settings">
@@ -299,5 +308,5 @@
  <button type="button" class="v0617-close" data-shortcuts-close>✕ Close</button></div>
 </dialog>
 <dialog id="studio-command-palette" class="v0617-command-dialog" aria-label="Search MangoShot commands"></dialog>
-<script src="pdf-export.js"></script><script src="capture-store.js"></script><script src="capture-output-v0614.js"></script><script src="image-editor-core-v0611.js"></script><script src="image-layers-v0612.js"></script><script src="image-type-effects-v0613.js"></script><script src="image-vector-v0615.js"></script><script src="pen-input-v0616.js"></script><script src="editor.js"></script><script src="shortcut-core-v0617.js"></script><script src="studio-shortcuts-v0617.js"></script><script src="studio-menus-v0617.js"></script>
+<script src="pdf-export.js"></script><script src="capture-store.js"></script><script src="capture-output-v0614.js"></script><script src="image-editor-core-v0611.js"></script><script src="image-layers-v0612.js"></script><script src="image-type-effects-v0613.js"></script><script src="image-vector-v0615.js"></script><script src="pen-input-v0616.js"></script><script src="image-layer-ops-v0618.js"></script><script src="editor.js"></script><script src="shortcut-core-v0617.js"></script><script src="studio-shortcuts-v0617.js"></script><script src="studio-menus-v0617.js"></script>
 </body></html>
