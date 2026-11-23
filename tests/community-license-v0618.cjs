@@ -16,7 +16,7 @@ assert.match(license,/does NOT retroactively withdraw/i);
 assert.match(license,/rights of compliant downstream recipients/i);
 assert.match(readme,/source-available, not OSI-approved open source/i);
 assert.match(readme,/resell or charge for access/i);
-assert.match(readme,/full-page screenshot/i);
+assert.match(readme,/full scrolling page/i);
 assert.match(readme,/Wacom/i);
 for(const term of ['Capture','Image Studio','Record Studio','Clip Studio','Resources',
  'Ctrl+C','Alt + drag','Whole Stroke Erase','Layer appearance','AutoCut','timer','LICENSE']){
