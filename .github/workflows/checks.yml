@@ -40,24 +40,32 @@ jobs:
           node tests/captions-v072.cjs
           node tests/preview-continuity-v072.cjs
           node tests/caption-speech-v072.cjs
-          for src in studio-control-core-v070.js studio-professional-v070.js precision-cursors-v071.js image-tool-groups-v071.js image-canvas-viewport-v071.js caption-core-v072.js caption-speech-v072.js caption-studio-v072.js sequence-preview.js clip-studio.js; do node --check "$src"; done
-      - name: Package MangoShot v0.7.2 Caption Studio preview
-        if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.2-captions-preview-continuity'
+          node tests/caption-word-v073.cjs
+          for src in studio-control-core-v070.js studio-professional-v070.js precision-cursors-v071.js image-tool-groups-v071.js image-canvas-viewport-v071.js caption-core-v072.js caption-speech-v072.js caption-studio-v072.js caption-whisper-v073.js caption-dock-v073.js asr-worker-v073.js sequence-preview.js clip-studio.js; do node --check "$src"; done
+      - name: Install pinned packaged AI runtime
+        if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.3-caption-dock-word-asr'
         shell: bash
         run: |
           set -euo pipefail
-          python3 tools/package-extension.py --out dist --version v0.6.18-caption-v072-preview
-          unzip -t dist/MangoShot-v0.6.18-caption-v072-preview-Extension.zip
-          for dependency in caption-core-v072.js caption-speech-v072.js caption-studio-v072.js caption-studio-v072.css sequence-preview.js clip-studio.js; do
-            unzip -l dist/MangoShot-v0.6.18-caption-v072-preview-Extension.zip | grep "$dependency"
+          npm install --ignore-scripts --no-audit --no-fund
+          python3 tools/vendor-asr-runtime-v073.py
+      - name: Package MangoShot v0.7.3 Caption Studio preview
+        if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.3-caption-dock-word-asr'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/package-extension.py --out dist --version v0.6.18-caption-v073-preview
+          unzip -t dist/MangoShot-v0.6.18-caption-v073-preview-Extension.zip
+          for dependency in caption-core-v072.js caption-speech-v072.js caption-studio-v072.js caption-dock-v073.js caption-dock-v073.css caption-whisper-v073.js asr-worker-v073.js asr-runtime/transformers.web.min.js asr-runtime/ort-wasm-simd-threaded.jsep.wasm sequence-preview.js clip-studio.js; do
+            unzip -l dist/MangoShot-v0.6.18-caption-v073-preview-Extension.zip | grep "$dependency"
           done
-          unzip -p dist/MangoShot-v0.6.18-caption-v072-preview-Extension.zip clip-studio.html | grep -q 'id="cc-track"'
-          unzip -p dist/MangoShot-v0.6.18-caption-v072-preview-Extension.zip clip-studio.html | grep -q 'id="caption-studio-panel"'
-      - name: Upload v0.7.2 development preview ZIP (not a release)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.2-captions-preview-continuity'
+          unzip -p dist/MangoShot-v0.6.18-caption-v073-preview-Extension.zip clip-studio.html | grep -q 'id="cc-track"'
+          unzip -p dist/MangoShot-v0.6.18-caption-v073-preview-Extension.zip clip-studio.html | grep -q 'id="v073-caption-dock"'
+      - name: Upload v0.7.3 development preview ZIP (not a release)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.3-caption-dock-word-asr'
         uses: actions/upload-artifact@v4
         with:
-          name: MangoShot-v0.7.2-Caption-Studio-Development-Preview
-          path: dist/MangoShot-v0.6.18-caption-v072-preview-Extension.zip
+          name: MangoShot-v0.7.3-Left-Dock-Auto-Captions-Preview
+          path: dist/MangoShot-v0.6.18-caption-v073-preview-Extension.zip
           retention-days: 21
           if-no-files-found: error
