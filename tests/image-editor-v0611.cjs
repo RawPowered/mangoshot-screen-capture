@@ -175,7 +175,7 @@ async function settle(){await new Promise(resolve=>setTimeout(resolve,15));}
  // Select visible text via the layer list and copy/paste it without overriding Copy Image.
  const firstRow=get('stroke-list').children[0];
  const title=firstRow.children?.find?.(x=>x.className==='image-object-select');
- title?.click?.();
+ title?.fire?.('click');
  const api=context.globalThis.MangoImageActions;
  assert.ok(api&&typeof api.run==='function');
  assert.equal(api.run('copyLayer'),true,'Select-tool layer can be copied');
