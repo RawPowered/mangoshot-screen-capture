@@ -86,9 +86,16 @@
   const body=doc.body;
   const studio=body?.classList?.contains('studio-image')?'image':body?.classList?.contains('studio-clip')?'clip':null;
   if(!studio)return null;
-  let previous='';
+  let previous='',penEraser=false,penPressure=1;
   function refresh(){
-   const tool=getTool(doc,studio),diameter=diameterFor(doc,tool),key=tool+':'+Math.round(diameter);
+   // The physical Wacom eraser can temporarily override a selected drawing
+   // tool without changing the editable tool state or source shortcut.
+   const tool=studio==='image'&&penEraser?'erase-brush':getTool(doc,studio);
+   let diameter=diameterFor(doc,tool);
+   if(studio==='image'&&(tool==='erase-brush'||tool==='mask-erase'||tool==='mask-restore')&&
+      doc.getElementById('image-pen-pressure')?.checked!==false)
+    diameter=Math.max(2,diameter*(.18+.82*penPressure));
+   const key=tool+':'+Math.round(diameter);
    if(previous===key)return;previous=key;
    body.style.setProperty('--mango-precision-cursor',forTool(tool,diameter));
    body.dataset.mangoPrecisionTool=tool;
@@ -98,6 +105,25 @@
   doc.addEventListener('change',schedule,true);
   doc.addEventListener('click',schedule,true);
   doc.addEventListener('keydown',schedule,false);
+  if(studio==='image'){
+   const ink=doc.getElementById('ink');
+   const updatePen=event=>{
+    if(event.pointerType!=='pen'){
+     if(penEraser){penEraser=false;penPressure=1;refresh();}
+     return;
+    }
+    const eraser=!!root.MangoPenInputV0616?.eraserTip?.(event)&&
+     doc.getElementById('image-eraser-tip')?.checked!==false;
+    const pressure=Number(event.pressure);
+    penPressure=Number.isFinite(pressure)&&pressure>0?Math.max(.04,Math.min(1,pressure)):1;
+    penEraser=eraser;refresh();
+   };
+   ink?.addEventListener('pointermove',updatePen,{passive:true});
+   ink?.addEventListener('pointerdown',updatePen,{passive:true});
+   ink?.addEventListener('pointerleave',()=>{
+    if(penEraser||penPressure!==1){penEraser=false;penPressure=1;refresh();}
+   },{passive:true});
+  }
   if(root.MutationObserver&&studio==='clip'){
    new root.MutationObserver(schedule).observe(body,{attributes:true,attributeFilter:['data-clip-tool']});
   }
