@@ -103,6 +103,26 @@
   <div id="image-layer-properties" class="image-layer-properties" hidden>
    <div class="image-pane-title"><strong>Selected layer</strong><span id="image-selected-layer-name"></span></div>
    <label>Opacity <input id="image-layer-opacity" type="range" min="0" max="100" value="100"><output id="image-opacity-readout">100%</output></label>
+<div class="image-layer-style-controls" id="image-layer-style-controls">
+ <div class="image-pane-title"><strong>Layer appearance</strong><span>Editable · non-destructive</span></div>
+ <div class="image-style-presets" role="group" aria-label="Layer effect presets">
+ <button type="button" data-layer-preset="none">None</button>
+ <button type="button" data-layer-preset="shadow">Shadow</button>
+ <button type="button" data-layer-preset="glow">Glow</button>
+ <button type="button" data-layer-preset="floating">Floating</button>
+ <button type="button" data-layer-preset="crisp">Crisp</button></div>
+ <details id="image-layer-appearance-detail"><summary>Customize effect & blend</summary>
+ <div class="image-style-detail-grid">
+ <label>Effect <select id="image-layer-fx-kind"><option value="none">None</option><option value="shadow">Drop shadow</option><option value="glow">Outer glow</option></select></label>
+ <label>Color <input id="image-layer-fx-color" type="color" value="#000000"></label>
+ <label>Blur <input id="image-layer-fx-blur" type="range" min="0" max="80" value="0"><output id="image-layer-fx-blur-value">0 px</output></label>
+ <label>Horizontal offset <input id="image-layer-fx-x" type="range" min="-50" max="50" value="0"><output id="image-layer-fx-x-value">0 px</output></label>
+ <label>Vertical offset <input id="image-layer-fx-y" type="range" min="-50" max="50" value="0"><output id="image-layer-fx-y-value">0 px</output></label>
+ <label>Blend with annotations <select id="image-layer-fx-blend"><option value="source-over">Normal</option><option value="multiply">Multiply</option><option value="screen">Screen</option><option value="overlay">Overlay</option><option value="darken">Darken</option><option value="lighten">Lighten</option></select></label>
+ </div></details>
+ <div class="image-style-clipboard" role="group" aria-label="Layer style clipboard">
+ <button type="button" id="image-copy-style">Copy style</button><button type="button" id="image-paste-style">Paste style</button></div>
+ </div>
    <label class="image-aspect-toggle"><input id="image-keep-ratio" type="checkbox" checked> <span><strong>Lock proportions</strong><small>Drag a corner to resize · hold Shift to stretch</small></span></label><div id="image-transform-readout" role="status" aria-live="off">Drag corners to resize · hold Shift to stretch</div>
    <div class="image-layer-buttons"><button type="button" id="image-layer-front">Move up</button><button type="button" id="image-layer-back">Move down</button><button type="button" id="image-layer-remove">Delete</button></div>
    <details class="image-transform-details"><summary>Advanced size & position</summary>
