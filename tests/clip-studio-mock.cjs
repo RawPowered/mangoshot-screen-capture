@@ -1,5 +1,5 @@
 const vm=require('node:vm'),fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
-const root=path.join(__dirname,'..'),els=new Map();let mimeMp4=false,downloads=[];
+const root=path.join(__dirname,'..'),els=new Map();let mimeMp4=false,downloads=[],drawnFrames=0,clearedFrames=0;
 class FakeElement{
  constructor(id){this.id=id;this.disabled=false;this.hidden=false;this.value='0';this.textContent='';this.style={setProperty(){}};this.dataset={};this.classList={toggle(){},contains(){return false;}};this.children=[];this.listeners={};this.videoWidth=640;this.videoHeight=360;this.duration=24;this.currentTime=0;this.seekable={length:0};this.readyState=4;}
  setAttribute(){}
@@ -7,7 +7,9 @@ class FakeElement{
  removeEventListener(type,fn){this.listeners[type]=(this.listeners[type]||[]).filter(x=>x!==fn);}
  replaceChildren(...children){this.children=children;}
  appendChild(node){this.children.push(node);}
- getContext(){return {clearRect(){},save(){},restore(){},setLineDash(){},fillRect(){},strokeRect(){}};}
+ getContext(){return {clearRect(){clearedFrames++;},save(){},restore(){},setLineDash(){},fillRect(){},strokeRect(){},
+ drawImage(){drawnFrames++;},translate(){},scale(){},measureText:value=>({width:String(value).length*12}),
+ fillText(){},strokeText(){},beginPath(){},moveTo(){},lineTo(){},closePath(){},stroke(){},fill(){}};}
  remove(){}
  click(){if(this.id==='a')downloads.push(this.download);}
  pause(){}
@@ -21,7 +23,7 @@ const ctx={document:doc,window:{addEventListener(){}},Blob,URL:{createObjectURL:
   MediaRecorder:class {static isTypeSupported(type){return type.includes('webm')||(mimeMp4&&type.includes('mp4'));}},
   URLSearchParams,location:{search:''},setTimeout:(fn,ms)=>setTimeout(fn,Math.min(ms||0,30)),clearTimeout,requestAnimationFrame:cb=>setTimeout(cb,1),cancelAnimationFrame:clearTimeout};
 ctx.globalThis=ctx;const run=filename=>vm.runInNewContext(fs.readFileSync(path.join(root,filename),'utf8'),ctx);
-run('clip-timeline.js');run('sequence-media.js');run('sequence-preview.js');run('clip-edit-ops.js');run('motion-core-v067.js');run('clip-graphics.js');run('creative-zoom.js');run('sequence-operations.js');run('auto-cut.js');run('layer-timeline-ops.js');run('media-format.js');ctx.MangoClips={load:async()=>null,clear:async()=>null};
+run('clip-timeline.js');run('sequence-media.js');run('sequence-preview.js');run('clip-edit-ops.js');run('motion-core-v067.js');run('clip-graphics.js');run('caption-core-v072.js');run('clip-project.js');run('creative-zoom.js');run('sequence-operations.js');run('auto-cut.js');run('layer-timeline-ops.js');run('media-format.js');ctx.MangoClips={load:async()=>null,clear:async()=>null};
 let markerCache=[];ctx.MangoClipTimeline={markers:()=>markerCache.map(x=>({...x})),loadMarkers:next=>{markerCache=next.map(x=>({...x}));},render(){},reset(){markerCache=[];}};
 run('clip-studio.js');
 (async()=>{
@@ -115,5 +117,40 @@ run('clip-studio.js');
  st.setLayerLocked(added,false);
  assert.equal(st.deleteLayer(added),true,'Unlocked graphics can be removed directly');
  assert.equal(st.layers().length,count);
- console.log('PASS: no-edit export, Razor/ripple, direct locked-aware layer deletion, one-step AutoCut and Undo/Redo');
+ // Caption Studio must participate in actual Clip Studio state, ripple,
+ // Undo/Redo, and project payloads (not only the isolated caption core).
+ get('reset').onclick();
+ assert.equal(st.setCaptions([{id:'cc-a',start:4,end:8,text:'Spoken caption'}]),true);
+ assert.equal(st.captions().length,1);
+ const ccStart=drawnFrames;
+ st.paintPreview();
+ assert.ok(drawnFrames>ccStart,'Caption preview composites a real decoded video frame');
+ assert.equal(st.commitAutoCut([{start:2,end:3},{start:6,end:7}]),true);
+ assert.equal(st.captions()[0].start,3,'AutoCut ripples caption start');
+ assert.equal(st.captions()[0].end,6,'AutoCut ripples caption end');
+ get('undo').onclick();
+ assert.equal(st.captions()[0].start,4,'One Undo restores caption timing');
+ get('redo').onclick();
+ assert.equal(st.captions()[0].end,6,'Redo re-applies caption ripple');
+ const beforeBurn=st.burnCaptions();
+ assert.equal(beforeBurn,true);
+ assert.equal(st.setCaptionBurn(false),true);
+ assert.equal(st.burnCaptions(),false);
+ get('undo').onclick();
+ assert.equal(st.burnCaptions(),true,'Caption burn mode shares Undo history');
+ const pack=ctx.MangoProject.pack({size:123,format:'webm',duration:24},st.segments(),st.layers(),
+  markerCache,st.transitions(),st.captions(),st.captionStyle(),st.burnCaptions());
+ assert.equal(ctx.MangoProject.check(pack,{size:123,format:'webm',duration:24}).captions[0].text,'Spoken caption');
+ // Selection of a V1 segment during decoder invalidation may not clear the
+ // previously visible composite to black; the decoded frame then repaints.
+ st.commit(ctx.MangoEditOps.split(st.segments(),5),'Split for selection test');
+ const canvas=st.paintPreview,clip=get('timeline').children[1],video=get('video');
+ video.seeking=true;
+ const beforeClear=clearedFrames;clip.onclick();
+ assert.equal(clearedFrames,beforeClear,'Selection while decoder seeks must hold prior frame');
+ video.seeking=false;
+ const beforePaint=drawnFrames;
+ for(const handler of video.listeners.seeked||[])handler();
+ assert.ok(drawnFrames>beforePaint,'Seek completion restores decoded preview frame');
+ console.log('PASS: no-edit export, Razor/ripple, caption track Undo/AutoCut, stable V1 selection and project persistence');
 })().catch(e=>{console.error(e);process.exitCode=1;});
