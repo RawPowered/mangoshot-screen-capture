@@ -1237,9 +1237,8 @@ function vectorIndexAt(x,y){
 function topLayerAt(x,y){
  for(let i=strokes.length-1;i>=0;i--){
   const l=strokes[i];if(l.visible===false)continue;
-  if(l.type==='text'&&(typeEffects?.hit?.(pen,l,x,y,8)??editorCore?.hitText?.(pen,l,x,y,8)))return i;
-  if(l.type==='image'&&layerCore?.hit?.(l,x,y,0))return i;
-  if(vectorCore?.isVector?.(l)&&vectorCore.hit(l,x,y,8))return i;
+  if(layerOps?.hit?.(l,x,y,penInput,vectorCore,layerCore,typeEffects,pen))return i;
+  if(l.type==='text'&&editorCore?.hitText?.(pen,l,x,y,8))return i;
  }
  return -1;
 }
@@ -1332,35 +1331,22 @@ ink.addEventListener('pointerdown',event=>{
   scheduleRedraw();return;
  }
  if(type==='select'){
-  const topIndex=topLayerAt(p.x,p.y);
-  const index=strokes[topIndex]?.type==='text'?topIndex:-1;
-  if(index>=0){
-   selectText(index);if(strokes[index].locked)return;
-   event.preventDefault();ink.setPointerCapture?.(event.pointerId);
-   const anchor=strokes[index].points[0];
-   dragText={index,start:p,origin:{x:anchor.x,y:anchor.y},moved:false};
-   return;
+  const index=topLayerAt(p.x,p.y);
+  if(index<0){
+   selectedText=-1;selectedImage=-1;selectedObject=-1;
+   syncSelectedText();redraw();renderStrokeList();syncLayerProperties();return;
   }
-  const imageIndex=strokes[topIndex]?.type==='image'?topIndex:-1;
-  if(imageIndex>=0){
-   selectImage(imageIndex);
-   if(strokes[imageIndex].locked)return;
-   event.preventDefault();ink.setPointerCapture?.(event.pointerId);
-   const anchor=strokes[imageIndex].points[0];
-   dragImage={index:imageIndex,start:p,origin:{x:anchor.x,y:anchor.y},moved:false};
-   return;
-  }
-  const vectorIndex=vectorCore?.isVector?.(strokes[topIndex])?topIndex:-1;
-  if(vectorIndex>=0){
-   selectObject(vectorIndex);
-   const l=strokes[vectorIndex];
-   if(l.locked)return;
-   event.preventDefault();ink.setPointerCapture?.(event.pointerId);
-   dragVector={index:vectorIndex,start:p,origin:cloneStrokes([l])[0],moved:false};
-   return;
-  }
-  selectedText=-1;selectedImage=-1;selectedObject=-1;
-  syncSelectedText();redraw();renderStrokeList();syncVectorControls();return;
+  selectLayerAt(index);
+  const target=strokes[index];
+  if(target.locked)return;
+  event.preventDefault();ink.setPointerCapture?.(event.pointerId);
+  layerDrag={
+   pointerId:event.pointerId,
+   sourceIndex:index,index,start:p,
+   original:cloneStrokes([target])[0],
+   clone:!!event.altKey,moved:false
+  };
+  return;
  }
  selectedText=-1;selectedImage=-1;selectedObject=-1;syncSelectedText();
  event.preventDefault();ink.setPointerCapture?.(event.pointerId);
