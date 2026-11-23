@@ -1,6 +1,8 @@
 /* MangoShot v0.7.3 — fixed-view, left-rail Caption Studio.
  * Wide displays dock next to tool rail; smaller displays float the same dock.
  * Do not change timeline height or document scroll behavior. */
+/* Anchor compact-mode flyout to the editor grid, not the document. */
+body.studio-clip .clip-layout{position:relative}
 body.studio-clip .v073-caption-dock[hidden],
 body.studio-clip .v073-caption-page[hidden]{display:none!important}
 body.studio-clip .v06-rail .v073-rail-caption{
