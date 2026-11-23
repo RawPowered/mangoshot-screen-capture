@@ -677,10 +677,44 @@ document.getElementById('image-layer-back')?.addEventListener?.('click',()=>move
 document.getElementById('image-layer-opacity')?.addEventListener?.('input',event=>{
  const output=document.getElementById('image-opacity-readout');
  if(output)output.textContent=event.target.value+'%';
+ updateLayerAppearance('opacity',Number(event.target.value)/100,true);
 });
 document.getElementById('image-layer-opacity')?.addEventListener?.('change',event=>{
- replaceLayer(selectedAnyIndex(),{opacity:Number(event.target.value)/100});
+ if(appearanceGesture){appearanceGesture=null;setReady(true);syncLayerProperties();}
+ else updateLayerAppearance('opacity',Number(event.target.value)/100,false);
 });
+for(const [id,key] of [['image-layer-fx-kind','kind'],['image-layer-fx-color','color'],
+ ['image-layer-fx-blur','blur'],['image-layer-fx-x','offsetX'],['image-layer-fx-y','offsetY'],
+ ['image-layer-fx-blend','blend']]){
+ const field=document.getElementById(id);
+ if(!field)continue;
+ const value=()=>['blur','offsetX','offsetY'].includes(key)?Number(field.value):field.value;
+ field.addEventListener('input',()=>{
+  updateLayerAppearance(key,value(),true);
+  const readout=document.getElementById(id+'-value');if(readout)readout.textContent=field.value+' px';
+ });
+ field.addEventListener('change',()=>{
+  if(appearanceGesture){appearanceGesture=null;setReady(true);syncLayerProperties();}
+  else updateLayerAppearance(key,value(),false);
+ });
+}
+for(const button of document.querySelectorAll?.('[data-layer-preset]')||[]){
+ button.addEventListener('click',()=>{
+  const layer=selectedAnyStroke(),index=selectedAnyIndex();
+  if(!layer||layer.locked||!layerOps?.mayStyle(layer))return;
+  const next=layerOps.preset(button.dataset.layerPreset);
+  if(JSON.stringify(layerOps.style(layer))===JSON.stringify(next))return;
+  snapshot();strokes[index]={...layer,layerFx:next};
+  redraw();setReady(true);syncLayerProperties();
+  label(button.dataset.layerPreset+' layer appearance applied · Ctrl+Z to undo.');
+ });
+}
+for(const [id,handler] of [
+ ['image-copy-layer',copySelectedLayer],['image-cut-layer',cutSelectedLayer],
+ ['image-paste-layer',pasteCopiedLayer],['image-copy-style',copySelectedStyle],
+ ['image-paste-style',pasteCopiedStyle]
+])document.getElementById(id)?.addEventListener?.('click',handler);
+
 for(const [id,prop] of [['image-layer-x','x'],['image-layer-y','y'],['image-layer-width','width'],['image-layer-height','height']]){
  document.getElementById(id)?.addEventListener?.('change',event=>{
   const index=selectedAnyIndex(),layer=strokes[index],v=Number(event.target.value);
