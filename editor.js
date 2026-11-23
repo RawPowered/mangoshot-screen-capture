@@ -39,8 +39,15 @@ function setReady(value){
 }
 function image(dataUrl){return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error('Screenshot image failed to decode.'));img.src=dataUrl;});}
 function zoom(){if(!base.width)return;const selected=document.querySelector('#zoom').value;
-  const factor=selected==='fit'?Math.min(1,(workspace.clientWidth-44)/base.width):Number(selected);
-  wrap.style.width=Math.max(1,Math.round(base.width*factor))+'px';const zoomInfo=document.getElementById('img-zoom-readout');if(zoomInfo)zoomInfo.textContent=selected==='fit'?'Fit · '+Math.round(factor*100)+'%':Math.round(factor*100)+'%';
+  // Fit the entire image inside the stationary canvas viewport. Images taller
+  // than the editor are navigated by canvas panning, never document scrolling.
+  const availableWidth=Math.max(24,workspace.clientWidth-24);
+  const availableHeight=Math.max(24,workspace.clientHeight-24);
+  const factor=selected==='fit'?Math.max(.01,Math.min(1,availableWidth/base.width,availableHeight/base.height)):
+    selected==='fit-width'?Math.max(.01,Math.min(1,availableWidth/base.width)):Number(selected);
+  wrap.style.width=Math.max(1,Math.round(base.width*factor))+'px';
+  const zoomInfo=document.getElementById('img-zoom-readout');
+  if(zoomInfo)zoomInfo.textContent=(selected==='fit'?'Fit · ':selected==='fit-width'?'Width · ':'')+Math.round(factor*100)+'%';
 }
 document.querySelector('#zoom').addEventListener('change',zoom);
 window.addEventListener('resize',()=>{if(document.querySelector('#zoom').value==='fit')zoom();});
