@@ -1647,6 +1647,23 @@ function imageCommand(id){
  if(id==='commandPalette')return globalThis.MangoShortcutsV0617?.openPalette?.()===true;
  if(id==='undo'){if(!history.length)return false;undo();return true;}
  if(id==='redo'||id==='redoAlternate'){if(!redoHistory.length)return false;redo();return true;}
+ if(id==='copyLayer')return copySelectedLayer();
+ if(id==='cutLayer')return cutSelectedLayer();
+ if(id==='pasteLayer')return pasteCopiedLayer();
+ if(id==='copyLayerStyle')return copySelectedStyle();
+ if(id==='pasteLayerStyle')return pasteCopiedStyle();
+ const arrows={
+  nudgeLeft:[-1,0],nudgeRight:[1,0],nudgeUp:[0,-1],nudgeDown:[0,1],
+  nudgeLeftFast:[-10,0],nudgeRightFast:[10,0],
+  nudgeUpFast:[0,-10],nudgeDownFast:[0,10]
+ };
+ if(Object.hasOwn(arrows,id)){
+  const index=selectedAnyIndex(),layer=strokes[index];
+  if(!layer||layer.locked||!ready)return false;
+  const [dx,dy]=arrows[id];snapshot();
+  strokes[index]=layerOps.translate(layer,dx,dy);
+  redraw();setReady(true);syncLayerProperties();return true;
+ }
  if(id==='deleteLayer')return removeLayerAt(selectedAnyIndex());
  if(id==='duplicateLayer')return duplicateSelectedLayer();
  if(id==='layerForward')return moveLayerAt(selectedAnyIndex(),1);
@@ -1703,6 +1720,12 @@ globalThis.MangoImageActions={
   if(imageToolActions[id])return true;
   if(id==='undo')return history.length>0;
   if(id==='redo'||id==='redoAlternate')return redoHistory.length>0;
+  if(id==='copyLayer')return !!layer&&!!layerOps?.mayCopy?.(layer);
+  if(id==='cutLayer')return !!layer&&!layer.locked&&!!layerOps?.mayCopy?.(layer);
+  if(id==='pasteLayer')return !!ready&&!!layerClipboard;
+  if(id==='copyLayerStyle')return !!layer&&!!layerOps?.mayStyle?.(layer);
+  if(id==='pasteLayerStyle')return !!layer&&!layer.locked&&!!styleClipboard&&!!layerOps?.mayStyle?.(layer);
+  if(id.startsWith('nudge'))return !!ready&&!!layer&&!layer.locked;
   if(id==='deleteLayer'||id==='duplicateLayer')return !!layer&&!layer.locked;
   if(id==='layerForward')return !!layer&&!layer.locked&&index<strokes.length-1;
   if(id==='layerBackward')return !!layer&&!layer.locked&&index>0;
