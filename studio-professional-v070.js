@@ -72,7 +72,8 @@
   if(sideRange)sideRange.value=String(layout.side);
   if(bottomRange)bottomRange.value=String(layout.bottom);
   if(save)persist();
-  if(reflow)root.requestAnimationFrame?.(()=>root.dispatchEvent(new Event('resize')));
+  if(reflow&&typeof root.requestAnimationFrame==='function')
+   root.requestAnimationFrame(()=>root.dispatchEvent(new Event('resize')));
  }
  for(const [key,label] of items){
   const b=button(label,()=>{
@@ -99,7 +100,7 @@
  sideRange.setAttribute('aria-label','Inspector side width');
  sideRange.addEventListener('input',()=>{layout.side=Number(sideRange.value);apply({save:false});});
  sideRange.addEventListener('change',()=>persist());
- sideLabel.append(sideRange);menu.append(sideLabel);
+ sideLabel.append(sideRange);if(studio==='image')menu.append(sideLabel);
  const bottomLabel=create('label','v070-settings-range');
  bottomLabel.append(create('span','','Bottom height'));
  const bottomRange=doc.createElement('input');bottomRange.type='range';bottomRange.min='180';bottomRange.max='440';bottomRange.step='10';
@@ -180,8 +181,9 @@
   active.textContent=studio==='image'?
    (byId('tool')?.selectedOptions?.[0]?.textContent||tool):
    (graphic?'Selected graphic':{select:'Selection',razor:'Razor',range:'Range'}[tool]||'Timeline');
-  const fields=core.fieldsFor(studio,tool,graphic).filter(spec=>!!byId(spec.id));
-  const key=fields.map(v=>v.id).join('|')+'|'+studio+'|'+tool+'|'+graphic;
+  const layerType=studio==='image'?(byId('image-inspector-state')?.textContent||''):'';
+  const fields=core.fieldsFor(studio,tool,graphic,layerType).filter(spec=>!!byId(spec.id));
+  const key=fields.map(v=>v.id).join('|')+'|'+studio+'|'+tool+'|'+graphic+'|'+layerType;
   if(key!==signature){
    signature=key;fieldMap=new Map();options.replaceChildren();
    if(studio==='clip'){
@@ -211,9 +213,10 @@
  let pending=false;
  function schedule(){
   if(pending)return;
-  pending=true;(root.requestAnimationFrame||root.setTimeout)(()=>{
-   pending=false;refresh();
-  },0);
+  pending=true;
+  const work=()=>{pending=false;refresh();};
+  if(typeof root.requestAnimationFrame==='function')root.requestAnimationFrame(work);
+  else root.setTimeout?.(work,0);
  }
  doc.addEventListener('input',schedule,true);
  doc.addEventListener('change',schedule,true);
