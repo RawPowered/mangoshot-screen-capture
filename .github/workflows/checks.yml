@@ -33,3 +33,4 @@ jobs:
           node tests/pen-wacom-v0616.cjs
           node tests/shortcuts-v0617.cjs
           node tests/menus-v0617.cjs
+          node tests/layers-v0618.cjs
