@@ -1362,6 +1362,32 @@ ink.addEventListener('pointerdown',event=>{
 });
 ink.addEventListener('pointermove',event=>{
  const p=point(event);
+ if(layerDrag){
+  const d=layerDrag;
+  if(d.pointerId!=null&&event.pointerId!=null&&d.pointerId!==event.pointerId)return;
+  if(!strokes[d.index])return;
+  const dx=p.x-d.start.x,dy=p.y-d.start.y;
+  if(!d.moved&&Math.hypot(dx,dy)<3)return;
+  if(!d.moved){
+   snapshot();d.moved=true;
+   if(d.clone){
+    const newLayer=layerOps.cloneLayer(d.original,0);
+    if(!newLayer){layerDrag=null;return;}
+    d.index=d.sourceIndex+1;
+    strokes.splice(d.index,0,newLayer);
+    selectLayerAt(d.index);
+   }
+  }
+  const source=d.original;
+  const bounds=layerOps?.bounds?.(source,layerCore,typeEffects,pen);
+  let ox=dx,oy=dy;
+  if(bounds&&['image','text'].includes(source.type)){
+   ox=Math.max(-bounds.x,Math.min(ink.width-bounds.x-bounds.width,dx));
+   oy=Math.max(-bounds.y,Math.min(ink.height-bounds.y-bounds.height,dy));
+  }
+  strokes[d.index]=layerOps.translate(source,ox,oy);
+  redraw();event.preventDefault();return;
+ }
  if(entireErase){
   if(entireErase.pointerId!=null&&event.pointerId!==entireErase.pointerId)return;
   for(const sample of pointerSamples(event))eraseEntireAt(sample);
@@ -1415,6 +1441,17 @@ ink.addEventListener('pointermove',event=>{
  scheduleRedraw();event.preventDefault();
 });
 function finishStroke(event){
+ if(layerDrag){
+  const d=layerDrag;
+  if(d.pointerId!=null&&event?.pointerId!=null&&d.pointerId!==event.pointerId)return;
+  layerDrag=null;
+  if(d.moved){
+   redraw();setReady(true);syncLayerProperties();
+   label(d.clone?'Layer cloned and moved · Ctrl+Z restores original.':
+    'Layer moved · Ctrl+Z restores position.');
+  }
+  return;
+ }
  if(entireErase){
   const d=entireErase;
   if(d.pointerId!=null&&event.pointerId!=null&&d.pointerId!==event.pointerId)return;
