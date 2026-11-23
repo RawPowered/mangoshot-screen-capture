@@ -843,6 +843,25 @@ function renderStrokeList(){
   const stroke=strokes[i],row=document.createElement('div');
   row.className='stroke-entry image-layer-row'+(selectedAnyIndex()===i?' is-selected':'');
   row.setAttribute('role','group');row.setAttribute('aria-label',(stroke.name||stroke.type)+' layer');
+  row.dataset.layerIndex=String(i);
+  const grip=document.createElement('button');grip.type='button';grip.className='image-layer-grip';
+  grip.textContent='⠿';grip.title='Drag to reorder layer';grip.setAttribute('aria-label','Drag '+(stroke.name||stroke.type)+' to reorder');
+  grip.draggable=true;
+  grip.addEventListener('dragstart',event=>{
+   layerStackDrag=i;
+   if(event.dataTransfer){event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain','MangoShotLayer:'+i);}
+   row.classList.add('is-dragging');
+  });
+  grip.addEventListener('dragend',()=>{layerStackDrag=null;row.classList.remove('is-dragging');});
+  row.addEventListener('dragover',event=>{
+   if(layerStackDrag==null)return;
+   event.preventDefault();if(event.dataTransfer)event.dataTransfer.dropEffect='move';
+  });
+  row.addEventListener('drop',event=>{
+   if(layerStackDrag==null)return;
+   event.preventDefault();const source=layerStackDrag;layerStackDrag=null;
+   reorderLayerTo(source,i);
+  });
   const eye=document.createElement('button');eye.type='button';eye.className='image-layer-eye';
   eye.textContent=stroke.visible===false?'◌':'◉';eye.title=stroke.visible===false?'Show layer':'Hide layer';
   eye.setAttribute('aria-label',eye.title);eye.setAttribute('aria-pressed',String(stroke.visible!==false));
@@ -872,7 +891,7 @@ function renderStrokeList(){
   remove.className='image-object-remove';remove.title='Delete '+name+' layer';
   remove.setAttribute('aria-label',remove.title);remove.disabled=!!stroke.locked;
   remove.addEventListener('click',()=>removeLayerAt(i));
-  row.append(eye,title,lock,edit,remove);
+  row.append(grip,eye,title,lock,edit,remove);
   list.append(row);
  }
  syncLayerProperties();
