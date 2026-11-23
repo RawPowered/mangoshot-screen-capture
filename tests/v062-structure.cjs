@@ -2,7 +2,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const root=path.join(__dirname,'..'),read=x=>fs.readFileSync(path.join(root,x),'utf8');
 const html=read('clip-studio.html'),css=read('studio-v062.css'),workspace=read('clip-workspace-v062.js'),core=read('clip-studio.js');
 const manifest=JSON.parse(read('manifest.json'));
-assert.equal(manifest.version,'0.6.17');
+assert.equal(manifest.version,'0.6.18');
 for(const name of ['studio-v062.css','clip-workspace-v062.js'])assert.ok(html.includes(name),'missing v0.6.2 dependency '+name);
 assert.ok(html.includes('class="clip-layout"'),'existing editor layout removed');
 for(const id of ['v061-camera-panel','v061-voice-panel','autocut-panel','graphic-inspector','layer-list','timeline','thumbnail-strip','audio-waveform','v06-save-project','v06-open-project','save-project','open-project'])assert.ok(html.includes('id="'+id+'"'),'existing editor control removed '+id);
