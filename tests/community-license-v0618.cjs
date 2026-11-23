@@ -19,7 +19,7 @@ assert.match(readme,/resell or charge for access/i);
 assert.match(readme,/full scrolling page/i);
 assert.match(readme,/Wacom/i);
 for(const term of ['Capture','Image Studio','Record Studio','Clip Studio','Resources',
- 'Ctrl+C','Alt + drag','Whole Stroke Erase','Layer appearance','AutoCut','timer','LICENSE']){
+ 'Ctrl+C','Alt + drag','Whole Stroke Erase','Appearance presets','AutoCut','timer','LICENSE']){
  assert.ok(readme.toLowerCase().includes(term.toLowerCase()),'README missing feature or term: '+term);
 }
 for(const policy of ['separate written','contribution','proprietary']){
