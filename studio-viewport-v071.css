@@ -185,6 +185,13 @@ body.studio-image.v071-panning #ink{cursor:grabbing!important}
 body.studio-clip #timeline,body.studio-clip #timeline-ruler{
  cursor:var(--mango-precision-cursor,default)!important;
 }
+/* Razor/range cursor must reach the actual clip hit target. Keep trim grips
+ * recognizable as edge-resize controls and do not intercept their events. */
+body.studio-clip[data-clip-tool="razor"] #timeline :not(.trim-grip),
+body.studio-clip[data-clip-tool="range"] #timeline :not(.trim-grip){
+ cursor:var(--mango-precision-cursor,crosshair)!important;
+}
+body.studio-clip #timeline .trim-grip{cursor:ew-resize!important}
 body.studio-clip .timeline-playhead{cursor:ew-resize!important}
 @media(max-width:1200px){
  body.studio-image>.image-layout{
