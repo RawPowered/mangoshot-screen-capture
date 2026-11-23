@@ -13,7 +13,8 @@ def build(out,release_tag):
     out.mkdir(parents=True,exist_ok=True)
     files=sorted(set(p for ext in ('*.js','*.css','*.html','manifest.json') for p in BASE.glob(ext) if p.is_file()) |
                  set(p for p in (BASE/'icons').glob('*.png') if p.is_file()) |
-                 set(p for p in (BASE/'assets').glob('*.webp') if p.is_file()))
+                 set(p for p in (BASE/'assets').glob('*.webp') if p.is_file()) |
+                 set(p for p in (BASE/'LICENSE',BASE/'README.md') if p.is_file()))
     required=['manifest.json','popup.html','capture-store.js','content.js','background.js','editor.js','recorder.js','clip-studio.js','pdf-export.js']
     for name in required:
         if name not in {p.name for p in files}:raise ValueError(f'Missing required extension file: {name}')
@@ -30,6 +31,13 @@ def build(out,release_tag):
         if actual['version']!=version:raise ValueError('Invalid archive manifest')
         for html in ('popup.html','editor.html'):
             if b'capture-store.js' not in z.read(html):raise ValueError(f'Capture library missing from {html}')
+        if release_tag.endswith('-alpha.2') and version=='0.6.18':
+            for filename,signature in (
+                ('LICENSE',b'MANGOSHOT COMMUNITY SOURCE-AVAILABLE LICENSE 1.0'),
+                ('README.md',b'MangoShot'),
+            ):
+                if filename not in z.namelist() or signature not in z.read(filename):
+                    raise ValueError('Missing or mismatched policy/documentation: '+filename)
         if version in ('0.6.9','0.6.10','0.6.11','0.6.12','0.6.13','0.6.14','0.6.15','0.6.16','0.6.17','0.6.18'):
             for icon in ('16','32','48','128'):
                 if not z.read(f'icons/icon-{icon}.png').startswith(b'\x89PNG\r\n\x1a\n'):
