@@ -113,6 +113,13 @@
   more.addEventListener('click',()=>{
    if(open?.slot===slot){close();return;}
    close();flyout.hidden=false;more.setAttribute('aria-expanded','true');
+   // A tall Shapes flyout must remain inside the fixed editor even when its
+   // trigger is near the bottom of a short viewport.
+   const host=rail.getBoundingClientRect(),rect=slot.getBoundingClientRect();
+   const maxHeight=Math.max(80,Math.min(400,host.height-8));
+   flyout.style.maxHeight=Math.round(maxHeight)+'px';
+   const h=Math.min(maxHeight,flyout.scrollHeight);
+   flyout.style.top=Math.round(Math.max(host.top+4,Math.min(rect.top,host.bottom-h-4))-rect.top)+'px';
    open={slot,flyout,more};
    const selected=flyout.querySelector('[aria-pressed="true"]');
    (selected||flyout.querySelector('button'))?.focus();
