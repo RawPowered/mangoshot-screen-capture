@@ -79,6 +79,17 @@ function smoke(studio){
  assert.equal(body.classList.contains('v070-no-properties'),true);
  assert.equal(attrs.get('--v070-side'),'400px');
  assert.ok(store.has('MangoShot.ProfessionalLayout.v070.'+studio));
+ const bar=transport.children[0];
+ const profileInput=find(bar,n=>n.placeholder==='Workspace name')[0];
+ const saveProfile=find(bar,n=>n.className==='v070-profile-add')[0];
+ assert.ok(profileInput&&saveProfile,'Workspace save controls must exist');
+ profileInput.value='My Workspace';saveProfile.click();
+ const profiles=JSON.parse(store.get('MangoShot.ProfessionalLayout.v070.'+studio+'.profiles'));
+ assert.equal(profiles['My Workspace'].side,400,'Named workspace must persist validated layout');
+ const loadProfile=find(bar,n=>n.className==='v070-profile-load')[0];
+ assert.ok(loadProfile,'Saved workspace must be selectable');
+ api.setLayout({side:260});loadProfile.click();
+ assert.equal(api.layout().side,400,'Loading named profile restores dimensions');
  if(studio==='image'){
   const bar=transport.children[0];
   const controls=find(bar,n=>n.dataset?.v070Source==='size');
