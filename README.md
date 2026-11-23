@@ -18,9 +18,12 @@
 
 </div>
 
-> **Development alpha, not a browser-store release.** Automated regression and package checks are part of the release pipeline, but native Chrome/Edge/Firefox, Wacom, OS codec and accessibility compatibility are not universally certified. The default `main` branch contains older source; use the tagged release source and ZIP when evaluating current features.
+> **Development alpha, not a browser-store release.** Automated regression and package checks are part of the release pipeline, but native Chrome/Edge/Firefox, Wacom, OS codec and accessibility compatibility are not universally certified. The `main` branch now includes the unreleased v0.7 editor development patches; use the tagged v0.6.18 release ZIP when evaluating the latest published extension, or use an explicitly labeled development preview for testing.
 >
 > **Licensing clarity:** MangoShot is **free and source-available, not OSI-approved open source**. You may use it for free, inspect and modify its code, and share compliant copies for free, but you may not resell or charge for access to the software without a separate written license. See [LICENSE](LICENSE) for exact terms.
+
+
+> **Source integration status (November 23, 2026):** `main` includes editor development work from [Patch A](https://github.com/RawPowered/mangoshot-screen-capture/pull/29), [Patch B](https://github.com/RawPowered/mangoshot-screen-capture/pull/30) and [Patch B.1](https://github.com/RawPowered/mangoshot-screen-capture/pull/31), but those changes are not yet published in a versioned extension release. Use the v0.6.18 alpha.2 release ZIP for the last released build. Dedicated caption tracks and transcription are not yet available.
 
 ## What is MangoShot?
 

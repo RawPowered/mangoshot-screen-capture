@@ -1,0 +1,23 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const root=path.resolve(__dirname,'..'),read=p=>fs.readFileSync(path.join(root,p),'utf8');
+const html=read('clip-studio.html'),css=read('studio-v066.css'),js=read('workspace-resize-v066.js'),presets=read('preset-pack-v066.js');
+const menu=read('polish-icons-v066.js'),media=read('clip-media-bin.js');
+assert.equal(JSON.parse(read('manifest.json')).version,'0.6.18');
+for(const name of ['studio-v066.css','workspace-resize-v066.js','preset-pack-v066.js','polish-icons-v066.js'])
+ assert.ok(html.includes(name),'missing release dependency '+name);
+assert.ok(html.indexOf('media-dock-v065.js')<html.indexOf('workspace-resize-v066.js'),'Resizable grid must initialize after dock relocation');
+assert.ok(html.indexOf('type-hud-v063.js')<html.indexOf('preset-pack-v066.js'),'Preset tabs must initialize after graphic gallery');
+assert.ok(js.includes("createHandle('side'")&&js.includes("createHandle('top'")&&js.includes("createHandle('dock'"),'Three panel dividers required');
+assert.ok(js.includes("setPointerCapture")&&js.includes("pointermove")&&js.includes("pointercancel"),'Mouse/touch/pen resize not wired');
+assert.ok(js.includes("element.addEventListener('keydown'")&&js.includes("'role','separator'"),'Keyboard accessible divider controls missing');
+assert.ok(js.includes("root.localStorage?.setItem(store+name")&&js.includes("root.localStorage?.getItem(store+name"),'Per-workspace layout persistence missing');
+assert.ok(js.includes("root.ResizeObserver")&&js.includes("root.requestAnimationFrame"),'Responsive and throttled layout updates missing');
+assert.ok(js.includes("video.videoWidth/video.videoHeight"),'Source monitor aspect ratio tracking missing');
+assert.ok(css.includes('--v066-side')&&css.includes('--v066-top')&&css.includes('--v066-dock'),'Grid dimensions not connected');
+assert.ok(css.includes('.v066-splitter-side')&&css.includes('.v066-splitter-top')&&css.includes('.v066-splitter-dock'),'Resize affordances missing');
+assert.ok(css.includes('.v066-layout-menu')&&js.includes('Reset current workspace sizes'),'Layout presets and restore missing');
+assert.ok(presets.includes('Studio II · 8')&&presets.includes('setCollection')&&presets.includes("source.click()"),'Preset filtering / one-click add missing');
+assert.ok(menu.includes("import:[")&&menu.includes("export:[")&&menu.includes("geometry[icon]"),'Vector icon controls missing');
+assert.ok(media.includes('if(stamp===lastAssetSignature)return'),'Unnecessary media bin rerenders not gated');
+assert.ok(media.includes('updateControls();\n  if(stamp===lastAssetSignature)return'),'Media buttons must remain current even when rows are cached');
+console.log('PASS: source-aware resize handles, persistence, quick preset collection, icon polish and optimized Media Bin');

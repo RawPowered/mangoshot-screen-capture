@@ -27,7 +27,7 @@ Versions published before the license file was included are not automatically re
 
 ## Branch and release policy
 
-The default `main` branch remains an older source baseline. For the current working runtime, use the current **tagged source archive**, not `Code → Download ZIP` on main. Published tags and assets are immutable: do not rewrite them. If a documentation or policy correction is needed, issue a new alpha suffix with separate checksums and clear notes.
+The default `main` branch now includes the full v0.6.18 runtime and unreleased v0.7 editor development patches. **For installation, use the current tagged release ZIP**; `Code → Download ZIP` from `main` is developer source, not a tested release package. Published tags and assets are immutable: do not rewrite them. If a documentation or policy correction is needed, issue a new alpha suffix with separate checksums and clear notes.
 
 Before publishing a preview:
 1. Branch from the latest tested source and verify README, licensing, attribution and release notes.
@@ -39,6 +39,13 @@ Before publishing a preview:
 7. Promote to stable only after real Chrome/Edge/Firefox, Wacom, codec and accessibility testing passes.
 
 Automated CI does not establish physical hardware/browser acceptance.
+
+
+## Integrated development source (November 23, 2026)
+
+The `main` branch contains the approved complete runtime integration and the development changes from MangoShot editor patches A (shortcuts), B (professional workspaces) and B.1 (viewport, grouped tools, precision cursors). This is **source integration, not a new public release**; the last published artifact remains `v0.6.18-layers-alpha.2` until a separately versioned, verified prerelease is shipped.
+
+The browser/Wacom visual acceptance matrix, caption-track support and optional speech recognition are not certified or implemented by merging the code alone. Re-run the full GitHub regression gates before a new release and retain the previous release as the rollback baseline.
 
 ## Installation and upgrade
 
