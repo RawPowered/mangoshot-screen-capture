@@ -91,7 +91,8 @@
   const format=source.type?.includes('mp4')?'mp4':'webm';
   // Exact format may differ from Blob MIME; core exposes source format for the validator.
   const src={size:source.size,format:v.sourceFormat?.()||format,duration:v.duration()};
-  const legacy=root.MangoProject.pack(src,v.segments(),v.layers(),root.MangoClipTimeline?.markers?.()||[],v.transitions?.()||[]);
+  const legacy=root.MangoProject.pack(src,v.segments(),v.layers(),root.MangoClipTimeline?.markers?.()||[],v.transitions?.()||[],
+   v.captions?.()||[],v.captionStyle?.()||{preset:'classic'},v.burnCaptions?.()!==false);
   return {legacy,source:src};
  }
  function save(){const current=activeLegacy();if(!current){label('Load a primary video before saving a v2 project.');return;}
