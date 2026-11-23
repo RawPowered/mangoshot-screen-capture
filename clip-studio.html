@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MangoShot · Clip Studio</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="studio.css"><link rel="stylesheet" href="branding-v069.css"><link rel="stylesheet" href="studio-v06.css"><link rel="stylesheet" href="studio-v061.css"><link rel="stylesheet" href="studio-v062.css"><link rel="stylesheet" href="studio-v063.css"><link rel="stylesheet" href="studio-v064.css"><link rel="stylesheet" href="studio-v065.css"><link rel="stylesheet" href="studio-v066.css"><link rel="stylesheet" href="studio-v067.css"><link rel="stylesheet" href="studio-v068.css"><link rel="stylesheet" href="premium-v069.css"><link rel="stylesheet" href="studio-v0610.css"><link rel="stylesheet" href="studio-v0615.css"><link rel="stylesheet" href="studio-v0617.css"><link rel="stylesheet" href="studio-professional-v070.css"><link rel="stylesheet" href="studio-viewport-v071.css"><link rel="stylesheet" href="caption-studio-v072.css"></head><body class="studio studio-clip">
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MangoShot · Clip Studio</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="studio.css"><link rel="stylesheet" href="branding-v069.css"><link rel="stylesheet" href="studio-v06.css"><link rel="stylesheet" href="studio-v061.css"><link rel="stylesheet" href="studio-v062.css"><link rel="stylesheet" href="studio-v063.css"><link rel="stylesheet" href="studio-v064.css"><link rel="stylesheet" href="studio-v065.css"><link rel="stylesheet" href="studio-v066.css"><link rel="stylesheet" href="studio-v067.css"><link rel="stylesheet" href="studio-v068.css"><link rel="stylesheet" href="premium-v069.css"><link rel="stylesheet" href="studio-v0610.css"><link rel="stylesheet" href="studio-v0615.css"><link rel="stylesheet" href="studio-v0617.css"><link rel="stylesheet" href="studio-professional-v070.css"><link rel="stylesheet" href="studio-viewport-v071.css"><link rel="stylesheet" href="caption-studio-v072.css"><link rel="stylesheet" href="caption-dock-v073.css"></head><body class="studio studio-clip">
 <header class="studio-appbar"><div class="studio-identity"><span class="studio-mark"><img class="v069-app-icon" src="assets/mangoshot-icon.webp" alt=""></span><div><strong>MangoShot</strong><small>CLIP STUDIO</small></div></div><nav class="studio-tabs" aria-label="Studio workspaces"><a class="studio-tab" href="recorder.html">Record</a><span class="studio-tab is-active" aria-current="page">Edit</span><a class="studio-tab" href="popup.html">Capture</a><a class="studio-tab v069-resource-tab" href="resources.html">Resources</a></nav><span class="studio-local"><span class="local-dot"></span>LOCAL · NO CLOUD</span></header>
 <nav class="v06-menu-bar" aria-label="Clip Studio menu bar">
  <details class="v06-menu"><summary>File</summary><div class="v06-menu-pop" role="group" aria-label="File commands">
@@ -43,7 +43,44 @@
  <button type="button" data-v06-tool="add-text" aria-pressed="false" title="Create text graphic" aria-label="Add title graphic">T<small>TEXT</small></button>
  <button type="button" data-v06-tool="add-callout" aria-pressed="false" title="Create callout" aria-label="Add callout">◇<small>NOTE</small></button>
  <button type="button" data-v06-tool="autocut-toggle" aria-pressed="false" title="AutoCut studio" aria-label="Open AutoCut">⚡<small>AUTO</small></button>
-</aside>
+<button type="button" id="v073-caption-toggle" class="v073-rail-caption" aria-pressed="false" aria-expanded="false" aria-controls="v073-caption-dock" title="Captions and automatic speech-to-text" aria-label="Open Caption Studio">CC<small>AUTO</small></button>
+</aside><section id="v073-caption-dock" class="v073-caption-dock studio-panel" hidden aria-label="Caption Studio tools">
+<header class="v073-caption-dock-head"><span><strong>CC</strong> CAPTION STUDIO</span><button id="v073-caption-close" type="button" title="Close captions panel" aria-label="Close Caption Studio">✕</button></header>
+<details open id="caption-studio-panel" class="v072-caption-panel"><summary><strong>CC · Caption Studio</strong><span>Timed captions · SRT / WebVTT · on-screen styles</span></summary>
+ <div class="v072-caption-body">
+  <div class="v072-caption-actions">
+   <button id="cc-add" type="button" disabled>+ Caption at playhead</button>
+   <label>Language <select id="cc-lang" aria-label="Speech recognition language"><option value="en-US">English (US)</option><option value="en-GB">English (UK)</option><option value="es-ES">Español (Spain)</option></select></label>
+   <button id="cc-transcribe" type="button" disabled title="Local on-device browser recognition from the primary recording, when supported">Transcribe locally · beta</button>
+   <button id="cc-install-pack" type="button" hidden>Install local speech pack</button>
+   <button id="cc-cancel-transcribe" type="button" hidden>Cancel transcription</button>
+   <label class="v072-caption-import">Import SRT / VTT<input id="cc-import" type="file" accept=".srt,.vtt,text/vtt,application/x-subrip,text/plain"></label>
+   <button id="cc-export-srt" type="button" disabled>Export .srt</button><button id="cc-export-vtt" type="button" disabled>Export .vtt</button>
+   <label class="v072-caption-toggle"><input id="cc-burn" type="checkbox" checked> Show on video / burn in at export</label>
+  </div>
+  <div class="v072-caption-style" role="group" aria-label="Caption preset and appearance">
+   <label>Preset <select id="cc-style"><option value="classic">Classic CC</option><option value="creator">Creator Bold</option><option value="editorial">Editorial</option><option value="clean">Clean</option><option value="mango">MangoShot</option></select></label>
+   <label>Font <select id="cc-font"><option value="sans">Sans</option><option value="serif">Serif</option><option value="mono">Mono</option></select></label>
+   <label>Size <input id="cc-size" type="number" min="14" max="120" value="44"></label>
+   <label>Position % <input id="cc-position" type="number" min="40" max="96" value="88"></label>
+   <label>Text <input id="cc-color" type="color" value="#ffffff"></label>
+   <label>Outline <input id="cc-outline" type="color" value="#050505"></label>
+  </div>
+  <div class="v072-caption-editor">
+   <span id="cc-current">Select a caption in the CC1 timeline or add a new cue.</span>
+   <label>In (seconds)<input id="cc-in" type="number" min="0" step=".01"></label>
+   <label>Out (seconds)<input id="cc-out" type="number" min=".04" step=".01"></label>
+   <label class="v072-caption-text">Caption text<textarea id="cc-text" rows="2" maxlength="350" placeholder="Words shown on screen"></textarea></label>
+   <button id="cc-save" type="button" disabled>Apply changes</button>
+   <button id="cc-delete" type="button" disabled>Delete cue</button>
+  </div>
+  <div class="v072-caption-list" id="cc-list" aria-label="Timed caption cues"></div>
+  <progress id="cc-asr-progress" max="100" value="0" hidden aria-label="On-device transcription progress"></progress>
+  <p id="cc-status" class="v072-caption-status" role="status" aria-live="polite">Captions are edited locally. SRT/WebVTT exports are sidecars; enabling on-screen captions burns them into encoded video.</p>
+  <p class="v072-caption-note">Experimental speech-to-text requires a browser-supported on-device engine and an installed language pack. It requests the primary source audio track, processes locally in real time, and never enables remote recognition. If your browser unexpectedly asks for microphone access, deny the request. Cue timing is estimated, not word-aligned; review it. Otherwise import SRT/VTT or enter captions manually.</p>
+ </div>
+</details>
+</section>
 
 <aside class="clip-bin studio-panel"><div class="panel-heading">MEDIA / PROJECT <span class="panel-muted">LOCAL ASSETS</span></div>
 <section class="v06-section" aria-labelledby="v06-media-title">
@@ -139,43 +176,10 @@
  <p id="autocut-status" role="status" aria-live="polite">Review proposed removals before applying; original remains unchanged.</p>
  <div id="autocut-list" class="autocut-list" aria-label="Proposed AutoCut removals"></div>
 </details>
-<details id="caption-studio-panel" class="v072-caption-panel"><summary><strong>CC · Caption Studio</strong><span>Timed captions · SRT / WebVTT · on-screen styles</span></summary>
- <div class="v072-caption-body">
-  <div class="v072-caption-actions">
-   <button id="cc-add" type="button" disabled>+ Caption at playhead</button>
-   <label>Language <select id="cc-lang" aria-label="Speech recognition language"><option value="en-US">English (US)</option><option value="en-GB">English (UK)</option><option value="es-ES">Español (Spain)</option></select></label>
-   <button id="cc-transcribe" type="button" disabled title="Local on-device browser recognition from the primary recording, when supported">Transcribe locally · beta</button>
-   <button id="cc-install-pack" type="button" hidden>Install local speech pack</button>
-   <button id="cc-cancel-transcribe" type="button" hidden>Cancel transcription</button>
-   <label class="v072-caption-import">Import SRT / VTT<input id="cc-import" type="file" accept=".srt,.vtt,text/vtt,application/x-subrip,text/plain"></label>
-   <button id="cc-export-srt" type="button" disabled>Export .srt</button><button id="cc-export-vtt" type="button" disabled>Export .vtt</button>
-   <label class="v072-caption-toggle"><input id="cc-burn" type="checkbox" checked> Show on video / burn in at export</label>
-  </div>
-  <div class="v072-caption-style" role="group" aria-label="Caption preset and appearance">
-   <label>Preset <select id="cc-style"><option value="classic">Classic CC</option><option value="creator">Creator Bold</option><option value="editorial">Editorial</option><option value="clean">Clean</option><option value="mango">MangoShot</option></select></label>
-   <label>Font <select id="cc-font"><option value="sans">Sans</option><option value="serif">Serif</option><option value="mono">Mono</option></select></label>
-   <label>Size <input id="cc-size" type="number" min="14" max="120" value="44"></label>
-   <label>Position % <input id="cc-position" type="number" min="40" max="96" value="88"></label>
-   <label>Text <input id="cc-color" type="color" value="#ffffff"></label>
-   <label>Outline <input id="cc-outline" type="color" value="#050505"></label>
-  </div>
-  <div class="v072-caption-editor">
-   <span id="cc-current">Select a caption in the CC1 timeline or add a new cue.</span>
-   <label>In (seconds)<input id="cc-in" type="number" min="0" step=".01"></label>
-   <label>Out (seconds)<input id="cc-out" type="number" min=".04" step=".01"></label>
-   <label class="v072-caption-text">Caption text<textarea id="cc-text" rows="2" maxlength="350" placeholder="Words shown on screen"></textarea></label>
-   <button id="cc-save" type="button" disabled>Apply changes</button>
-   <button id="cc-delete" type="button" disabled>Delete cue</button>
-  </div>
-  <div class="v072-caption-list" id="cc-list" aria-label="Timed caption cues"></div>
-  <progress id="cc-asr-progress" max="100" value="0" hidden aria-label="On-device transcription progress"></progress>
-  <p id="cc-status" class="v072-caption-status" role="status" aria-live="polite">Captions are edited locally. SRT/WebVTT exports are sidecars; enabling on-screen captions burns them into encoded video.</p>
-  <p class="v072-caption-note">Experimental speech-to-text requires a browser-supported on-device engine and an installed language pack. It requests the primary source audio track, processes locally in real time, and never enables remote recognition. If your browser unexpectedly asks for microphone access, deny the request. Cue timing is estimated, not word-aligned; review it. Otherwise import SRT/VTT or enter captions manually.</p>
- </div>
-</details><div id="edit-target" class="timeline-selection-note" role="status" aria-live="polite">Choose a V1 clip, or Shift+drag the ruler to select a range.</div><div class="timeline-scroll" id="timeline-scroll"><div class="timeline-inner" id="timeline-inner"><div class="timeline-ruler" id="timeline-ruler" aria-label="Drag to scrub the playhead; wheel to seek through the video"></div><div class="marker-layer" id="marker-layer" aria-hidden="true"></div><div class="timeline-range" id="timeline-range" aria-hidden="true"></div><div class="autocut-overlay" id="autocut-overlay" aria-hidden="true"></div><div id="graphic-tracks" class="graphic-tracks" aria-label="Graphic timeline tracks">
+<div id="edit-target" class="timeline-selection-note" role="status" aria-live="polite">Choose a V1 clip, or Shift+drag the ruler to select a range.</div><div class="timeline-scroll" id="timeline-scroll"><div class="timeline-inner" id="timeline-inner"><div class="timeline-ruler" id="timeline-ruler" aria-label="Drag to scrub the playhead; wheel to seek through the video"></div><div class="marker-layer" id="marker-layer" aria-hidden="true"></div><div class="timeline-range" id="timeline-range" aria-hidden="true"></div><div class="autocut-overlay" id="autocut-overlay" aria-hidden="true"></div><div id="graphic-tracks" class="graphic-tracks" aria-label="Graphic timeline tracks">
  <div class="graphic-track" data-track="3"><span class="track-name">G3</span><div class="graphic-track-items" id="graphic-track-3"></div></div>
  <div class="graphic-track" data-track="2"><span class="track-name">G2</span><div class="graphic-track-items" id="graphic-track-2"></div></div>
  </div><div class="v072-caption-track" id="cc-track" aria-label="CC1 timed caption track"><span class="track-name">CC1</span><div class="v072-caption-track-cues" id="cc-track-cues"></div></div><div class="thumbnail-strip" id="thumbnail-strip" aria-label="Frame thumbnails"></div><div class="clip-timeline" id="timeline" role="group" aria-label="Retained video segments"></div><div class="waveform-strip"><span class="track-name">A1</span><canvas id="audio-waveform" width="960" height="46" aria-label="Local audio waveform if supported"></canvas></div><div class="v061-zoom-track" id="v061-zoom-track" aria-label="Camera zoom keyframes"></div><div class="v061-voice-track" id="v061-voice-track" aria-label="A2 voiceover track"></div><div class="timeline-playhead" id="timeline-playhead" role="slider" aria-label="Drag video playhead" tabindex="0"></div></div></div><div id="segments" class="segment-list" aria-live="polite"></div><div class="timeline-footer"><span>V1 · Select clip → Ripple Delete / Shift+drag ruler → Select range / C Razor / Ctrl+Z Undo</span><span>A1 · Audio retained when browser codec permits</span></div></section>
 </main>
 <dialog id="v061-export-dialog" class="v061-export-dialog" aria-label="Export and render video"><div class="v061-export-header"><h2>Export · Finalize Recording</h2><button id="v061-close-export" type="button">✕ Close</button></div><div class="v061-export-content"></div></dialog>
-<dialog id="studio-command-palette" class="v0617-command-dialog" aria-label="Search MangoShot commands"></dialog><script src="clip-timeline.js"></script><script src="sequence-media.js"></script><script src="sequence-preview.js"></script><script src="clip-edit-ops.js"></script><script src="motion-core-v067.js"></script><script src="premium-core-v069.js"></script><script src="clip-graphics.js"></script><script src="caption-core-v072.js"></script><script src="caption-speech-v072.js"></script><script src="creative-zoom.js"></script><script src="voiceover.js"></script><script src="sequence-operations.js"></script><script src="auto-cut.js"></script><script src="auto-cut-analysis.js"></script><script src="layer-timeline-ops.js"></script><script src="clip-project.js"></script><script src="media-assets.js"></script><script src="project-v2.js"></script><script src="media-format.js"></script><script src="clip-store.js"></script><script src="clip-studio.js"></script><script src="clip-timeline-ui.js"></script><script src="clip-graphics-ui.js"></script><script src="studio-workspaces.js"></script><script src="auto-cut-ui.js"></script><script src="clip-media-bin.js"></script><script src="clip-workspace-ui.js"></script><script src="creative-studio-ui.js"></script><script src="clip-workspace-v062.js"></script><script src="zoom-hud-v063.js"></script><script src="type-hud-v063.js"></script><script src="visual-controls-v064.js"></script><script src="media-dock-v065.js"></script><script src="tool-icons-v065.js"></script><script src="keyboard-shortcuts-v065.js"></script><script src="workspace-resize-v066.js"></script><script src="preset-pack-v066.js"></script><script src="polish-icons-v066.js"></script><script src="motion-ui-v067.js"></script><script src="visual-inspector-v068.js"></script><script src="premium-ui-v069.js"></script><script src="shortcut-core-v0617.js"></script><script src="studio-shortcuts-v0617.js"></script><script src="studio-menus-v0617.js"></script><script src="studio-control-core-v070.js"></script><script src="studio-professional-v070.js"></script><script src="precision-cursors-v071.js"></script><script src="caption-studio-v072.js"></script></body></html>
+<dialog id="studio-command-palette" class="v0617-command-dialog" aria-label="Search MangoShot commands"></dialog><script src="clip-timeline.js"></script><script src="sequence-media.js"></script><script src="sequence-preview.js"></script><script src="clip-edit-ops.js"></script><script src="motion-core-v067.js"></script><script src="premium-core-v069.js"></script><script src="clip-graphics.js"></script><script src="caption-core-v072.js"></script><script src="caption-speech-v072.js"></script><script src="creative-zoom.js"></script><script src="voiceover.js"></script><script src="sequence-operations.js"></script><script src="auto-cut.js"></script><script src="auto-cut-analysis.js"></script><script src="layer-timeline-ops.js"></script><script src="clip-project.js"></script><script src="media-assets.js"></script><script src="project-v2.js"></script><script src="media-format.js"></script><script src="clip-store.js"></script><script src="clip-studio.js"></script><script src="clip-timeline-ui.js"></script><script src="clip-graphics-ui.js"></script><script src="studio-workspaces.js"></script><script src="auto-cut-ui.js"></script><script src="clip-media-bin.js"></script><script src="clip-workspace-ui.js"></script><script src="creative-studio-ui.js"></script><script src="clip-workspace-v062.js"></script><script src="zoom-hud-v063.js"></script><script src="type-hud-v063.js"></script><script src="visual-controls-v064.js"></script><script src="media-dock-v065.js"></script><script src="tool-icons-v065.js"></script><script src="keyboard-shortcuts-v065.js"></script><script src="workspace-resize-v066.js"></script><script src="preset-pack-v066.js"></script><script src="polish-icons-v066.js"></script><script src="motion-ui-v067.js"></script><script src="visual-inspector-v068.js"></script><script src="premium-ui-v069.js"></script><script src="shortcut-core-v0617.js"></script><script src="studio-shortcuts-v0617.js"></script><script src="studio-menus-v0617.js"></script><script src="studio-control-core-v070.js"></script><script src="studio-professional-v070.js"></script><script src="precision-cursors-v071.js"></script><script src="caption-studio-v072.js"></script><script src="caption-dock-v073.js"></script></body></html>
