@@ -587,6 +587,31 @@ function syncLayerProperties(){
  const opacity=document.getElementById('image-layer-opacity');
  if(opacity){opacity.value=Math.round((l?.opacity??1)*100);opacity.disabled=!l||!!l.locked;}
  const output=document.getElementById('image-opacity-readout');if(output)output.textContent=(opacity?.value||100)+'%';
+ const stylable=!!l&&!!layerOps?.mayStyle?.(l);
+ const styleBox=document.getElementById('image-layer-style-controls');
+ if(styleBox){styleBox.hidden=!stylable;styleBox.setAttribute('aria-disabled',String(!stylable||!!l?.locked));}
+ const fx=layerOps?.style?.(l)||{kind:'none',color:'#000000',blur:0,offsetX:0,offsetY:0,blend:'source-over'};
+ for(const [id,key] of [['image-layer-fx-kind','kind'],['image-layer-fx-color','color'],
+  ['image-layer-fx-blur','blur'],['image-layer-fx-x','offsetX'],['image-layer-fx-y','offsetY'],['image-layer-fx-blend','blend']]){
+  const control=document.getElementById(id);
+  if(control){control.value=String(fx[key]);control.disabled=!stylable||!!l?.locked;}
+ }
+ for(const [id,suffix] of [['image-layer-fx-blur',' px'],['image-layer-fx-x',' px'],['image-layer-fx-y',' px']]){
+  const outputEl=document.getElementById(id+'-value'),inputEl=document.getElementById(id);
+  if(outputEl&&inputEl)outputEl.textContent=inputEl.value+suffix;
+ }
+ for(const button of document.querySelectorAll?.('[data-layer-preset]')||[]){
+  const preset=layerOps?.preset?.(button.dataset.layerPreset);
+  const active=stylable&&preset&&Object.entries(preset).every(([key,value])=>fx[key]===value);
+  button.setAttribute('aria-pressed',String(!!active));
+  button.disabled=!stylable||!!l?.locked;
+ }
+ for(const [id,disabled] of [
+  ['image-copy-layer',!l],['image-cut-layer',!l||!!l.locked],
+  ['image-paste-layer',!ready||!layerClipboard],
+  ['image-copy-style',!stylable],['image-paste-style',!stylable||!!l?.locked||!styleClipboard]
+ ]){const el=document.getElementById(id);if(el)el.disabled=disabled;}
+
  for(const [id,prop] of [['image-layer-x','x'],['image-layer-y','y'],['image-layer-width','width'],['image-layer-height','height']]){
   const el=document.getElementById(id);if(!el)continue;
   const b=l?.type==='image'?layerCore?.bounds(l):
