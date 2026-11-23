@@ -117,6 +117,51 @@
   },'v070-settings-preset'));
  }
  menu.append(presetRow);
+ section('SAVED WORKSPACES');
+ const profileKey=storeKey+'.profiles';
+ let profiles={};
+ try{
+  const raw=JSON.parse(root.localStorage?.getItem(profileKey)||'{}');
+  if(raw&&typeof raw==='object'&&!Array.isArray(raw)){
+   for(const [name,value] of Object.entries(raw).slice(0,12))
+    if(name.length<=36)profiles[name]=core.validateLayout(value);
+  }
+ }catch{}
+ const saveRow=create('div','v070-profile-save');
+ const nameInput=doc.createElement('input');nameInput.type='text';nameInput.maxLength=36;
+ nameInput.placeholder='Workspace name';nameInput.setAttribute('aria-label','Name this workspace');
+ const saveProfile=button('Save',()=>{
+  const name=nameInput.value.trim();
+  if(!name||name.length>36)return;
+  if(!Object.hasOwn(profiles,name)&&Object.keys(profiles).length>=12)return;
+  profiles[name]=core.validateLayout(layout);
+  try{root.localStorage?.setItem(profileKey,JSON.stringify(profiles));}catch{}
+  nameInput.value='';renderProfiles();
+ },'v070-profile-add');
+ saveRow.append(nameInput,saveProfile);
+ menu.append(saveRow);
+ const profileList=create('div','v070-profile-list');
+ menu.append(profileList);
+ function renderProfiles(){
+  profileList.replaceChildren();
+  for(const [name,value] of Object.entries(profiles).sort(([a],[b])=>a.localeCompare(b))){
+   const row=create('div','v070-profile-row');
+   const load=button(name,()=>{
+    layout=core.validateLayout(value);apply();settings.open=false;
+   },'v070-profile-load');
+   load.title='Load saved workspace '+name;
+   const remove=button('×',()=>{
+    delete profiles[name];
+    try{root.localStorage?.setItem(profileKey,JSON.stringify(profiles));}catch{}
+    renderProfiles();
+   },'v070-profile-remove');
+   remove.setAttribute('aria-label','Delete workspace '+name);
+   row.append(load,remove);profileList.append(row);
+  }
+  if(!Object.keys(profiles).length)
+   profileList.append(create('span','v070-profile-empty','No saved custom workspaces'));
+ }
+ renderProfiles();
  menu.append(button('Restore default layout',()=>{
   layout=core.defaultLayout();apply();settings.open=false;
  },'v070-settings-reset'));
