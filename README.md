@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/branding/mangoshot-banner.svg" width="100%" alt="MangoShot logo — mango capture icon and neon-lime / silver wordmark" />
+<img src="assets/branding/mangoshot-wordmark.webp" width="900" alt="MangoShot original detailed logo — orange mango capture icon, metallic silver Mango wordmark and neon-lime Shot with illuminated gunmetal frame" />
 
 # MangoShot
 
