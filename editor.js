@@ -494,6 +494,91 @@ function duplicateSelectedLayer(){
  else{selectedObject=i+1;selectedText=-1;selectedImage=-1;}
  redraw();setReady(ready);syncSelectedText();syncLayerProperties();return true;
 }
+/* Layer operations remain in the same undoable annotation model.
+ * Local in-editor layer clipboard is intentionally separate from Copy Image.
+ */
+function selectLayerAt(index,showLayerPanel=true){
+ const l=strokes[index];
+ selectedText=l?.type==='text'?index:-1;
+ selectedImage=l?.type==='image'?index:-1;
+ selectedObject=l&&selectedText<0&&selectedImage<0?index:-1;
+ if(showLayerPanel)switchInspectorTab('layers');
+ redraw();syncSelectedText();renderStrokeList();syncLayerProperties();
+ return !!l;
+}
+function copySelectedLayer(){
+ const layer=selectedAnyStroke();
+ if(!layer||!layerOps?.mayCopy?.(layer))return false;
+ layerClipboard=layerOps.clipboardOf(layer);layerClipboardCount=0;
+ label((layer.name||layer.type)+' copied to MangoShot layer clipboard.');
+ syncLayerProperties();return true;
+}
+let layerClipboardCount=0;
+function pasteCopiedLayer(){
+ if(!ready||!layerClipboard||!layerOps?.cloneLayer)return false;
+ // Imported image asset IDs are valid only inside this running Image Studio.
+ if(layerClipboard.type==='image'&&layerCore?.asset&&!layerCore.asset(layerClipboard)){
+  label('This layer image asset is unavailable in the current editor session.');return false;
+ }
+ layerClipboardCount++;
+ const copy=layerOps.cloneLayer(layerClipboard,20*layerClipboardCount);
+ if(!copy)return false;
+ snapshot();
+ const position=selectedAnyIndex();
+ const index=position>=0?position+1:strokes.length;
+ strokes.splice(index,0,copy);
+ selectLayerAt(index);setReady(true);
+ label('Layer pasted · drag it to reposition · Ctrl+Z to undo.');
+ return true;
+}
+function cutSelectedLayer(){
+ if(!ready||!selectedAnyStroke()||selectedAnyStroke().locked)return false;
+ if(!copySelectedLayer())return false;
+ return removeLayerAt(selectedAnyIndex());
+}
+function copySelectedStyle(){
+ const layer=selectedAnyStroke();
+ if(!layer||!layerOps?.mayStyle(layer))return false;
+ styleClipboard={opacity:layer.opacity??1,layerFx:layerOps.copy(layerOps.style(layer))};
+ label('Layer appearance copied.');syncLayerProperties();return true;
+}
+function pasteCopiedStyle(){
+ const layer=selectedAnyStroke(),index=selectedAnyIndex();
+ if(!styleClipboard||!layer||layer.locked||!layerOps?.mayStyle(layer))return false;
+ snapshot();
+ strokes[index]={...layer,opacity:styleClipboard.opacity,layerFx:layerOps.copy(styleClipboard.layerFx)};
+ redraw();setReady(true);syncLayerProperties();
+ label('Layer style pasted · Ctrl+Z restores the original appearance.');return true;
+}
+function reorderLayerTo(from,to){
+ if(!Number.isInteger(from)||!Number.isInteger(to)||from===to||
+    from<0||from>=strokes.length||to<0||to>=strokes.length)return false;
+ // Reordering locked layers is allowed; locking protects their content.
+ snapshot();
+ const [layer]=strokes.splice(from,1);strokes.splice(to,0,layer);
+ selectLayerAt(to);setReady(true);return true;
+}
+function updateLayerAppearance(field,value,continuous=false){
+ const i=selectedAnyIndex(),layer=strokes[i];
+ if(!layer||layer.locked||!layerOps?.mayStyle(layer))return false;
+ const fx={...layerOps.style(layer)};
+ if(field==='opacity'){
+  value=layerOps.clamp(value,0,1);
+  if((layer.opacity??1)===value)return false;
+ }else{
+  fx[field]=value;
+  const valid=layerOps.style({layerFx:fx});
+  value=valid[field];fx[field]=value;
+  if(layerOps.style(layer)[field]===value)return false;
+ }
+ if(!continuous||!appearanceGesture||appearanceGesture.index!==i||appearanceGesture.field!==field){
+  snapshot();appearanceGesture={index:i,field};
+ }
+ strokes[i]=field==='opacity'?{...layer,opacity:value}:{...layer,layerFx:fx};
+ redraw();
+ if(!continuous){appearanceGesture=null;setReady(true);syncLayerProperties();}
+ return true;
+}
 function syncLayerProperties(){
  globalThis.MangoStudioMenusV0617?.updateAvailability?.();
  const l=selectedAnyStroke(),panel=document.getElementById('image-layer-properties');
