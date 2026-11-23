@@ -39,7 +39,8 @@ jobs:
           node tests/viewport-cursors-v071.cjs
           node tests/captions-v072.cjs
           node tests/preview-continuity-v072.cjs
-          for src in studio-control-core-v070.js studio-professional-v070.js precision-cursors-v071.js image-tool-groups-v071.js image-canvas-viewport-v071.js caption-core-v072.js caption-studio-v072.js sequence-preview.js clip-studio.js; do node --check "$src"; done
+          node tests/caption-speech-v072.cjs
+          for src in studio-control-core-v070.js studio-professional-v070.js precision-cursors-v071.js image-tool-groups-v071.js image-canvas-viewport-v071.js caption-core-v072.js caption-speech-v072.js caption-studio-v072.js sequence-preview.js clip-studio.js; do node --check "$src"; done
       - name: Package MangoShot v0.7.2 Caption Studio preview
         if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.2-captions-preview-continuity'
         shell: bash
@@ -47,7 +48,7 @@ jobs:
           set -euo pipefail
           python3 tools/package-extension.py --out dist --version v0.6.18-caption-v072-preview
           unzip -t dist/MangoShot-v0.6.18-caption-v072-preview-Extension.zip
-          for dependency in caption-core-v072.js caption-studio-v072.js caption-studio-v072.css sequence-preview.js clip-studio.js; do
+          for dependency in caption-core-v072.js caption-speech-v072.js caption-studio-v072.js caption-studio-v072.css sequence-preview.js clip-studio.js; do
             unzip -l dist/MangoShot-v0.6.18-caption-v072-preview-Extension.zip | grep "$dependency"
           done
           unzip -p dist/MangoShot-v0.6.18-caption-v072-preview-Extension.zip clip-studio.html | grep -q 'id="cc-track"'
