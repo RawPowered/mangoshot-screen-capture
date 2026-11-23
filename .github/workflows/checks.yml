@@ -37,23 +37,27 @@ jobs:
           node tests/editor-core-v070.cjs
           node tests/professional-uix-v070.cjs
           node tests/viewport-cursors-v071.cjs
-          for src in studio-control-core-v070.js studio-professional-v070.js precision-cursors-v071.js image-tool-groups-v071.js image-canvas-viewport-v071.js; do node --check "$src"; done
-      - name: Package MangoShot v0.7.1 precision tools development preview
-        if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.1-viewport-precision-tools'
+          node tests/captions-v072.cjs
+          node tests/preview-continuity-v072.cjs
+          node tests/caption-speech-v072.cjs
+          for src in studio-control-core-v070.js studio-professional-v070.js precision-cursors-v071.js image-tool-groups-v071.js image-canvas-viewport-v071.js caption-core-v072.js caption-speech-v072.js caption-studio-v072.js sequence-preview.js clip-studio.js; do node --check "$src"; done
+      - name: Package MangoShot v0.7.2 Caption Studio preview
+        if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.2-captions-preview-continuity'
         shell: bash
         run: |
           set -euo pipefail
-          python3 tools/package-extension.py --out dist --version v0.6.18-uix-b1-preview
-          unzip -t dist/MangoShot-v0.6.18-uix-b1-preview-Extension.zip
-          unzip -l dist/MangoShot-v0.6.18-uix-b1-preview-Extension.zip | grep studio-professional-v070.js
-          unzip -l dist/MangoShot-v0.6.18-uix-b1-preview-Extension.zip | grep studio-professional-v070.css
-          unzip -l dist/MangoShot-v0.6.18-uix-b1-preview-Extension.zip | grep studio-control-core-v070.js
-          unzip -l dist/MangoShot-v0.6.18-uix-b1-preview-Extension.zip | grep studio-viewport-v071.css
-          unzip -l dist/MangoShot-v0.6.18-uix-b1-preview-Extension.zip | grep precision-cursors-v071.js
-      - name: Upload development preview ZIP (not a release)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.1-viewport-precision-tools'
+          python3 tools/package-extension.py --out dist --version v0.6.18-caption-v072-preview
+          unzip -t dist/MangoShot-v0.6.18-caption-v072-preview-Extension.zip
+          for dependency in caption-core-v072.js caption-speech-v072.js caption-studio-v072.js caption-studio-v072.css sequence-preview.js clip-studio.js; do
+            unzip -l dist/MangoShot-v0.6.18-caption-v072-preview-Extension.zip | grep "$dependency"
+          done
+          unzip -p dist/MangoShot-v0.6.18-caption-v072-preview-Extension.zip clip-studio.html | grep -q 'id="cc-track"'
+          unzip -p dist/MangoShot-v0.6.18-caption-v072-preview-Extension.zip clip-studio.html | grep -q 'id="caption-studio-panel"'
+      - name: Upload v0.7.2 development preview ZIP (not a release)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.2-captions-preview-continuity'
         uses: actions/upload-artifact@v4
         with:
-          name: MangoShot-v0.7.1-Precision-Tools-Preview
-          path: dist/MangoShot-v0.6.18-uix-b1-preview-Extension.zip
-          retention-days: 14
+          name: MangoShot-v0.7.2-Caption-Studio-Development-Preview
+          path: dist/MangoShot-v0.6.18-caption-v072-preview-Extension.zip
+          retention-days: 21
+          if-no-files-found: error

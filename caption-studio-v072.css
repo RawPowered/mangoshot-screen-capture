@@ -1,0 +1,79 @@
+/* MangoShot Caption Studio v0.7.2 — compact CC1 editing inside fixed Clip Studio. */
+body.studio-clip .v072-caption-panel{
+ flex:0 1 auto;min-height:32px;max-height:38px;min-width:0;
+ border-top:1px solid #486454;border-bottom:1px solid #324a3f;
+ background:linear-gradient(110deg,#1b2b25,#121f1b);overflow:visible;
+ color:#e9f3e6;position:relative;z-index:23;
+}
+body.studio-clip .v072-caption-panel>summary{
+ list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;
+ padding:6px 11px;min-height:32px;white-space:nowrap;font:700 11px/1.3 system-ui;
+}
+body.studio-clip .v072-caption-panel>summary::-webkit-details-marker{display:none}
+body.studio-clip .v072-caption-panel>summary strong{font-size:11px;color:#c5ef9b}
+body.studio-clip .v072-caption-panel>summary span{font-size:10px;color:#b5c5b9;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+body.studio-clip .v072-caption-panel>summary:before{content:"▸";font-size:10px;color:#a9d08d}
+body.studio-clip .v072-caption-panel[open]>summary:before{content:"▾"}
+body.studio-clip .v072-caption-panel[open]{
+ max-height:min(52%,450px);min-height:170px;overflow-y:auto;overscroll-behavior:contain;
+}
+body.studio-clip .v072-caption-body{padding:6px 10px 12px;display:grid;gap:7px;font:500 10px/1.4 system-ui}
+body.studio-clip .v072-caption-body button,body.studio-clip .v072-caption-body select,
+body.studio-clip .v072-caption-body input:not([type=checkbox]),body.studio-clip .v072-caption-body textarea,
+body.studio-clip .v072-caption-import{
+ border:1px solid #466451;background:#253a30;color:#f4faee;border-radius:2px;
+ font:600 10px/1.3 system-ui;min-height:28px;padding:5px 7px;
+}
+body.studio-clip .v072-caption-body :is(button,select,input,textarea):focus-visible,
+body.studio-clip .v072-caption-panel>summary:focus-visible{
+ outline:2px solid #c5f58d;outline-offset:2px
+}
+body.studio-clip .v072-caption-body button:hover{background:#36533e}
+body.studio-clip .v072-caption-body button:disabled{opacity:.45;cursor:not-allowed}
+body.studio-clip .v072-caption-actions{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+body.studio-clip .v072-caption-import{display:inline-flex;align-items:center;position:relative;overflow:hidden;cursor:pointer}
+body.studio-clip .v072-caption-import input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+body.studio-clip .v072-caption-toggle{display:inline-flex;gap:5px;align-items:center;color:#d2e7d1;font-size:10px}
+body.studio-clip .v072-caption-toggle input{accent-color:#9ddd73}
+body.studio-clip .v072-caption-style{display:flex;flex-wrap:wrap;align-items:end;gap:7px;padding:8px 0;border-top:1px solid #41574d}
+body.studio-clip .v072-caption-style label{display:grid;gap:3px;color:#b9cfbb;font-size:9px}
+body.studio-clip .v072-caption-style input[type=number]{width:75px}
+body.studio-clip .v072-caption-style input[type=color]{width:40px;height:29px;padding:2px;cursor:pointer}
+body.studio-clip .v072-caption-editor{display:grid;grid-template-columns:1fr 115px 115px minmax(155px,2fr) auto auto;gap:7px;align-items:end}
+body.studio-clip #cc-current{font-weight:750;color:#c4e99f;align-self:center}
+body.studio-clip .v072-caption-editor label{display:grid;gap:3px;color:#b9cfbb;font-size:9px;min-width:0}
+body.studio-clip .v072-caption-editor textarea{width:100%;min-height:41px;resize:vertical}
+body.studio-clip .v072-caption-editor input[type=number]{width:100%}
+body.studio-clip #cc-save{background:#476440;border-color:#a4d67a;color:#f6ffe9}
+body.studio-clip #cc-delete{color:#ffd0cb;border-color:#795450}
+body.studio-clip .v072-caption-list{display:flex;gap:4px;overflow-x:auto;min-height:31px;scrollbar-width:thin}
+body.studio-clip .v072-caption-row{white-space:nowrap;max-width:270px;text-align:left;overflow:hidden;text-overflow:ellipsis;flex:0 0 auto}
+body.studio-clip .v072-caption-row[aria-pressed=true]{border-color:#b8f183;color:#d9ffb0}
+body.studio-clip .v072-caption-status{margin:0;color:#c8ddc2}
+body.studio-clip .v072-caption-note{margin:0;color:#9fb5a7;font-size:9px}
+body.studio-clip .v072-caption-track{height:30px;min-height:30px;position:relative;
+ display:flex;align-items:stretch;padding:1px 2px;background:#202d24;
+ border-top:1px solid #4e7556;border-bottom:1px solid #36513b;
+}
+body.studio-clip .v072-caption-track>.track-name{z-index:2;flex:0 0 36px;align-self:center;
+ font:800 10px/1.2 ui-monospace,Consolas,monospace;color:#c4ed98}
+body.studio-clip .v072-caption-track-cues{flex:1;min-width:0;position:relative}
+body.studio-clip .v072-cc-chip{position:absolute;top:2px;bottom:2px;min-width:3px;
+ border:1px solid #add575;border-radius:2px;background:#456944;color:#edffd9;
+ font:700 10px/20px system-ui;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 5px;
+ cursor:pointer}
+body.studio-clip .v072-cc-chip[aria-pressed=true],body.studio-clip .v072-cc-chip.is-at-playhead{
+ border-color:#d7ffa3;background:#65864a;color:#fff
+}
+body.studio-clip .v072-cc-chip:focus-visible{outline:2px solid #fff;outline-offset:2px}
+@media(max-width:1200px){
+ body.studio-clip .v072-caption-editor{grid-template-columns:1fr 100px 100px minmax(130px,2fr)}
+ body.studio-clip #cc-save,body.studio-clip #cc-delete{grid-row:2}
+}
+@media(max-width:760px){
+ body.studio-clip .v072-caption-panel[open]{max-height:min(68%,400px)}
+ body.studio-clip .v072-caption-editor{grid-template-columns:repeat(2,minmax(0,1fr))}
+ body.studio-clip .v072-caption-editor #cc-current,body.studio-clip .v072-caption-editor .v072-caption-text{grid-column:1/-1}
+ body.studio-clip .v072-caption-actions{gap:4px}
+ body.studio-clip .v072-caption-panel>summary span{display:none}
+}
