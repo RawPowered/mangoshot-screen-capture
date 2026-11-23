@@ -34,3 +34,6 @@ jobs:
           node tests/shortcuts-v0617.cjs
           node tests/menus-v0617.cjs
           node tests/layers-v0618.cjs
+          node tests/editor-core-v070.cjs
+          node tests/professional-uix-v070.cjs
+          for src in studio-control-core-v070.js studio-professional-v070.js; do node --check "$src"; done
