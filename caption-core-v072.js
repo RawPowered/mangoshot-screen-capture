@@ -15,15 +15,17 @@
  function style(value={}){
   if(!value||typeof value!=='object'||Array.isArray(value))throw new Error('Invalid caption style');
   const preset=Object.hasOwn(presets,value.preset)?value.preset:'classic';
-  const p=presets[preset],v={...p,...value,preset};
+  const p=presets[preset],v={...p,highlightColor:'#ffd05c',wordHighlight:true,...value,preset};
   if(!Object.hasOwn(fontMap,v.font)||!Number.isFinite(v.size)||v.size<14||v.size>120||
    !Number.isFinite(v.outlineWidth)||v.outlineWidth<0||v.outlineWidth>12||
    !Number.isFinite(v.position)||v.position<40||v.position>96||![400,500,600,700,800].includes(v.weight)||
    !/^#[0-9a-f]{6}$/i.test(v.color)||!/^#[0-9a-f]{6}$/i.test(v.outline)||
+   !/^#[0-9a-f]{6}$/i.test(v.highlightColor)||typeof v.wordHighlight!=='boolean'||
    !(v.background==='transparent'||/^#[0-9a-f]{8}$/i.test(v.background)))
    throw new Error('Invalid caption appearance');
   return {preset:v.preset,font:v.font,size:v.size,color:v.color,outline:v.outline,
-   outlineWidth:v.outlineWidth,background:v.background,position:v.position,weight:v.weight};
+   outlineWidth:v.outlineWidth,background:v.background,position:v.position,weight:v.weight,
+   highlightColor:v.highlightColor,wordHighlight:v.wordHighlight};
  }
  function check(items,duration=Infinity){
   if(!Array.isArray(items)||items.length>MAX)throw new Error('Too many captions');
@@ -36,31 +38,78 @@
     throw new Error('Invalid caption text');
    if(!Number.isFinite(c.start)||!Number.isFinite(c.end)||c.start<0||
     c.end-c.start<.04||c.end>duration+.005)throw new Error('Invalid caption timing');
-   return {id:c.id,start:c.start,end:c.end,text:c.text.trim()};
+   let words;
+   if(c.words!=null){
+    if(!Array.isArray(c.words)||c.words.length>120)throw new Error('Invalid caption word timestamps');
+    words=c.words.map(w=>{
+     if(!w||typeof w.text!=='string'||!w.text.trim()||w.text.length>80||
+      !Number.isFinite(w.start)||!Number.isFinite(w.end)||w.start<c.start-.005||
+      w.end>c.end+.005||w.end-w.start<.02)throw new Error('Invalid caption word timing');
+     return {text:w.text.trim(),start:w.start,end:w.end};
+    });
+   }
+   return {id:c.id,start:c.start,end:c.end,text:c.text.trim(),...(words?.length?{words}:{})};
   }).sort((a,b)=>a.start-b.start||a.end-b.end||a.id.localeCompare(b.id));
  }
  const nextId=()=> 'cc-'+(root.crypto?.randomUUID?.()||(''+Date.now()+'-'+Math.random().toString(36).slice(2,12)));
  function add(items,cue,duration){const v={id:nextId(),...cue};return check([...items,v],duration);}
  function update(items,id,changes,duration){const found=items.find(c=>c.id===id);if(!found)throw new Error('Caption not found');
-  return check(items.map(c=>c.id===id?{...c,...changes,id:c.id}:c),duration);}
+  return check(items.map(c=>{
+   if(c.id!==id)return c;
+   // A user rewrite invalidates ASR token alignment; do not highlight
+   // unrelated words or persist stale timestamps after a manual edit.
+   const next={...c,...changes,id:c.id};
+   if(Object.hasOwn(changes,'text')&&changes.text!==c.text)delete next.words;
+   if(Object.hasOwn(changes,'start')||Object.hasOwn(changes,'end')){
+    // Explicit cue time edits change the phrase boundary. Drop alignment
+    // until word timing is manually corrected or transcription is rerun.
+    if(next.start!==c.start||next.end!==c.end)delete next.words;
+   }
+   return next;
+  }),duration);}
  function remove(items,id){return items.filter(c=>c.id!==id).map(c=>({...c}));}
  function ripple(items,start,end){
   const d=end-start;if(!Number.isFinite(start)||!Number.isFinite(end)||d<=0)return clone(items);
+  const moveWord=w=>{
+   if(w.end<=start+EPS)return {...w};
+   if(w.start>=end-EPS)return {...w,start:w.start-d,end:w.end-d};
+   if(w.start<start-EPS&&w.end>end+EPS)return {...w,end:w.end-d};
+   if(w.start<start-EPS)return start-w.start>=.02?{...w,end:start}:null;
+   if(w.end>end+EPS)return w.end-end>=.02?{...w,start,end:w.end-d}:null;
+   return null;
+  };
   const next=[];
   for(const c of items){
-   if(c.end<=start+EPS)next.push({...c});
-   else if(c.start>=end-EPS)next.push({...c,start:c.start-d,end:c.end-d});
-   else if(c.start<start-EPS&&c.end>end+EPS)next.push({...c,end:c.end-d});
-   else if(c.start<start-EPS){if(start-c.start>=.04)next.push({...c,end:start});}
-   else if(c.end>end+EPS){if(c.end-end>=.04)next.push({...c,start,end:c.end-d});}
+   let shifted=null;
+   if(c.end<=start+EPS)shifted={...c};
+   else if(c.start>=end-EPS)shifted={...c,start:c.start-d,end:c.end-d};
+   else if(c.start<start-EPS&&c.end>end+EPS)shifted={...c,end:c.end-d};
+   else if(c.start<start-EPS&&start-c.start>=.04)shifted={...c,end:start};
+   else if(c.end>end+EPS&&c.end-end>=.04)shifted={...c,start,end:c.end-d};
+   if(!shifted)continue;
+   if(Array.isArray(c.words)){
+    const words=c.words.map(moveWord).filter(Boolean).filter(w=>w.start>=shifted.start-.005&&w.end<=shifted.end+.005);
+    shifted.words=words;
+    if(words.length)shifted.text=words.map(w=>w.text).join(' ').slice(0,350);
+   }
+   next.push(shifted);
   }
-  return next.sort((a,b)=>a.start-b.start);
+  return next.sort((a,b)=>a.start-b.start||a.end-b.end);
  }
  function trim(items,start,end){
   if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start)return [];
   return items.flatMap(c=>{
    const a=Math.max(c.start,start),b=Math.min(c.end,end);
-   return b-a>=.04?[{...c,start:a-start,end:b-start}]:[];
+   if(b-a<.04)return [];
+   const next={...c,start:a-start,end:b-start};
+   if(Array.isArray(c.words)){
+    next.words=c.words.flatMap(w=>{
+     const lo=Math.max(a,w.start),hi=Math.min(b,w.end);
+     return hi-lo>=.02?[{text:w.text,start:lo-start,end:hi-start}]:[];
+    });
+    if(next.words.length)next.text=next.words.map(w=>w.text).join(' ').slice(0,350);
+   }
+   return [next];
   }).sort((a,b)=>a.start-b.start||a.end-b.end);
  }
  function parseStamp(value){
@@ -133,10 +182,26 @@
   }
   ctx.fillStyle=a.color;ctx.strokeStyle=a.outline;ctx.lineWidth=a.outlineWidth*scale;
   ctx.lineJoin='round';ctx.shadowColor='rgba(0,0,0,.85)';ctx.shadowBlur=fontsize*.14;
+  const wordCue=cues.length===1&&Array.isArray(cues[0].words)&&cues[0].words.length&&a.wordHighlight?cues[0]:null;
+  let wordIndex=0;
   for(let i=0;i<content.length;i++){
    const y=top+pad+leading*(i+.5);
-   if(ctx.lineWidth>0)ctx.strokeText(content[i],w/2,y);
-   ctx.fillText(content[i],w/2,y);
+   if(!wordCue){
+    if(ctx.lineWidth>0)ctx.strokeText(content[i],w/2,y);
+    ctx.fillText(content[i],w/2,y);continue;
+   }
+   const tokens=content[i].split(/\s+/),spaceWidth=ctx.measureText(' ').width;
+   const full=ctx.measureText(content[i]).width;let x=(w-full)/2;
+   for(const token of tokens){
+    const match=wordCue.words[wordIndex++];
+    const active=match&&seconds>=match.start&&seconds<match.end;
+    ctx.fillStyle=active?a.highlightColor:a.color;
+    const text=token||'';
+    const width=ctx.measureText(text).width;
+    if(ctx.lineWidth>0)ctx.strokeText(text,x+width/2,y);
+    ctx.fillText(text,x+width/2,y);
+    x+=width+spaceWidth;
+   }
   }
   ctx.restore();
  }
