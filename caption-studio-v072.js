@@ -4,7 +4,8 @@
  if(typeof document==='undefined'||!root.MangoCaptionsV072)return;
  const doc=document,core=root.MangoCaptionsV072,el=id=>doc.getElementById(id),view=()=>root.MangoClipView;
  if(!el('caption-studio-panel')||!el('cc-track-cues'))return;
- let selected=null;
+ let selected=null,job=null,packState='unknown';
+ const speech=root.MangoCaptionSpeechV072;
  const message=text=>{el('cc-status').textContent=text;};
  const fmt=seconds=>{const sec=Math.max(0,Number(seconds)||0);
   return String(Math.floor(sec/60)).padStart(2,'0')+':'+String(Math.floor(sec%60)).padStart(2,'0')+'.'+String(Math.round(sec%1*100)).padStart(2,'0');};
@@ -20,7 +21,11 @@
   list.replaceChildren();track.replaceChildren();
   if(!all.some(c=>c.id===selected))selected=null;
   const active=current(),style=loaded?v.captionStyle():core.style(),burn=loaded?v.burnCaptions():true;
-  el('cc-add').disabled=!loaded||v.exporting();
+  el('cc-add').disabled=!loaded||v.exporting()||!!job;
+  el('cc-transcribe').disabled=!loaded||v.exporting()||!!job||packState!=='available';
+  el('cc-install-pack').hidden=packState!=='downloadable'||!!job;
+  el('cc-install-pack').disabled=!!job;
+  el('cc-cancel-transcribe').hidden=!job;
   for(const id of ['cc-export-srt','cc-export-vtt'])el(id).disabled=!all.length||v?.exporting();
   el('cc-burn').checked=burn;el('cc-burn').disabled=!loaded||v.exporting();
   el('cc-style').value=style.preset||'classic';
@@ -105,6 +110,50 @@
  el('cc-export-srt').onclick=()=>download('srt');
  el('cc-export-vtt').onclick=()=>download('vtt');
  el('cc-burn').addEventListener('change',()=>{if(valid())view().setCaptionBurn(el('cc-burn').checked);});
+ async function checkPack(){
+  packState='checking';refresh();
+  if(!speech?.supported?.()){
+   packState='unsupported';refresh();
+   message('On-device source transcription is not supported by this browser. Manual cues and SRT/VTT remain available.');
+   return;
+  }
+  packState=await speech.availability(el('cc-lang').value);
+  refresh();
+  if(packState==='available')message('Local speech pack available. Transcription is experimental and cue timings are estimated.');
+  else if(packState==='downloadable')message('An on-device speech pack can be installed with your permission. No remote recognition fallback is allowed.');
+  else message('Local speech pack '+packState+'. Manual captions and SRT/VTT are available.');
+ }
+ el('cc-lang').addEventListener('change',()=>{if(!job)void checkPack();});
+ el('cc-install-pack').addEventListener('click',async()=>{
+  if(job||!speech?.supported?.())return;
+  el('cc-install-pack').disabled=true;
+  message('Installing the browser on-device speech pack with your permission…');
+  try{
+   const ok=await speech.install(el('cc-lang').value);
+   message(ok?'Language pack installed. Checking local availability…':'The browser could not install the language pack.');
+  }catch(error){message('Local language pack installation failed: '+error.message);}
+  await checkPack();
+ });
+ el('cc-cancel-transcribe').onclick=()=>{job?.cancel?.();message('Stopping on-device transcription…');};
+ el('cc-transcribe').onclick=async()=>{
+  if(!valid()||job||packState!=='available'||!speech)return;
+  const v=view(),source=v.original(),parts=JSON.stringify(v.segments());
+  try{
+   job=speech.create(v,{status:message,progress:fraction=>{
+    el('cc-asr-progress').value=Math.round(100*fraction);
+   }});
+   el('cc-asr-progress').hidden=false;el('cc-asr-progress').value=0;refresh();
+   const result=await job.run(el('cc-lang').value);
+   if(v.original()!==source||JSON.stringify(v.segments())!==parts)
+    throw new Error('Source or edit decisions changed; transcript was not applied');
+   if(result.cues.length&&v.setCaptions(result.cues,
+      'On-device transcript: '+result.cues.length+' estimated cues. Please review and correct timing.')){
+    selected=null;refresh();message('On-device transcription completed. Cue timing is approximate; review every caption.');
+   }
+  }catch(error){message('Transcription unavailable: '+error.message+' · Original captions remain unchanged.');}
+  finally{job=null;el('cc-asr-progress').hidden=true;refresh();}
+ };
+ void checkPack();
  const props={font:'cc-font',size:'cc-size',position:'cc-position',color:'cc-color',outline:'cc-outline'};
  el('cc-style').addEventListener('change',()=>{
   if(!valid())return;
