@@ -3,7 +3,7 @@
 (function(root){'use strict';
  const field=(id,label)=>({id,label});
  const image={
-  select:[field('tool','Tool'),field('image-layer-opacity','Layer opacity')],
+  select:[field('tool','Tool')],
   pen:[field('tool','Tool'),field('color','Color'),field('size','Width'),field('image-tool-opacity','Opacity')],
   highlighter:[field('tool','Tool'),field('color','Color'),field('size','Width'),field('image-tool-opacity','Opacity')],
   'erase-brush':[field('tool','Tool'),field('size','Diameter'),field('image-eraser-hardness','Hardness'),field('image-tool-opacity','Opacity')],
@@ -45,8 +45,16 @@
   const preset=presets[studio]?.[name];
   return preset?validateLayout({...current,...preset}):validateLayout(current);
  }
- function fieldsFor(studio,tool,selectedGraphic=false){
+ function fieldsFor(studio,tool,selectedGraphic=false,selectedType=''){
   if(studio==='clip')return selectedGraphic?[...clip.timeline,...clip.graphic]:clip.timeline.slice();
+  if(tool==='select'){
+   const base=image.select.slice();
+   const type=String(selectedType).toUpperCase();
+   if(type==='TEXT LAYER')base.push(field('text-font-size','Size'),field('text-font-family','Font'));
+   if(type==='IMAGE LAYER'||type==='TEXT LAYER'||type==='ANNOTATION')
+    base.push(field('image-layer-x','X'),field('image-layer-y','Y'),field('image-layer-opacity','Opacity'));
+   return base;
+  }
   if(shapeNames.has(tool))return image.shape.slice();
   return (image[tool]||[field('tool','Tool')]).slice();
  }
