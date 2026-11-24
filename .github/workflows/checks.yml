@@ -41,6 +41,8 @@ jobs:
           node tests/cursor-effects-v073.cjs
           node tests/cursor-director-v074.cjs
           node tests/automation-v075.cjs
+          node tests/sequence-engine-v076.cjs
+          for src in sequence-engine-v076.js sequence-studio-v076.js; do node --check "$src"; done
           for src in automation-core-v075.js automation-adapters-v075.js automation-ui-v075.js; do node --check "$src"; done
           for src in cursor-director-core-v074.js cursor-director-ui-v074.js; do node --check "$src"; done
           for src in cursor-effects-v073.js cursor-recorder-v073.js cursor-clip-v073.js linked-tab.js; do node --check "$src"; done
@@ -68,7 +70,7 @@ jobs:
           retention-days: 14
 
   studio-precision-preview:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.5-automation-studio'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.6-mangoscript-sequences'
     runs-on: ubuntu-latest
     needs: browser-extension-unit-tests
     steps:
@@ -86,21 +88,24 @@ jobs:
           node tests/cursor-studio-v073.browser.cjs
           node tests/cursor-director-v074.browser.cjs
           node tests/automation-v075.browser.cjs
+          if ! command -v ffmpeg >/dev/null; then sudo apt-get update && sudo apt-get install -y ffmpeg; fi
+          ffmpeg -loglevel error -f lavfi -i color=c=blue:s=320x180:r=15:d=6 -c:v libvpx-vp9 -pix_fmt yuv420p -an -y /tmp/mangoshot-sequence-test.webm
+          node tests/sequence-studio-v076.browser.cjs /tmp/mangoshot-sequence-test.webm
       - name: Package development preview (not a release)
         run: |
-          python3 tools/package-extension.py --out dist --version v0.6.18-automation-preview
-          unzip -t dist/MangoShot-v0.6.18-automation-preview-Extension.zip
-          unzip -l dist/MangoShot-v0.6.18-automation-preview-Extension.zip | grep studio-precision-v072.css
-          unzip -l dist/MangoShot-v0.6.18-automation-preview-Extension.zip | grep studio-layout-core-v072.js
-          unzip -l dist/MangoShot-v0.6.18-automation-preview-Extension.zip | grep studio-overlays-v072.js
-          unzip -l dist/MangoShot-v0.6.18-automation-preview-Extension.zip | grep cursor-effects-v073.js
-          unzip -l dist/MangoShot-v0.6.18-automation-preview-Extension.zip | grep cursor-recorder-v073.js
-          unzip -l dist/MangoShot-v0.6.18-automation-preview-Extension.zip | grep cursor-clip-v073.js
-          unzip -l dist/MangoShot-v0.6.18-automation-preview-Extension.zip | grep cursor-director-core-v074.js
-          unzip -l dist/MangoShot-v0.6.18-automation-preview-Extension.zip | grep cursor-director-ui-v074.js
-          for src in automation-core-v075.js automation-adapters-v075.js automation-ui-v075.js automation-v075.css; do unzip -l dist/MangoShot-v0.6.18-automation-preview-Extension.zip | grep "$src"; done
+          python3 tools/package-extension.py --out dist --version v0.6.18-sequence-preview
+          unzip -t dist/MangoShot-v0.6.18-sequence-preview-Extension.zip
+          unzip -l dist/MangoShot-v0.6.18-sequence-preview-Extension.zip | grep studio-precision-v072.css
+          unzip -l dist/MangoShot-v0.6.18-sequence-preview-Extension.zip | grep studio-layout-core-v072.js
+          unzip -l dist/MangoShot-v0.6.18-sequence-preview-Extension.zip | grep studio-overlays-v072.js
+          unzip -l dist/MangoShot-v0.6.18-sequence-preview-Extension.zip | grep cursor-effects-v073.js
+          unzip -l dist/MangoShot-v0.6.18-sequence-preview-Extension.zip | grep cursor-recorder-v073.js
+          unzip -l dist/MangoShot-v0.6.18-sequence-preview-Extension.zip | grep cursor-clip-v073.js
+          unzip -l dist/MangoShot-v0.6.18-sequence-preview-Extension.zip | grep cursor-director-core-v074.js
+          unzip -l dist/MangoShot-v0.6.18-sequence-preview-Extension.zip | grep cursor-director-ui-v074.js
+          for src in sequence-engine-v076.js sequence-studio-v076.js sequence-studio-v076.css automation-core-v075.js automation-adapters-v075.js automation-ui-v075.js automation-v075.css; do unzip -l dist/MangoShot-v0.6.18-sequence-preview-Extension.zip | grep "$src"; done
       - uses: actions/upload-artifact@v4
         with:
-          name: MangoShot-v0.7.5-Automation-Studio-Preview
-          path: dist/MangoShot-v0.6.18-automation-preview-Extension.zip
+          name: MangoShot-v0.7.6-MangoScript-Sequences-Preview
+          path: dist/MangoShot-v0.6.18-sequence-preview-Extension.zip
           retention-days: 14

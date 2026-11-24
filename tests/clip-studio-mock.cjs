@@ -23,7 +23,7 @@ const ctx={document:doc,window:{addEventListener(){}},Blob,URL:{createObjectURL:
 ctx.globalThis=ctx;const run=filename=>vm.runInNewContext(fs.readFileSync(path.join(root,filename),'utf8'),ctx);
 run('clip-timeline.js');run('sequence-media.js');run('sequence-preview.js');run('clip-edit-ops.js');run('motion-core-v067.js');run('clip-graphics.js');run('creative-zoom.js');run('sequence-operations.js');run('auto-cut.js');run('layer-timeline-ops.js');run('media-format.js');ctx.MangoClips={load:async()=>null,clear:async()=>null};
 let markerCache=[];ctx.MangoClipTimeline={markers:()=>markerCache.map(x=>({...x})),loadMarkers:next=>{markerCache=next.map(x=>({...x}));},render(){},reset(){markerCache=[];}};
-run('cursor-effects-v073.js');run('cursor-director-core-v074.js');run('clip-studio.js');run('automation-core-v075.js');run('automation-adapters-v075.js');
+run('cursor-effects-v073.js');run('cursor-director-core-v074.js');run('clip-studio.js');run('automation-core-v075.js');run('automation-adapters-v075.js');run('clip-project.js');run('sequence-engine-v076.js');
 (async()=>{
  await get('file').listeners.change[0]({target:{files:[new Blob([Uint8Array.from([0x1a,0x45,0xdf,0xa3,0,0,0,0])],{type:'video/webm'})]}});
  await new Promise(resolve=>setTimeout(resolve,15));
@@ -58,6 +58,23 @@ run('cursor-effects-v073.js');run('cursor-director-core-v074.js');run('clip-stud
  const cut=engine.preview(recipe('clip.timeline.rippleDelete',{start:2,end:3}));engine.apply(cut.ticket);assert.equal(st.outputDuration(),23);
  get('undo').onclick();assert.equal(st.outputDuration(),24);
  const stale=engine.preview(recipe('clip.graphics.add',{kind:'text',text:'Stale',start:0,duration:2}));st.addLayer('text','none');assert.throws(()=>engine.apply(stale.ticket),/changed/);get('undo').onclick();
+ // Atomic sequences use the real editor commit path and preserve the existing history.
+ const SQ=ctx.MangoSequenceEngineV076,controller=SQ.controller({capture:()=>st.automationCapture(),draft:()=>st.sequenceDraft(),commit:(d,e)=>st.commitSequenceAutomation(d,e)});
+ const checkpoint=controller.saveCheckpoint('Before batch');
+ let batch=controller.preview(SQ.example());assert.equal(st.layers().length,0);assert.equal(st.zoomFrames().length,0);
+ controller.apply(batch.ticket);assert.equal(st.layers().length,1);assert.equal(st.layers()[0].opacity,.9);assert.equal(st.zoomFrames().length,2);
+ get('undo').onclick();assert.equal(st.layers().length,0);assert.equal(st.zoomFrames().length,0);
+ get('redo').onclick();assert.equal(st.layers().length,1);assert.equal(st.zoomFrames().length,2);
+ const restored=controller.restorePreview(checkpoint);controller.apply(restored.ticket);assert.equal(st.layers().length,0);assert.equal(st.zoomFrames().length,0);
+ get('undo').onclick();assert.equal(st.layers().length,1);assert.equal(st.zoomFrames().length,2);get('redo').onclick();assert.equal(st.layers().length,0);
+ batch=controller.preview(SQ.example());st.addLayer('text','none');assert.throws(()=>controller.apply(batch.ticket),/changed/);get('undo').onclick();
+ const invalid={schema:SQ.SCHEMA,steps:[{command:'clip.graphics.add',args:{kind:'text',text:'Draft only',start:0,duration:2}},{command:'clip.timeline.rippleDelete',args:{start:0,end:24}}]};
+ assert.throws(()=>controller.preview(invalid));assert.equal(st.layers().length,0);assert.equal(st.outputDuration(),24);
+ // Inject a one-time render error after mutation to verify rollback of model and undo stacks.
+ batch=controller.preview(SQ.example());const before=JSON.stringify(st.sequenceDraft());const oldRender=ctx.MangoGraphics.render;let failOnce=true;
+ ctx.MangoGraphics.render=(...args)=>{if(failOnce){failOnce=false;throw Error('injected renderer error');}return oldRender(...args);};
+ assert.throws(()=>controller.apply(batch.ticket),/rolled back/);ctx.MangoGraphics.render=oldRender;
+ assert.equal(JSON.stringify(st.sequenceDraft()),before,'Failed commit must restore exact edit decisions');
  st.addLayer('text','none');st.addLayer('text','none');
  assert.equal(st.layers().length,2);
  const a=st.layers()[0].id,b=st.layers()[1].id;

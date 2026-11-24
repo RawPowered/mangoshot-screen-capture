@@ -298,14 +298,37 @@ if(requestedRecording){
  * this editor's existing non-destructive edit decision list. */
 globalThis.MangoClipView={
  automationCapture(){
-  const busy=exporting||!!sequencePreview?.isPlaying?.()||!!globalThis.MangoCreativeUI?.voice?.state?.().recording;
+  const voiceState=globalThis.MangoCreativeUI?.voice?.state?.(),busy=exporting||!!sequencePreview?.isPlaying?.()||!!voiceState?.recording;
   return {ready:!!original&&automationLoadReadyV075&&!busy,reason:busy?'Pause playback, voice recording or export before applying edits.':'Load a video first.',
-   identity:original,trace:cursorTrace,
-   stamp:JSON.stringify([automationRevisionV075,loadVersion,segments,layers,zoomEvents,transitions,cursorRegions,globalThis.MangoClipTimeline?.markers?.()||[],selectedLayerId,selectedClipIndex,rangeSelected])};
+   identity:original,trace:cursorTrace,voice:voiceState?.clip||null,
+   stamp:JSON.stringify([automationRevisionV075,loadVersion,segments,layers,zoomEvents,transitions,cursorRegions,globalThis.MangoClipTimeline?.markers?.()||[],selectedLayerId,selectedClipIndex,rangeSelected,byId('in').value,byId('out').value,voiceState?.clip?.start,voiceState?.clip?.duration])};
  },
  automationInspect(){return {studio:'clip',ready:!!original&&automationLoadReadyV075,sourceDuration:duration,sequenceDuration:MangoEditOps.length(segments),
   exporting,playing:!!sequencePreview?.isPlaying?.(),segments:clone(segments),graphics:layers.map(l=>({id:l.id,kind:l.kind,start:l.start,end:l.end,opacity:l.opacity??1,locked:!!l.locked})),cameraEvents:clone(zoomEvents),
   cursorPath:cursorTrace?{samples:cursorTrace.samples.length,clicks:cursorTrace.clicks?.length||0,baked:cursorTrace.baked}:null,cursorRegions:cursorRegions.map(r=>({id:r.id,start:r.start,end:r.end,enabled:r.enabled}))};},
+ sequenceDraft(){
+  const state=this.automationCapture();if(!state.ready)throw Error(state.reason);
+  return {...snapshot(),source:{size:original.size,format:originalFormat,duration},hasVoice:!!state.voice};
+ },
+ commitSequenceAutomation(draft,expected){
+  const engine=globalThis.MangoSequenceEngineV076,actual=this.automationCapture();
+  if(!engine||!actual.ready||!engine.equal(actual,expected))throw Error('Sequence review is stale');
+  if(draft.source.size!==original.size||draft.source.format!==originalFormat||draft.source.duration!==duration||draft.hasVoice!==!!actual.voice)throw Error('Source identity mismatch');
+  if(actual.voice&&JSON.stringify(draft.segments)!==JSON.stringify(segments))throw Error('Cannot change timeline timing while voiceover exists');
+  const checked=engine.validateDraft(draft),previous=snapshot(),beforeHistory=history.slice(),beforeRedo=redoHistory.slice(),at=sequencePreview?.current?.()??0;
+  const next={...checked,selectedLayerId:null,selectedClipIndex:null,rangeSelected:false,selection:{start:0,end:MangoEditOps.length(checked.segments)}};
+  try{
+   remember();restore(next);
+   sequencePreview?.seekOutput(Math.max(0,Math.min(at,MangoEditOps.length(segments)-.005)));
+   label('MangoScript sequence committed. One Ctrl+Z restores the prior edit.');return true;
+  }catch(error){
+   // Restore the authoritative model and both history stacks even if a UI refresh failed.
+   history=beforeHistory;redoHistory=beforeRedo;
+   try{restore(previous);sequencePreview?.seekOutput(Math.max(0,Math.min(at,MangoEditOps.length(segments)-.005)));}
+   catch{throw Error('Commit failed; prior model restored, but interface refresh failed. Reload the saved project if needed.');}
+   throw Error('Sequence rolled back: '+error.message);
+  }
+ },
  commitAutomationGraphic(draft){
   if(!original||!automationLoadReadyV075||exporting||layers.length>=1500||!draft||!['text','callout'].includes(draft.kind)||!Number.isFinite(draft.start)||!Number.isFinite(draft.end)||draft.start<0||draft.end-draft.start<.09999||draft.end>MangoEditOps.length(segments)+.000001)return false;
   remember();layers.push(clone(draft));selectedLayerId=draft.id;selectedClipIndex=null;rangeSelected=false;refreshed();label('Automation graphic added. Ctrl+Z to undo.');return true;
