@@ -23,7 +23,7 @@ const ctx={document:doc,window:{addEventListener(){}},Blob,URL:{createObjectURL:
 ctx.globalThis=ctx;const run=filename=>vm.runInNewContext(fs.readFileSync(path.join(root,filename),'utf8'),ctx);
 run('clip-timeline.js');run('sequence-media.js');run('sequence-preview.js');run('clip-edit-ops.js');run('motion-core-v067.js');run('clip-graphics.js');run('creative-zoom.js');run('sequence-operations.js');run('auto-cut.js');run('layer-timeline-ops.js');run('media-format.js');ctx.MangoClips={load:async()=>null,clear:async()=>null};
 let markerCache=[];ctx.MangoClipTimeline={markers:()=>markerCache.map(x=>({...x})),loadMarkers:next=>{markerCache=next.map(x=>({...x}));},render(){},reset(){markerCache=[];}};
-run('clip-studio.js');
+run('cursor-effects-v073.js');run('cursor-director-core-v074.js');run('clip-studio.js');run('automation-core-v075.js');run('automation-adapters-v075.js');
 (async()=>{
  await get('file').listeners.change[0]({target:{files:[new Blob([Uint8Array.from([0x1a,0x45,0xdf,0xa3,0,0,0,0])],{type:'video/webm'})]}});
  await new Promise(resolve=>setTimeout(resolve,15));
@@ -48,6 +48,16 @@ run('clip-studio.js');
  // Timeline gestures must persist through the actual Clip Studio state/history, not just pure math.
  ctx.MangoGraphics.render=()=>{};
  const st=ctx.MangoClipView;
+ const A=ctx.MangoAutomationCoreV075,engine=A.createEngine('clip',ctx.MangoAutomationAdaptersV075.adapter('clip'));
+ const recipe=(command,args)=>({schema:A.SCHEMA,command,args});
+ const add=engine.preview(recipe('clip.graphics.add',{kind:'text',text:'Tutorial title',start:1,duration:2,preset:'title'}));
+ assert.equal(st.layers().length,0);engine.apply(add.ticket);assert.equal(st.layers().length,1);assert.equal(st.layers()[0].text,'Tutorial title');
+ get('undo').onclick();assert.equal(st.layers().length,0);
+ const zoom=engine.preview(recipe('clip.camera.zoomRange',{start:2,scale:2,x:.5,y:.5}));engine.apply(zoom.ticket);assert.equal(st.zoomFrames().length,2);
+ get('undo').onclick();assert.equal(st.zoomFrames().length,0);
+ const cut=engine.preview(recipe('clip.timeline.rippleDelete',{start:2,end:3}));engine.apply(cut.ticket);assert.equal(st.outputDuration(),23);
+ get('undo').onclick();assert.equal(st.outputDuration(),24);
+ const stale=engine.preview(recipe('clip.graphics.add',{kind:'text',text:'Stale',start:0,duration:2}));st.addLayer('text','none');assert.throws(()=>engine.apply(stale.ticket),/changed/);get('undo').onclick();
  st.addLayer('text','none');st.addLayer('text','none');
  assert.equal(st.layers().length,2);
  const a=st.layers()[0].id,b=st.layers()[1].id;

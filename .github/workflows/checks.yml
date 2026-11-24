@@ -40,6 +40,8 @@ jobs:
           node tests/studio-layout-v072.cjs
           node tests/cursor-effects-v073.cjs
           node tests/cursor-director-v074.cjs
+          node tests/automation-v075.cjs
+          for src in automation-core-v075.js automation-adapters-v075.js automation-ui-v075.js; do node --check "$src"; done
           for src in cursor-director-core-v074.js cursor-director-ui-v074.js; do node --check "$src"; done
           for src in cursor-effects-v073.js cursor-recorder-v073.js cursor-clip-v073.js linked-tab.js; do node --check "$src"; done
           node --check studio-layout-core-v072.js
@@ -66,7 +68,7 @@ jobs:
           retention-days: 14
 
   studio-precision-preview:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.4-cursor-director'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.5-automation-studio'
     runs-on: ubuntu-latest
     needs: browser-extension-unit-tests
     steps:
@@ -83,20 +85,22 @@ jobs:
           node tests/studio-overlays-v072.browser.cjs
           node tests/cursor-studio-v073.browser.cjs
           node tests/cursor-director-v074.browser.cjs
+          node tests/automation-v075.browser.cjs
       - name: Package development preview (not a release)
         run: |
-          python3 tools/package-extension.py --out dist --version v0.6.18-cursor-director-preview
-          unzip -t dist/MangoShot-v0.6.18-cursor-director-preview-Extension.zip
-          unzip -l dist/MangoShot-v0.6.18-cursor-director-preview-Extension.zip | grep studio-precision-v072.css
-          unzip -l dist/MangoShot-v0.6.18-cursor-director-preview-Extension.zip | grep studio-layout-core-v072.js
-          unzip -l dist/MangoShot-v0.6.18-cursor-director-preview-Extension.zip | grep studio-overlays-v072.js
-          unzip -l dist/MangoShot-v0.6.18-cursor-director-preview-Extension.zip | grep cursor-effects-v073.js
-          unzip -l dist/MangoShot-v0.6.18-cursor-director-preview-Extension.zip | grep cursor-recorder-v073.js
-          unzip -l dist/MangoShot-v0.6.18-cursor-director-preview-Extension.zip | grep cursor-clip-v073.js
-          unzip -l dist/MangoShot-v0.6.18-cursor-director-preview-Extension.zip | grep cursor-director-core-v074.js
-          unzip -l dist/MangoShot-v0.6.18-cursor-director-preview-Extension.zip | grep cursor-director-ui-v074.js
+          python3 tools/package-extension.py --out dist --version v0.6.18-automation-preview
+          unzip -t dist/MangoShot-v0.6.18-automation-preview-Extension.zip
+          unzip -l dist/MangoShot-v0.6.18-automation-preview-Extension.zip | grep studio-precision-v072.css
+          unzip -l dist/MangoShot-v0.6.18-automation-preview-Extension.zip | grep studio-layout-core-v072.js
+          unzip -l dist/MangoShot-v0.6.18-automation-preview-Extension.zip | grep studio-overlays-v072.js
+          unzip -l dist/MangoShot-v0.6.18-automation-preview-Extension.zip | grep cursor-effects-v073.js
+          unzip -l dist/MangoShot-v0.6.18-automation-preview-Extension.zip | grep cursor-recorder-v073.js
+          unzip -l dist/MangoShot-v0.6.18-automation-preview-Extension.zip | grep cursor-clip-v073.js
+          unzip -l dist/MangoShot-v0.6.18-automation-preview-Extension.zip | grep cursor-director-core-v074.js
+          unzip -l dist/MangoShot-v0.6.18-automation-preview-Extension.zip | grep cursor-director-ui-v074.js
+          for src in automation-core-v075.js automation-adapters-v075.js automation-ui-v075.js automation-v075.css; do unzip -l dist/MangoShot-v0.6.18-automation-preview-Extension.zip | grep "$src"; done
       - uses: actions/upload-artifact@v4
         with:
-          name: MangoShot-v0.7.4-Cursor-Director-Preview
-          path: dist/MangoShot-v0.6.18-cursor-director-preview-Extension.zip
+          name: MangoShot-v0.7.5-Automation-Studio-Preview
+          path: dist/MangoShot-v0.6.18-automation-preview-Extension.zip
           retention-days: 14

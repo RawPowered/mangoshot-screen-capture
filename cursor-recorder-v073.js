@@ -6,10 +6,11 @@
  if(!panel||!wrap||!ink)return;
  const api=root.chrome??root.browser,now=()=>performance.now();
  let settings=core.preset('off'),mode='preview',port=null,pointer=null,clicked=null,clickAt=-Infinity,lastAt=-Infinity,lastFrame=0,lastCamera=null;
- let trace=null,retain=false,focusTool=false,session=false,pendingClick=null;
+ let trace=null,retain=false,focusTool=false,session=false,pendingClick=null,automationRevisionV075=0;
  const setStatus=t=>{el('cursor-status-v073').textContent=t;};
  const fields={spotlight:'cursor-spotlight-v073',ring:'cursor-ring-v073',zoomMode:'cursor-zoom-mode-v073',scale:'cursor-scale-v073',radius:'cursor-radius-v073',dim:'cursor-dim-v073',feather:'cursor-feather-v073',smooth:'cursor-smooth-v073',hold:'cursor-hold-v073',color:'cursor-color-v073'};
  function renderSettings(){
+  automationRevisionV075++;
   for(const [k,id] of Object.entries(fields)){const n=el(id);if(n.type==='checkbox')n.checked=settings[k];else n.value=settings[k];}
   el('cursor-recipe-v073').value=JSON.stringify({schema:core.RECIPE,action:'recorder.cursor.configure',settings},null,2);
  }
@@ -93,5 +94,5 @@
  function manualCamera(){if(settings.zoomMode!=='off'){settings={...settings,zoomMode:'off'};el('cursor-preset-v073').value='custom';renderSettings();}lastCamera=null;}
  function suspend(){disconnect();el('cursor-consent-v073').checked=false;setStatus('Tracking paused; reconfirm and reconnect linked tab after resuming if needed.');}
  root.MangoRecorderCursorV073=Object.freeze({begin:resetSession,end,suspend,frame,manualCamera,focusTool:()=>focusTool&&enabled(),applyRecipe,
-  state:()=>({settings:{...settings},mode,session,retain,focusTool})});
+  state:()=>({settings:{...settings},mode,session,retain,focusTool,automationRevision:automationRevisionV075})});
 })(typeof globalThis!=='undefined'?globalThis:this);

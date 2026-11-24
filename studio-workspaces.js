@@ -26,7 +26,7 @@
  window.addEventListener('keydown',event=>{
    if(globalThis.MangoShortcuts?.active)return;
    if(event.ctrlKey||event.altKey||event.metaKey||!event.shiftKey)return;
-   if(event.target?.closest?.('input,textarea,select,[contenteditable="true"]'))return;
+   if(event.target?.closest?.('input,textarea,select,[contenteditable="true"],dialog[open]'))return;
    const map={'1':'edit','2':'graphics','3':'timeline'};
    if(map[event.key]){event.preventDefault();setWorkspace(map[event.key]);}
  },true);

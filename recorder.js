@@ -283,6 +283,7 @@ wrap.addEventListener('wheel',event=>{
  // No interaction gesture: leave normal page scrolling alone.
 },{capture:true,passive:false});
 window.addEventListener('keydown',event=>{
+ if(get('automation-dialog-v075')?.open)return;
  const ignored=event.target?.matches?.('input,textarea,select,[contenteditable]');
  ctrlHeld=!!event.ctrlKey;altHeld=!!event.altKey;updateMode();
  if(ignored)return;
@@ -432,5 +433,5 @@ window.addEventListener('pagehide',()=>{globalThis.MangoRecorderCursorV073?.end?
 if(!navigator.mediaDevices?.getDisplayMedia||typeof MediaRecorder==='undefined'){
  label('Screen capture APIs unavailable here.');start.disabled=true;
 }
-globalThis.MangoRecorderCursorHostV073=Object.freeze({active:()=>active()&&recorder?.state==='recording',camera:()=>({...zoomState}),surface:()=>captureSource,linked:()=>linkedAvailable,source:()=>source});
+globalThis.MangoRecorderCursorHostV073=Object.freeze({active:()=>active()&&recorder?.state==='recording',camera:()=>({...zoomState}),surface:()=>captureSource,linked:()=>linkedAvailable,source:()=>source,automationCapture:()=>({ready:!stopping&&(!start.disabled||recording)&&(!recording||recorder?.state==='recording'||recorder?.state==='paused'),reason:'Capture is starting or finalizing.',identity:recordingToken,phase:recorder?.state||get('record-state').dataset.state||'ready'})});
 void checkRecovery();

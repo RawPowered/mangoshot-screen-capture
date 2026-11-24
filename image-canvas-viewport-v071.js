@@ -22,6 +22,7 @@
    stage.releasePointerCapture?.(event.pointerId);
  }
  doc.addEventListener('keydown',event=>{
+  if(doc.getElementById('automation-dialog-v075')?.open)return;
   if(event.key==='Escape'){end();arm(false);return;}
   if(event.code!=='Space'&&event.key!==' ')return;
   if(event.repeat||event.ctrlKey||event.metaKey||event.altKey||editable(event.target))return;

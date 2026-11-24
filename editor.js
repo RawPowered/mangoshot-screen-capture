@@ -26,12 +26,12 @@ let selectedText=-1,textDraft=null,dragText=null,textPreset='plain';
 let selectedImage=-1,selectedObject=-1,dragImage=null,maskDraw=null,dragVector=null,inspectorTab='layers';
 let entireErase=null,lastEraserMode='erase-brush';
 let layerClipboard=null,styleClipboard=null,layerDrag=null,layerStackDrag=null,appearanceGesture=null;
-let resizeDrag=null;
+let resizeDrag=null,automationRevisionV075=0;
 function label(message){status.textContent=message;}
 function activate(){call(api.tabs.getCurrent.bind(api.tabs)).then(tab=>
   tab?.id&&call(api.tabs.update.bind(api.tabs),tab.id,{active:true})).catch(()=>{});}
 function setReady(value){
- ready=value;
+ automationRevisionV075++;ready=value;
  for(const id of ['png','pdf','clear','copy-image']){const button=document.getElementById(id);if(button)button.disabled=!value;}
  document.getElementById('undo').disabled=!value||!history.length;
  const redo=document.getElementById('redo');if(redo)redo.disabled=!value||!redoHistory.length;
@@ -265,11 +265,11 @@ function redraw(){
  drawStroke(active);updateSelectionBox();updateImageSelectionBox();updateVectorSelectionBox();
 }
 function cloneStrokes(value){return JSON.parse(JSON.stringify(value));}
-function snapshot(){history.push(cloneStrokes(strokes));if(history.length>80)history.shift();redoHistory=[];}
-function undo(){if(!history.length)return;redoHistory.push(cloneStrokes(strokes));strokes=history.pop();
+function snapshot(){automationRevisionV075++;history.push(cloneStrokes(strokes));if(history.length>80)history.shift();redoHistory=[];}
+function undo(){if(!history.length)return;automationRevisionV075++;redoHistory.push(cloneStrokes(strokes));strokes=history.pop();
  selectedText=Math.min(selectedText,strokes.length-1);selectedImage=Math.min(selectedImage,strokes.length-1);
  selectedObject=Math.min(selectedObject,strokes.length-1);redraw();setReady(ready);syncSelectedText();syncLayerProperties();}
-function redo(){if(!redoHistory.length)return;history.push(cloneStrokes(strokes));strokes=redoHistory.pop();
+function redo(){if(!redoHistory.length)return;automationRevisionV075++;history.push(cloneStrokes(strokes));strokes=redoHistory.pop();
  selectedText=Math.min(selectedText,strokes.length-1);selectedImage=Math.min(selectedImage,strokes.length-1);
  selectedObject=Math.min(selectedObject,strokes.length-1);redraw();setReady(ready);syncSelectedText();syncLayerProperties();}
 function selectedStroke(){return selectedText>=0&&strokes[selectedText]?.type==='text'?strokes[selectedText]:null;}
@@ -1528,7 +1528,7 @@ document.querySelector('#clear').addEventListener('click',()=>{if(strokes.length
  selectedText=-1;selectedImage=-1;selectedObject=-1;redraw();setReady(true);}});
 function isTyping(target){return !!target?.matches?.('input,textarea,select,[contenteditable],[role="textbox"]');}
 window.addEventListener('keydown',event=>{
- if(!ready)return;
+ if(document.getElementById('automation-dialog-v075')?.open||!ready)return;
  if(event.key==='Escape'){
   if(textDraft){event.preventDefault();cancelInline();return;}
   if(contextMenu&&!contextMenu.hidden){event.preventDefault();closeContextMenu();}
@@ -1757,4 +1757,41 @@ globalThis.MangoImageActions={
    visible:layer?.visible!==false,layerCount:strokes.length};
  }
 };
+/* Local typed adapter: selection is explicit and the review token is bound
+ * to the source identity and all intervening editor revisions. */
+globalThis.MangoImageAutomationV075=Object.freeze({
+ capture(){
+  const busy=!!(drawing||active||textDraft||dragText||dragImage||maskDraw||dragVector||entireErase||layerDrag||layerStackDrag!==null||resizeDrag||appearanceGesture);
+  return {ready:ready&&!busy,reason:busy?'Finish the current image gesture or text draft.':'Import or capture an image first.',identity:meta,
+   stamp:JSON.stringify([automationRevisionV075,selectedAnyIndex(),ready,busy,base.width,base.height])};
+ },
+ inspect(){const l=selectedAnyStroke();return {studio:'image',ready,width:base.width,height:base.height,layerCount:strokes.length,
+  selected:l?{index:selectedAnyIndex(),id:l.id||null,type:l.type,locked:!!l.locked,visible:l.visible!==false,opacity:l.opacity??1}:null};},
+ plan(command,a){
+  const i=selectedAnyIndex(),l=strokes[i];
+  if(!l)throw Error('Select a layer first');
+  if(!layerOps?.mayStyle(l))throw Error('Automation does not modify redaction or eraser layers');
+  if(l.locked&&command!=='image.layer.lock')throw Error('Selected layer is locked');
+  const target={index:i,type:l.type,id:l.id||null};
+  function plan(summary,change,execute){return {summary,changes:[{target,...change}],execute};}
+  function patch(summary,field,value,before=l[field]){
+   if(JSON.stringify(before)===JSON.stringify(value))throw Error('No change');
+   return plan(summary,{property:field,from:before,to:value},()=>replaceLayer(i,{[field]:value}));
+  }
+  if(command==='image.layer.opacity')return patch('Set selected layer opacity','opacity',a.value,l.opacity??1);
+  if(command==='image.layer.style')return patch('Apply selected layer appearance','layerFx',layerOps.preset(a.preset),layerOps.style(l));
+  if(command==='image.layer.visibility')return patch('Set selected layer visibility','visible',a.visible,l.visible!==false);
+  if(command==='image.layer.translate'){
+   if(!a.dx&&!a.dy||!Array.isArray(l.points)||!l.points.length)throw Error('No applicable translation');
+   const next=layerOps.translate(l,a.dx,a.dy);
+   return plan('Move selected layer',{dx:a.dx,dy:a.dy,unit:'source pixels'},()=>replaceLayer(i,{points:next.points}));
+  }
+  if(command==='image.layer.duplicate')return plan('Duplicate selected layer',{operation:'duplicate'},duplicateSelectedLayer);
+  if(command==='image.layer.lock'){
+   if(!!l.locked===a.locked)throw Error('Lock already set');
+   return plan('Set selected layer lock',{from:!!l.locked,to:a.locked},()=>{snapshot();strokes[i]={...strokes[i],locked:a.locked};redraw();setReady(ready);syncLayerProperties();return true;});
+  }
+  throw Error('Unsupported Image Studio command');
+ }
+});
 begin();
