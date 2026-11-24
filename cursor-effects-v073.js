@@ -94,6 +94,7 @@
   if(!raw||raw.schema!==RECIPE||typeof raw!=='object'||Array.isArray(raw))throw Error('Invalid cursor recipe schema');
   if(raw.action==='recorder.cursor.configure'){
    if(Object.keys(raw).some(k=>!['schema','action','preset','settings'].includes(k)))throw Error('Unknown recipe field');
+   if(raw.settings!=null&&(typeof raw.settings!=='object'||Array.isArray(raw.settings)))throw Error('Invalid cursor settings');
    return {schema:RECIPE,action:raw.action,settings:config({...preset(raw.preset??'off'),...(raw.settings??{})})};
   }
   if(raw.action==='clip.cursor.zoom'){

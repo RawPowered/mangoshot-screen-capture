@@ -16,7 +16,7 @@
   const {point,time}=inspect(r.at);
   if(!point)throw Error('No tracked cursor at this playhead. Record with cursor-path retention and move to a tracked moment.');
   const end=time+r.transition+r.hold;
-  if(time<0||end>=v.outputDuration()-.005)throw Error('Not enough sequence time for the requested zoom and return; move earlier or shorten the hold.');
+  if(time<0||end+r.transition>v.outputDuration()-.005)throw Error('Not enough sequence time for the requested zoom and return; move earlier or shorten the hold.');
   // addZoomRange performs one existing history transaction and uses the
   // same camera keyframes for preview and render; original video is unchanged.
   v.addZoomRange(time,end,r.scale,point.x,point.y,r.transition);

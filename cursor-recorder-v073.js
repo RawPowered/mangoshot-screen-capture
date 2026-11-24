@@ -14,7 +14,7 @@
   el('cursor-recipe-v073').value=JSON.stringify({schema:core.RECIPE,action:'recorder.cursor.configure',settings},null,2);
  }
  function applyRecipe(raw){const checked=core.recipe(raw);if(checked.action!=='recorder.cursor.configure')throw Error('This recipe is for Clip Studio');
-  settings=checked.settings;clicked=null;clickAt=-Infinity;renderSettings();el('cursor-preset-v073').value='custom';return {...settings};}
+  settings=checked.settings;clicked=null;clickAt=-Infinity;renderSettings();el('cursor-preset-v073').value='custom';if(!enabled())disconnect();return {...settings};}
  function clear(){pointer=null;clicked=null;clickAt=-Infinity;lastAt=-Infinity;}
  function disconnect(){const old=port;port=null;if(old)try{old.disconnect();}catch{}mode='preview';clear();
   el('cursor-link-v073').textContent='Connect linked tab';el('cursor-link-v073').setAttribute('aria-pressed','false');}
@@ -35,7 +35,7 @@
  wrap.addEventListener('pointerleave',()=>{if(mode==='preview')clear();});
  root.addEventListener('blur',()=>{if(mode==='preview')clear();});
  async function connect(){
-  if(port){disconnect();setStatus('Linked tracking disconnected. Preview only.');return;}
+  if(port){disconnect();el('cursor-consent-v073').checked=false;setStatus('Linked tracking disconnected. Preview only.');return;}
   if(!session||!host.active()||host.surface()!=='browser'||!host.linked()||!api?.tabs?.connect){setStatus('Start a browser-tab capture from the linked webpage first.');return;}
   if(!enabled()){setStatus('Choose a cursor effect or enable cursor-path retention first.');return;}
   if(!el('cursor-consent-v073').checked){setStatus('Confirm the linked webpage is the same tab selected in the screen picker.');return;}
@@ -47,7 +47,7 @@
     if(m?.type==='leave'){clear();return;}
     if(m?.type==='point')ingest({x:m.x,y:m.y},m.click===true);
    });
-   p.onDisconnect.addListener(()=>{if(port===p){disconnect();setStatus('Linked tab disconnected. Reconfirm the selected tab to reconnect.');}});
+   p.onDisconnect.addListener(()=>{if(port===p){disconnect();el('cursor-consent-v073').checked=false;setStatus('Linked tab disconnected. Reconfirm the selected tab to reconnect.');}});
    el('cursor-link-v073').textContent='Disconnect linked tab';el('cursor-link-v073').setAttribute('aria-pressed','true');setStatus('Connecting to the authorized linked tab…');
   }catch(e){disconnect();setStatus('Linked tracking unavailable: '+e.message);}
  }
@@ -90,7 +90,7 @@
  let traceStarted=false;
  function resetSession(){traceStarted=false;begin();}
  function manualCamera(){if(settings.zoomMode!=='off'){settings={...settings,zoomMode:'off'};el('cursor-preset-v073').value='custom';renderSettings();}lastCamera=null;}
- function suspend(){disconnect();setStatus('Tracking paused; reconnect linked tab after resuming if needed.');}
+ function suspend(){disconnect();el('cursor-consent-v073').checked=false;setStatus('Tracking paused; reconfirm and reconnect linked tab after resuming if needed.');}
  root.MangoRecorderCursorV073=Object.freeze({begin:resetSession,end,suspend,frame,manualCamera,focusTool:()=>focusTool&&enabled(),applyRecipe,
   state:()=>({settings:{...settings},mode,session,retain,focusTool})});
 })(typeof globalThis!=='undefined'?globalThis:this);
