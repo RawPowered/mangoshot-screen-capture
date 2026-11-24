@@ -11,8 +11,8 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('nod
  try{
  ctx=await chromium.launchPersistentContext(path.join(tmp,'profile'),{channel:'chromium',headless:true,env:{...process.env,HOME:home,XDG_CONFIG_HOME:config},args:['--disable-extensions-except='+dir,'--load-extension='+dir,'--no-sandbox']});
  let [worker]=ctx.serviceWorkers();if(!worker)worker=await ctx.waitForEvent('serviceworker',{timeout:20000});const id=new URL(worker.url()).host;
- for(const browser of ['chromium','google-chrome','google-chrome-for-testing']){
-  const folder=path.join(config,browser,'NativeMessagingHosts');fs.mkdirSync(folder,{recursive:true});
+ for(const folder of [path.join(tmp,'profile','NativeMessagingHosts'),...['chromium','google-chrome','google-chrome-for-testing'].map(browser=>path.join(config,browser,'NativeMessagingHosts'))]){
+  fs.mkdirSync(folder,{recursive:true});
   fs.writeFileSync(path.join(folder,'com.rawpowered.mangoshot.bridge.json'),JSON.stringify({name:'com.rawpowered.mangoshot.bridge',description:'MangoShot test host',path:host,type:'stdio',allowed_origins:['chrome-extension://'+id+'/']}));
  }
  const p=await ctx.newPage();await p.setViewportSize({width:1366,height:768});
