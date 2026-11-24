@@ -27,6 +27,8 @@ const assert=require('node:assert/strict'),path=require('node:path'),{chromium}=
  await p.setViewportSize({width:768,height:600});await p.locator('.v06-menu > summary').filter({hasText:'Automation'}).click();await p.locator('#automation-open-v075').click();await p.locator('[data-au-tab="sequence"]').click();
  const bounds=await p.locator('#automation-dialog-v075').boundingBox();assert.ok(bounds.x>=0&&bounds.y>=0&&bounds.x+bounds.width<=769&&bounds.y+bounds.height<=601);
  await p.locator('#sq-validate-v076').click();assert.equal(await p.locator('#sq-apply-v076').isDisabled(),false);await p.keyboard.press('Escape');
+ await p.locator('#automation-dialog-v075').waitFor({state:'hidden'});
+ await p.waitForFunction(()=>!MangoSequenceStudioV076.inspect().reviewPending);
  assert.equal(await p.evaluate(()=>MangoSequenceStudioV076.inspect().reviewPending),false);
  console.log('Actual decoded WebM proposed-frame pixels, non-mutating preview, batch commit, checkpoint restore, undo and small viewport passed');
  }finally{await ctx.close();}

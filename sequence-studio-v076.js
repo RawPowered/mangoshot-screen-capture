@@ -67,7 +67,7 @@ el('file').addEventListener('change',async e=>{const file=e.target.files?.[0];e.
 el('export').addEventListener('click',()=>{try{const data=json(core.syntax(el('script').value)),url=URL.createObjectURL(new Blob([data],{type:'application/json'})),a=doc.createElement('a');a.href=url;a.download='MangoShot-Sequence.json';doc.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}catch(e){status(e.message);}});
 el('save').addEventListener('click',()=>{try{engine.saveCheckpoint(el('name').value);el('name').value='';points();status('Checkpoint saved in this session.');}catch(e){status(e.message);}});
 for(const tab of dialog.querySelectorAll('[data-au-tab]'))tab.addEventListener('click',()=>{invalidate();if(tab.dataset.auTab==='sequence'){points();refreshHistory();status('Validate a sequence before applying.');}});
-dialog.addEventListener('close',invalidate);root.addEventListener('pagehide',invalidate);
+dialog.addEventListener('cancel',invalidate);dialog.addEventListener('close',invalidate);root.addEventListener('pagehide',invalidate);
 el('script').value=json(core.example());
 root.MangoSequenceStudioV076=Object.freeze({inspect:()=>({reviewPending:!!ticket,checkpoints:engine.checkpoints(),history:engine.history()}),syntax:core.syntax});
 })(typeof globalThis!=='undefined'?globalThis:this);
