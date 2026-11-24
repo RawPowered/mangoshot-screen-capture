@@ -87,7 +87,7 @@ function waitVideoEvent(type,timeout=8000){return new Promise((resolve,reject)=>
  video.addEventListener(type,done,{once:true});video.addEventListener('error',failed,{once:true});
  });}
 async function load(blob,attachedCursorTrace=null){if(exporting)throw new Error('Finish the current export first.');
- automationLoadReadyV075=false;automationRevisionV075++;const request=++loadVersion;cursorTrace=null;cursorRegions=[];globalThis.MangoCursorClipV073?.refresh?.();
+ globalThis.MangoBridgeV077?.disconnect?.('Source changed');automationLoadReadyV075=false;automationRevisionV075++;const request=++loadVersion;cursorTrace=null;cursorRegions=[];globalThis.MangoCursorClipV073?.refresh?.();
  if(!(blob instanceof Blob)||!blob.size)throw new Error('Select a nonempty video.');
  sequencePlaying=false;sequencePreview?.stop();video.pause();if(originalUrl)URL.revokeObjectURL(originalUrl);
  globalThis.MangoCreativeUI?.voice?.dispose?.();zoomEvents=[];
