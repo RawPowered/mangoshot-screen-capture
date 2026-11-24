@@ -37,6 +37,9 @@ jobs:
           node tests/editor-core-v070.cjs
           node tests/professional-uix-v070.cjs
           node tests/viewport-cursors-v071.cjs
+          node tests/studio-layout-v072.cjs
+          node --check studio-layout-core-v072.js
+          node --check studio-overlays-v072.js
           for src in studio-control-core-v070.js studio-professional-v070.js precision-cursors-v071.js image-tool-groups-v071.js image-canvas-viewport-v071.js; do node --check "$src"; done
       - name: Package MangoShot v0.7.1 precision tools development preview
         if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.1-viewport-precision-tools'
@@ -56,4 +59,32 @@ jobs:
         with:
           name: MangoShot-v0.7.1-Precision-Tools-Preview
           path: dist/MangoShot-v0.6.18-uix-b1-preview-Extension.zip
+          retention-days: 14
+
+  studio-precision-preview:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.2-studio-precision'
+    runs-on: ubuntu-latest
+    needs: browser-extension-unit-tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser smoke test tooling
+        run: |
+          npm install --no-save --no-package-lock playwright
+          npx playwright install --with-deps chromium
+      - name: Test both actual editor surfaces
+        run: node tests/studio-overlays-v072.browser.cjs
+      - name: Package development preview (not a release)
+        run: |
+          python3 tools/package-extension.py --out dist --version v0.6.18-uix-b2-preview
+          unzip -t dist/MangoShot-v0.6.18-uix-b2-preview-Extension.zip
+          unzip -l dist/MangoShot-v0.6.18-uix-b2-preview-Extension.zip | grep studio-precision-v072.css
+          unzip -l dist/MangoShot-v0.6.18-uix-b2-preview-Extension.zip | grep studio-layout-core-v072.js
+          unzip -l dist/MangoShot-v0.6.18-uix-b2-preview-Extension.zip | grep studio-overlays-v072.js
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MangoShot-v0.7.2-Studio-Precision-Preview
+          path: dist/MangoShot-v0.6.18-uix-b2-preview-Extension.zip
           retention-days: 14

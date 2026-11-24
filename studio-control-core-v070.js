@@ -1,7 +1,15 @@
 /* MangoShot v0.7 Patch B: declarative tool options and validated UI preferences.
  * Pure descriptors. Editing source controls remain the authoritative state. */
 (function(root){'use strict';
- const field=(id,label)=>({id,label});
+ const units=Object.freeze({
+  size:'px','image-layer-x':'px','image-layer-y':'px','image-layer-width':'px','image-layer-height':'px',
+  'image-layer-opacity':'%','image-tool-opacity':'%','image-eraser-hardness':'%','image-mask-brush':'px',
+  'image-mask-feather':'px','image-shape-radius':'px','text-font-size':'px','graphic-size':'px',
+  'graphic-x':'%','graphic-y':'%','graphic-width':'%','graphic-opacity':'%','graphic-in':'s','graphic-out':'s',
+  in:'s',out:'s','timeline-zoom':'×'
+ });
+ const field=(id,label)=>Object.freeze({id,label,unit:units[id]||''});
+ const formatValue=(id,value)=>String(value)+(units[id]||'');
  const image={
   select:[field('tool','Tool')],
   pen:[field('tool','Tool'),field('color','Color'),field('size','Width'),field('image-tool-opacity','Opacity')],
@@ -19,7 +27,7 @@
  const clip={
   timeline:[field('timeline-zoom','Timeline zoom'),field('performance-profile','Performance')],
   graphic:[field('graphic-font','Font'),field('graphic-size','Size'),field('graphic-color','Color'),
-   field('graphic-opacity','Opacity')],
+   field('graphic-opacity','Opacity'),field('graphic-x','X'),field('graphic-y','Y'),field('graphic-width','Width')],
  };
  const bounds={side:[260,520],bottom:[180,440]};
  const defaultLayout=()=>({tools:true,properties:true,dock:'right',side:310,bottom:260,media:true});
@@ -50,13 +58,20 @@
   if(tool==='select'){
    const base=image.select.slice();
    const type=String(selectedType).toUpperCase();
-   if(type==='TEXT LAYER')base.push(field('text-font-size','Size'),field('text-font-family','Font'));
-   if(type==='IMAGE LAYER'||type==='TEXT LAYER'||type==='ANNOTATION')
+   if(type==='TEXT LAYER')base.push(field('text-font-size','Size'),field('text-font-family','Font'),field('text-fill-color','Color'));
+   if(['IMAGE LAYER','TEXT LAYER','ANNOTATION','VECTOR LAYER'].includes(type))
     base.push(field('image-layer-x','X'),field('image-layer-y','Y'),field('image-layer-opacity','Opacity'));
+   if(['IMAGE LAYER','VECTOR LAYER','ANNOTATION'].includes(type))base.push(field('image-layer-width','W'),field('image-layer-height','H'));
    return base;
   }
-  if(shapeNames.has(tool))return image.shape.slice();
+  if(shapeNames.has(tool)){
+   const fields=image.shape.slice();
+   if(tool==='rounded-rectangle')fields.push(field('image-shape-radius','Radius'));
+   if(tool==='star')fields.push(field('image-shape-points','Points'));
+   if(tool==='arrow')fields.push(field('image-shape-heads','Heads'));
+   return fields;
+  }
   return (image[tool]||[field('tool','Tool')]).slice();
  }
- root.MangoControlCoreV070={image,clip,presets,defaultLayout,validateLayout,applyPreset,fieldsFor};
+ root.MangoControlCoreV070={image,clip,presets,defaultLayout,validateLayout,applyPreset,fieldsFor,units,formatValue};
 })(typeof globalThis!=='undefined'?globalThis:this);

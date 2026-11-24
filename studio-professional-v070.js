@@ -195,10 +195,10 @@
   label.append(input);
   const readout=create('output','v070-readout');
   if(['range','number'].includes(input.type)){label.append(readout);}
-  return {label,input,readout,source};
+  return {label,input,readout,source,spec};
  }
  function syncProxy(pair){
-  const {input,readout,source}=pair;
+  const {input,readout,source,spec}=pair;
   input.disabled=!!source.disabled;
   if(input.type==='checkbox')input.checked=!!source.checked;
   else if(input.value!==source.value)input.value=source.value;
@@ -206,7 +206,7 @@
    if(source.hasAttribute(key))input.setAttribute(key,source.getAttribute(key));
   }
   if(readout&&['range','number'].includes(input.type)){
-   readout.value=source.value+(input.type==='range'&&source.max==='100'?'%':'');
+   readout.value=input.type==='number'?(spec.unit||''):core.formatValue(spec.id,source.value);
    readout.textContent=readout.value;
   }
  }
