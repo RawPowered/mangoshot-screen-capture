@@ -6,7 +6,7 @@
  const api=root.browser||root.chrome,el=k=>doc.getElementById('br-'+k+'-v077'),menu=doc.getElementById('bridge-open-v077'),indicator=doc.getElementById('bridge-indicator-v077');
  const hostName='com.rawpowered.mangoshot.bridge',permission={permissions:['nativeMessaging']},scopeKeys=['inspect','propose','frame'];
  const seq=S.controller({capture:()=>view.automationCapture(),draft:()=>view.sequenceDraft(),commit:(d,s)=>view.commitSequenceAutomation(d,s)});
- let port=null,endpoint=null,connecting=false,generation=0,pairTimer=null,decoder=null,lastRequest=null,rendering=false,connectionIdentity=null;
+ let port=null,endpoint=null,connecting=false,generation=0,pairTimer=null,decoder=null,lastRequest=null,rendering=false,connectionIdentity=null,lastRender=null;
  const note=t=>{el('status').textContent=C.safe(t,350);},json=x=>JSON.stringify(x,null,2);
  function inspect(){
   const s=view.automationInspect();
@@ -22,6 +22,7 @@
  }
  function render(){
   const s=bridge.state(),p=s.pending,linked=s.connected&&!!endpoint;
+  const signature=JSON.stringify([s,linked,connecting,!!port,!!view.original(),rendering]);if(signature===lastRender)return;lastRender=signature;
   el('state').textContent=connecting?'Connecting…':linked?'Paired · local':'Disconnected';
   menu.textContent='Intelligence Bridge · '+(p?'Review pending':linked?'Paired':connecting?'Connecting':'Off');
   indicator.textContent=p?'LOCAL · REVIEW PENDING':linked?'LOCAL · BRIDGE ON':'LOCAL · NO CLOUD';
@@ -36,7 +37,7 @@
   el('review-kind').textContent=p?(p.kind==='sequence'?'Sequence proposal · '+p.id:'Frame request · '+p.data.time.toFixed(3)+'s'):'No pending requests';
   el('review').textContent=p?(p.kind==='sequence'?json({recipe:p.data.recipe,changes:p.data.changes,beforeDuration:p.data.beforeDuration,afterDuration:p.data.afterDuration,warnings:p.data.warnings}):'Requested sequence time: '+p.data.time.toFixed(3)+' seconds. Render a frame locally and inspect it before sharing.'): 'No edits or frames are shared automatically.';
   el('frame-panel').hidden=p?.kind!=='frame';
-  el('render').disabled=!p||p.kind!=='frame'||rendering;
+  el('render').disabled=!p||p.kind!=='frame'||p.frameReady||rendering;
   el('approve').disabled=!p||(p.kind==='frame'&&!p.frameReady)||rendering;
   el('approve').textContent=p?.kind==='frame'?'Share reviewed frame':'Apply reviewed sequence';
   el('reject').disabled=!p;
@@ -85,7 +86,7 @@
   video.addEventListener(event,ok,{once:true});video.addEventListener('error',bad,{once:true});if(decoder)decoder.cancel=()=>finish(Error('Frame canceled'));try{begin();}catch(e){finish(e);}
  });}
  async function renderFrame(event){
-  if(!event.isTrusted||rendering||!dialog.open||panel.hidden)return;
+  if(!event.isTrusted||rendering||!dialog.open||panel.hidden||bridge.state().pending?.frameReady)return;
   let request,run=generation;
   try{
    request=bridge.frameRequest();clearImage();rendering=true;render();el('frame-note').textContent='Decoding locally…';
@@ -118,7 +119,7 @@
  el('revoke').addEventListener('click',async e=>{if(!e.isTrusted)return;disconnect('Session revoked');try{await browserPermission('remove');note('Native messaging permission removal requested.');}catch(err){note('Permission removal failed: '+err.message);}});
  el('select-config').addEventListener('click',()=>{el('config').focus();el('config').select();});
  el('render').addEventListener('click',renderFrame);
- el('approve').addEventListener('click',e=>{if(!e.isTrusted||!dialog.open||panel.hidden)return;try{const s=bridge.approve();note(s==='applied'?'Sequence applied · undo in editor':'Frame approved · available to paired client for 60 seconds');}catch(err){note(err.message);}render();});
+ el('approve').addEventListener('click',e=>{if(!e.isTrusted||!dialog.open||panel.hidden)return;try{const p=bridge.state().pending;if(p?.kind==='frame'&&(el('image').hidden||!el('image').complete||!el('image').naturalWidth))throw Error('Inspect the rendered JPEG before sharing');const s=bridge.approve();note(s==='applied'?'Sequence applied · undo in editor':'Frame approved · available to paired client for 60 seconds');}catch(err){note(err.message);}render();});
  el('reject').addEventListener('click',e=>{if(e.isTrusted){bridge.reject();note('Request rejected');render();}});
  api?.permissions?.onRemoved?.addListener(p=>{if(p.permissions?.includes('nativeMessaging'))disconnect('Browser permission revoked');});
  dialog.querySelector('[data-au-tab="access"]').addEventListener('click',render);

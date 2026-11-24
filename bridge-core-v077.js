@@ -73,7 +73,7 @@
   }
   function frameRequest(){const p=current('frame');return {id:p.id,time:p.data.time,state:p.state};}
   function stageFrame(requestId,image){
-   const p=current('frame');if(p.id!==requestId||!shape(image,['mimeType','data'])||image.mimeType!=='image/jpeg'||typeof image.data!=='string'||image.data.length>300000||!/^[A-Za-z0-9+/=]+$/.test(image.data))throw Error('Invalid review frame');
+   const p=current('frame');if(p.frame)throw Error('Frame already staged');if(p.id!==requestId||!shape(image,['mimeType','data'])||image.mimeType!=='image/jpeg'||typeof image.data!=='string'||image.data.length>300000||!/^[A-Za-z0-9+/=]+$/.test(image.data))throw Error('Invalid review frame');
    p.frame=clone(image);host.changed?.();
   }
   function approve(){

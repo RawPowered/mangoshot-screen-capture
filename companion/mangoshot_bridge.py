@@ -268,6 +268,8 @@ class MCP:
             try:
                 validate(method, args)
                 response = self.call(method, args)
+                if not isinstance(response, dict):
+                    raise ValueError("Missing bridge response")
                 if not response.get("ok"):
                     return result({"isError": True, "content": [{"type": "text", "text": str(response.get("error", "Bridge refused"))[:240]}]})
                 data = response["result"]
@@ -318,6 +320,10 @@ def mcp_main():
                 return 1
 
 if __name__ == "__main__":
+    if os.name == "nt":
+        import msvcrt
+        msvcrt.setmode(sys.stdin.fileno(), os.O_BINARY)
+        msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
     # Chrome supplies its allowed origin and Windows parent handle; Firefox supplies
     # manifest path and add-on ID. The browser-installed manifest is the origin gate.
     if sys.argv[1:] == ["--mcp"]:
