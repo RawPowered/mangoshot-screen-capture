@@ -62,5 +62,5 @@ for(const key of ['vectorCore.paint(pen,stroke)','function syncVectorControls()'
 }
 assert.ok(css.includes('.image-vector-library')&&css.includes('.image-vector-selection'));
 assert.equal(JSON.parse(read('manifest.json')).version,'0.6.18');
-assert.deepEqual(JSON.parse(read('manifest.json')).permissions,['activeTab','scripting','clipboardWrite']);
+assert.deepEqual(JSON.parse(read('manifest.json')).permissions,['activeTab','scripting','clipboardWrite','nativeMessaging']);
 console.log('PASS: 11 editable vector types, fill, stroke, dash, position, resize, UI and history wiring');
