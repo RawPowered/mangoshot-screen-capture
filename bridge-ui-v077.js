@@ -5,6 +5,7 @@
  if(!panel||!view||!C||!S)return;
  const api=root.browser||root.chrome,el=k=>doc.getElementById('br-'+k+'-v077'),menu=doc.getElementById('bridge-open-v077'),indicator=doc.getElementById('bridge-indicator-v077');
  const hostName='com.rawpowered.mangoshot.bridge',permission={permissions:['nativeMessaging']},scopeKeys=['inspect','propose','frame'];
+ const manifest=api?.runtime?.getManifest?.()||{},mode=manifest.permissions?.includes('nativeMessaging')?'required':manifest.optional_permissions?.includes('nativeMessaging')?'optional':'missing';
  const seq=S.controller({capture:()=>view.automationCapture(),draft:()=>view.sequenceDraft(),commit:(d,s)=>view.commitSequenceAutomation(d,s)});
  let port=null,endpoint=null,connecting=false,generation=0,pairTimer=null,decoder=null,lastRequest=null,rendering=false,connectionIdentity=null,lastRender=null;
  const note=t=>{el('status').textContent=C.safe(t,350);},json=x=>JSON.stringify(x,null,2);
@@ -27,7 +28,8 @@
   menu.textContent='Intelligence Bridge · '+(p?'Review pending':linked?'Paired':connecting?'Connecting':'Off');
   indicator.textContent=p?'LOCAL · REVIEW PENDING':linked?'LOCAL · BRIDGE ON':'LOCAL · NO CLOUD';
   for(const k of scopeKeys)el(k).disabled=connecting||linked;
-  el('connect').disabled=connecting||linked||!view.original();
+  el('connect').disabled=connecting||linked||!view.original()||mode==='missing';
+  el('revoke').disabled=mode!=='optional';
   el('disconnect').disabled=!connecting&&!port;
   el('config-details').hidden=!linked;
   if(!linked)el('config').value='';
@@ -67,18 +69,21 @@
   if(!event.isTrusted||connecting||port)return;
   const scopes=scopeKeys.filter(k=>el(k).checked),state=view.automationCapture();
   if(!state.ready||!scopes.length){note('Load and pause a video, then select at least one permission.');return;}
-  if(!api?.permissions?.request||!api?.runtime){note('Native messaging is unavailable in this browser.');return;}
+  if(mode==='missing'){note('Native messaging is missing from the loaded manifest. Reload the bridge-enabled extension directory.');return;}
+  if(!api?.permissions?.contains||!api?.runtime){note('Native messaging is unavailable in this browser.');return;}
   connecting=true;connectionIdentity=view.original();const run=++generation;render();
   try{
-   const allowed=await browserPermission('request');if(run!==generation)return;
-   if(!allowed){disconnect('Browser permission was declined');return;}
+   // Required permission is granted through installation; do not request it as optional.
+   const allowed=await browserPermission(mode==='required'?'contains':'request');if(run!==generation)return;
+   if(!allowed){disconnect(mode==='required'?'Native messaging is not granted. Enable the updated extension in the browser extension manager.':'Browser permission was declined');return;}
+   if(typeof api.runtime.connectNative!=='function'){disconnect('Browser native messaging API is unavailable. Check the extension manager and policies.');return;}
    if(view.original()!==connectionIdentity||!view.automationCapture().ready)throw Error('Source or playback changed during pairing');
    const p=api.runtime.connectNative(hostName);port=p;
    p.onMessage.addListener(m=>onMessage(p,m));
    p.onDisconnect.addListener(()=>{if(p!==port)return;const error=api.runtime.lastError?.message;disconnect(error?'Companion unavailable: '+error:'Companion disconnected');});
    pairTimer=setTimeout(()=>{if(p===port&&connecting)disconnect('Companion pairing timed out. Check installation and extension ID.');},25000);
    p.postMessage({type:'start',scopes});note('Starting local companion…');
-  }catch(e){if(run===generation)disconnect('Pairing failed: '+e.message);}
+  }catch(e){if(run===generation)disconnect(/Only permissions specified in the manifest/.test(e.message)?'The browser rejected the declared native messaging permission. Reload the correct bridge compatibility preview.':'Pairing failed: '+e.message);}
  }
  function wait(video,event,begin){return new Promise((resolve,reject)=>{
   let done=false;const finish=e=>{if(done)return;done=true;clearTimeout(timer);video.removeEventListener(event,ok);video.removeEventListener('error',bad);e?reject(e):resolve();};
@@ -116,7 +121,7 @@
  menu.addEventListener('click',()=>{root.MangoAutomationV075.open();if(dialog.open)dialog.querySelector('[data-au-tab="access"]').click();render();});
  el('connect').addEventListener('click',connect);
  el('disconnect').addEventListener('click',e=>{if(e.isTrusted)disconnect('Session revoked. Re-pair to connect again.');});
- el('revoke').addEventListener('click',async e=>{if(!e.isTrusted)return;disconnect('Session revoked');try{await browserPermission('remove');note('Native messaging permission removal requested.');}catch(err){note('Permission removal failed: '+err.message);}});
+ el('revoke').addEventListener('click',async e=>{if(!e.isTrusted||mode!=='optional')return;disconnect('Session revoked');try{const removed=await browserPermission('remove');note(removed?'Native messaging permission removed.':'Permission was not removed. Check browser settings.');}catch(err){note('Permission removal failed: '+err.message);}});
  el('select-config').addEventListener('click',()=>{el('config').focus();el('config').select();});
  el('render').addEventListener('click',renderFrame);
  el('approve').addEventListener('click',e=>{if(!e.isTrusted||!dialog.open||panel.hidden)return;try{const p=bridge.state().pending;if(p?.kind==='frame'&&(el('image').hidden||!el('image').complete||!el('image').naturalWidth))throw Error('Inspect the rendered JPEG before sharing');const s=bridge.approve();note(s==='applied'?'Sequence applied · undo in editor':'Frame approved · available to paired client for 60 seconds');}catch(err){note(err.message);}render();});
@@ -126,6 +131,9 @@
  dialog.addEventListener('close',()=>{if(rendering){stopDecoder();clearImage();render();}});
  root.addEventListener('pagehide',()=>disconnect('Page closed'));
  setInterval(()=>{if(endpoint&&!bridge.active())disconnect('Session expired or source changed');else render();},1000);
+ el('permission-info').textContent='Build '+(manifest.version_name||manifest.version||'unknown')+' | Native messaging: '+mode+' | Extension ID: '+(api?.runtime?.id||'unavailable');
+ if(mode==='required'){el('revoke').textContent='Browser permission installed';el('revoke').title='This bridge-enabled preview grants native messaging at installation. Disconnect revokes the active session; disable/remove the extension to revoke its browser capability.';note('Native messaging is declared at installation. No companion runs until you pair.');}
+ if(mode==='missing')note('The loaded manifest does not declare native messaging. Reload the bridge-enabled extension directory.');
  root.MangoBridgeV077=Object.freeze({disconnect,inspect:()=>{const s=bridge.state();return {connected:s.connected,pending:s.pending?{id:s.pending.id,kind:s.pending.kind,frameReady:s.pending.frameReady}:null};}});
  render();
 })(typeof globalThis!=='undefined'?globalThis:this);

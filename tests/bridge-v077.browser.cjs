@@ -4,8 +4,8 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('nod
  fs.mkdirSync(dir,{recursive:true});fs.mkdirSync(config,{recursive:true});
  for(const name of fs.readdirSync(repo)){const p=path.join(repo,name);if(fs.statSync(p).isFile()&&/\.(html|js|css)$|^manifest\.json$/.test(name))fs.copyFileSync(p,path.join(dir,name));}
  for(const folder of ['assets','icons'])fs.cpSync(path.join(repo,folder),path.join(dir,folder),{recursive:true});
- // CI-only pre-granted native permission; production manifest stays optional.
- const mf=JSON.parse(fs.readFileSync(path.join(dir,'manifest.json')));mf.permissions.push('nativeMessaging');delete mf.optional_permissions;fs.writeFileSync(path.join(dir,'manifest.json'),JSON.stringify(mf));
+ // Use the exact shipping manifest without injecting or overriding permissions.
+ const mf=JSON.parse(fs.readFileSync(path.join(dir,'manifest.json')));assert.ok(mf.permissions.includes('nativeMessaging'));assert.equal(fs.readFileSync(path.join(dir,'manifest.json'),'utf8'),fs.readFileSync(path.join(repo,'manifest.json'),'utf8'));
  const host=path.join(repo,'companion','mangoshot_bridge.py');fs.chmodSync(host,0o755);
  let ctx,child;
  try{
@@ -20,6 +20,8 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('nod
  await p.locator('#file').setInputFiles(fixture);await p.waitForFunction(()=>MangoClipView.automationCapture().ready);
  await p.locator('.v06-menu > summary').filter({hasText:'Automation'}).click();await p.locator('#bridge-open-v077').click();
  await p.locator('.bridge-v077').waitFor({state:'visible'});
+ assert.match(await p.locator('#br-permission-info-v077').textContent(),/Native messaging: required/);assert.ok(await p.locator('#br-revoke-v077').isDisabled());
+ assert.ok(await p.evaluate(()=>new Promise(resolve=>chrome.permissions.contains({permissions:['nativeMessaging']},resolve))));
  for(const k of ['inspect','propose','frame'])await p.locator('#br-'+k+'-v077').check();
  await p.locator('#br-connect-v077').click();
  await p.waitForFunction(()=>MangoBridgeV077.inspect().connected,null,{timeout:30000}).catch(async e=>{throw Error('Native host pairing failed: '+await p.locator('#br-status-v077').textContent());});

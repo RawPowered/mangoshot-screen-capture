@@ -182,7 +182,7 @@
 <label><input type="checkbox" id="br-propose-v077"> Propose reviewed MangoScript sequences</label>
 <label><input type="checkbox" id="br-frame-v077"> Request individual rendered frames, each explicitly approved</label>
 <div class="br-actions-v077"><button type="button" id="br-connect-v077">Pair local companion</button><button type="button" id="br-disconnect-v077" disabled>Disconnect / revoke session</button><button type="button" id="br-revoke-v077">Remove browser permission</button></div>
-<p id="br-status-v077" role="status" aria-live="polite">Install the separate companion first. No listener starts until you pair.</p>
+<p id="br-permission-info-v077" class="panel-muted" style="overflow-wrap:anywhere"></p><p id="br-status-v077" role="status" aria-live="polite">Install the separate companion first. No listener starts until you pair.</p>
 <details id="br-config-details-v077" hidden><summary>Reveal local MCP client configuration (secret)</summary><p>Replace the example executable path with your installed bridge. Paste only into a trusted local client. Re-pair after restarting that client; the secret expires after 30 minutes.</p><textarea id="br-config-v077" rows="11" readonly spellcheck="false" aria-label="Secret local MCP client configuration"></textarea><button type="button" id="br-select-config-v077">Select configuration</button></details>
 <p id="br-expiry-v077"></p><h3>Session activity</h3><pre id="br-audit-v077" tabindex="0">No activity</pre></section>
 <section><h3>Incoming request review</h3><p id="br-review-kind-v077">No pending requests. Pair a client to receive proposals.</p><pre id="br-review-v077" tabindex="0">No edits or frames are shared automatically.</pre>
