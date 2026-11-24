@@ -15,10 +15,11 @@
  });}finally{db.close();}}
  const makeId=()=>globalThis.crypto?.randomUUID?.()||Date.now()+'-'+Math.random().toString(36).slice(2);
  const validId=id=>typeof id==='string'&&/^[a-zA-Z0-9_-]{1,90}$/.test(id);
- async function save(blob,id=makeId()){
+ async function save(blob,id=makeId(),cursorTrace=null){
   if(!(blob instanceof Blob)||!blob.size)throw new Error('No recording to save');
   if(!validId(id))throw new Error('Invalid recording ID');
   const item={id,blob,created:Date.now(),bytes:blob.size};
+  if(cursorTrace&&globalThis.MangoCursorCoreV073)item.cursorTrace=globalThis.MangoCursorCoreV073.trace(cursorTrace);
   await run('readwrite',(store)=>{store.put(item,'recording:'+id);store.put({id,created:item.created},'latest');});
   return id;
  }

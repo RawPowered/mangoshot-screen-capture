@@ -16,7 +16,7 @@ let ctrlHeld=false,altHeld=false,scrollPermission=false,forwardingActive=false,l
 let scrollBusy=false,queuedScroll=0,warnings=[],startedAt=0,pausedAt=0,pausedTotal=0;
 let strokes=[],activeStroke=null,history=[],renderPending=false;
 // Every capture owns its own encoder/chunks/storage; late onstop cannot corrupt the next session.
-let activeSession=null;
+let activeSession=null,lastCursorTrace=null;
 const label=text=>{status.textContent=text;};
 function recordState(value){const el=get('record-state');if(!el)return;el.dataset.state=value;el.textContent=({ready:'Ready',recording:'Recording',stopped:'Capture stopped',finalizing:'Finalizing video',recovery:'Recovery available',complete:'Ready to edit',error:'Capture error'})[value]||value;}
 recordState('ready');
@@ -42,7 +42,7 @@ function normalized(event){const rect=ink.getBoundingClientRect();
  return {x:Math.max(0,Math.min(1,(event.clientX-rect.left)/Math.max(1,rect.width))),
    y:Math.max(0,Math.min(1,(event.clientY-rect.top)/Math.max(1,rect.height)))};
 }
-function zoom(value){zoomState=MangoCamera.fit(value);get('zoomReadout').textContent=Math.round(zoomState.zoom*100)+'%';}
+function zoom(value){if(active())globalThis.MangoRecorderCursorV073?.manualCamera?.();zoomState=MangoCamera.fit(value);get('zoomReadout').textContent=Math.round(zoomState.zoom*100)+'%';}
 function resetZoom(){zoom(MangoCamera.camera());}
 function zoomBy(factor){if(active())zoom(MangoCamera.anchor(zoomState,zoomState.zoom*factor,{x:.5,y:.5}));}
 function updateMode(){
@@ -102,6 +102,7 @@ ink.addEventListener('pointerdown',event=>{
  if(event.ctrlKey||ctrlHeld){gesture={type:'dolly',startY:event.clientY,origin:zoomState,
    anchor:normalized(event),height:ink.getBoundingClientRect().height};
    const feedback=get('zoom-feedback');feedback.hidden=false;feedback.textContent='Drag ↑ Zoom in · ↓ Zoom out';return;}
+ if(globalThis.MangoRecorderCursorV073?.focusTool?.())return;
  activeStroke={color:get('color').value,
    size:Number(get('size').value)*ink.width/Math.max(1,ink.getBoundingClientRect().width),points:[penPoint(event)]};
 });
@@ -141,7 +142,7 @@ function stopClock(){if(timer)clearInterval(timer);timer=0;
 function resetControls(){start.disabled=false;stop.disabled=true;pause.disabled=true;pause.textContent='Pause';
  for(const id of ['zoomIn','zoomOut','zoomRegion'])get(id).disabled=true;
  get('resetZoom').disabled=false;regionEnabled(false);ctrlHeld=false;altHeld=false;updateMode();}
-function cleanup(){stopTracks();stopClock();screen=null;mic=null;
+function cleanup(){globalThis.MangoRecorderCursorV073?.end?.();stopTracks();stopClock();screen=null;mic=null;
  preview.srcObject=null;recorder=null;controller=null;captureSource='';scrollPermission=false;forwardingActive=false;
  get('video-placeholder').hidden=false;composite.style.display='none';ink.style.opacity='1';
  get('enable-scroll').disabled=true;get('enable-scroll').textContent='Enable captured-tab wheel control';
@@ -189,6 +190,7 @@ function finishSession(session,partial=false){
  const isCurrent=activeSession===session;
  if(isCurrent){
   finalized=true;partialShown=partial;cleanup();recordState(partial?'recovery':'complete');
+  lastCursorTrace=partial?null:session.cursorTrace||null;
   showResult(blob,partial,session.id);
  }else if(!partial&&blob.size){
   // This belongs to a former session. Do not replace the current recording's UI.
@@ -200,6 +202,7 @@ function finishSession(session,partial=false){
 function stopCapture(reason='Stopped by user'){
  const session=activeSession;
  if(!session||session.stopped||!recorder)return;
+ session.cursorTrace=globalThis.MangoRecorderCursorV073?.end?.()||null;
  session.stopped=true;stopping=true;recording=false;stop.disabled=true;pause.disabled=true;
  stopClock();recordState('stopped');label('Capture stopped. Finalizing video file separately…');
  try{if(session.encoder.state!=='inactive')session.encoder.stop();}
@@ -320,7 +323,7 @@ get('recover').addEventListener('click',async()=>{
  try{const sessions=typeof MangoRecovery.list==='function'?await MangoRecovery.list():[await MangoRecovery.latest()].filter(Boolean);
   const target=sessions.find(item=>item.id===get('recovery-select')?.value)||sessions[0];
   if(!target)throw new Error('No recording selected.');
-  const blob=await MangoRecovery.restore(target);lastBlob=blob;lastSessionId=target.id;get('result').hidden=false;
+  const blob=await MangoRecovery.restore(target);lastBlob=blob;lastSessionId=target.id;lastCursorTrace=null;get('result').hidden=false;
   get('result-meta').textContent=(blob.size/1048576).toFixed(1)+' MiB · '+(target.status==='finished'?'finalized':'INCOMPLETE')+' · '+(blob.type.includes('mp4')?'MP4':'WebM');
   label('Recovered local fragments. Save original to download; interrupted MP4 may lack final playback metadata.');
  }catch(error){label('Cannot recover: '+error.message);}finally{button.disabled=false;}
@@ -331,7 +334,7 @@ get('dismiss-recovery').addEventListener('click',async()=>{
  label('All locally stored recovery fragments deleted.');}catch(error){label('Could not clear recovery: '+error.message);}finally{button.disabled=false;}
 });
 start.addEventListener('click',async()=>{
- if(start.disabled)return;start.disabled=true;lastBlob=null;lastSessionId=null;
+ if(start.disabled)return;start.disabled=true;lastBlob=null;lastSessionId=null;lastCursorTrace=null;
  recording=false;stopping=false;finalized=false;partialShown=false;recordingToken++;const token=recordingToken;
  // Never overwrite a previous encoder's chunks or callbacks.
  activeSession=null;recordState('ready');
@@ -362,7 +365,12 @@ start.addEventListener('click',async()=>{
   composite.style.display='block';ink.style.opacity='0';
   const ctx=composite.getContext('2d',{alpha:false});
   const render=()=>{if(!screen||stopping)return;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);
-    if(preview.readyState>=2){const crop=MangoCamera.crop(zoomState,w,h);
+    const cursor=globalThis.MangoRecorderCursorV073;
+    if(cursor&&recording){
+      const seconds=recorder?.state==='recording'?Math.max(0,(Date.now()-startedAt-pausedTotal)/1000):null;
+      const effective=cursor.frame(ctx,preview,zoomState,w,h,seconds);
+      get('zoomReadout').textContent=Math.round(effective.zoom*100)+'%';
+    }else if(preview.readyState>=2){const crop=MangoCamera.crop(zoomState,w,h);
       ctx.drawImage(preview,crop.sx,crop.sy,crop.sw,crop.sh,0,0,w,h);}
     ctx.drawImage(ink,0,0);animation=requestAnimationFrame(render);};render();
   if(typeof composite.captureStream!=='function')throw new Error('Canvas recording unsupported.');
@@ -393,7 +401,7 @@ start.addEventListener('click',async()=>{
   for(const id of ['resetZoom','zoomIn','zoomOut','zoomRegion'])get(id).disabled=false;
   get('enable-scroll').disabled=!(controller?.forwardWheel&&captureSource==='browser');
   get('enable-scroll').title=captureSource==='browser'?'Enable scroll forwarding for the tab you selected in the browser capture picker. Browser permission may be requested.':'Native captured-tab scrolling is unavailable for a shared '+(captureSource||'display')+'. Enable linked-tab fallback or interact in the actual source.';
-  startedAt=Date.now();pausedAt=0;pausedTotal=0;light.className='record-dot active';
+  startedAt=Date.now();pausedAt=0;pausedTotal=0;globalThis.MangoRecorderCursorV073?.begin?.();light.className='record-dot active';
   timer=setInterval(()=>{const now=pausedAt||Date.now();elapsed.textContent=clock(now-startedAt-pausedTotal);},200);
   label('Recording '+w+'×'+h+' · '+(captureSource||'display')+' · '+(audio?'audio':'NO AUDIO TRACK — waveform unavailable')+
     (warnings.length?' · '+warnings.join(' '):''));
@@ -403,15 +411,15 @@ start.addEventListener('click',async()=>{
 stop.addEventListener('click',()=>stopCapture());
 pause.addEventListener('click',()=>{
  if(!recorder||stopping)return;
- if(recorder.state==='recording'){recorder.pause();pausedAt=Date.now();pause.textContent='Resume';light.className='record-dot idle';label('Recording paused');}
+ if(recorder.state==='recording'){recorder.pause();globalThis.MangoRecorderCursorV073?.suspend?.();pausedAt=Date.now();pause.textContent='Resume';light.className='record-dot idle';label('Recording paused');}
  else if(recorder.state==='paused'){recorder.resume();pausedTotal+=Date.now()-pausedAt;pausedAt=0;
    pause.textContent='Pause';light.className='record-dot active';label('Recording resumed');}
 });
 get('save-raw').addEventListener('click',()=>saveBlob(lastBlob,'Saved original recording.'));
-get('discard').addEventListener('click',()=>{lastBlob=null;lastSessionId=null;get('result').hidden=true;label('Recording removed from memory; local recovery remains until cleared.');});
+get('discard').addEventListener('click',()=>{lastBlob=null;lastSessionId=null;lastCursorTrace=null;get('result').hidden=true;label('Recording removed from memory; local recovery remains until cleared.');});
 get('edit').addEventListener('click',async()=>{
  if(!lastBlob)return;get('edit').disabled=true;label('Opening Clip Studio…');
- try{const recordingId=await MangoClips.save(lastBlob,lastSessionId||undefined);
+ try{const recordingId=await MangoClips.save(lastBlob,lastSessionId||undefined,lastCursorTrace);
   await call(api.tabs.create.bind(api.tabs),{url:api.runtime.getURL('clip-studio.html')+'?recording='+encodeURIComponent(recordingId)});
  label('Clip Studio opened. Original recording remains available.');}
  catch(error){label('Could not open Clip Studio: '+error.message+'. Save original instead.');}
@@ -420,8 +428,9 @@ get('edit').addEventListener('click',async()=>{
 window.addEventListener('beforeunload',event=>{
  if((recording||stopping)&&!finalized){event.preventDefault();event.returnValue='';}
 });
-window.addEventListener('pagehide',()=>{stopTracks();stopClock();});
+window.addEventListener('pagehide',()=>{globalThis.MangoRecorderCursorV073?.end?.();stopTracks();stopClock();});
 if(!navigator.mediaDevices?.getDisplayMedia||typeof MediaRecorder==='undefined'){
  label('Screen capture APIs unavailable here.');start.disabled=true;
 }
+globalThis.MangoRecorderCursorHostV073=Object.freeze({active:()=>active()&&recorder?.state==='recording',camera:()=>({...zoomState}),surface:()=>captureSource,linked:()=>linkedAvailable,source:()=>source});
 void checkRecovery();

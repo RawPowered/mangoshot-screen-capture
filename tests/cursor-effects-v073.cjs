@@ -1,0 +1,35 @@
+const assert=require('node:assert/strict'),fs=require('node:fs');
+const c=require('../cursor-effects-v073.js');
+assert.equal(c.preset('off').zoomMode,'off');
+assert.equal(c.preset('tutorial').zoomMode,'click');
+assert.throws(()=>c.config({scale:Infinity}));
+assert.throws(()=>c.config({unknown:true}));
+assert.throws(()=>c.recipe({schema:c.RECIPE,action:'recorder.cursor.configure',settings:{scale:6}}));
+assert.throws(()=>c.recipe({schema:c.RECIPE,action:'recorder.cursor.configure',source:'linked'}));
+assert.throws(()=>c.recipe({schema:c.RECIPE,action:'eval'}));
+const base=c.camera(1,.5,.5),target={x:.05,y:.9},s=c.preset('follow');
+let view=base;for(let i=0;i<120;i++)view=c.advance(view,base,target,s,16);
+assert.ok(view.zoom>1.99&&view.cx>=.5/view.zoom-1e-8&&view.cy<=1-.5/view.zoom+1e-8);
+const point=c.sourcePoint({x:.3,y:.8},view),out=c.outputPoint(point,view);
+assert.ok(Math.abs(out.x-.3)<1e-8&&Math.abs(out.y-.8)<1e-8);
+const click=c.preset('tutorial');
+assert.ok(c.advance(base,base,target,click,200,50,target).zoom>1);
+assert.equal(c.advance(base,base,target,click,200,5000,target).zoom,1);
+assert.deepEqual(c.advance(view,base,null,c.preset('off'),16),base);
+const t=c.createTrace();t.add(0,{x:.2,y:.4});t.add(.2,{x:.4,y:.6});t.add(.3,null);t.add(.6,null);t.add(.8,{x:.9,y:.1},true);
+const track=t.finish();assert.ok(track.baked);
+assert.ok(Math.abs(c.sampleAt(track,.1).x-.3)<.0001);
+assert.equal(c.sampleAt(track,.35),null);assert.equal(c.sampleAt(track,2),null);
+assert.throws(()=>c.trace({...track,samples:[[1,1,1],[.5,0,0]]}));
+assert.throws(()=>c.trace({...track,samples:[[1,-.1,0]]}));
+const capped=c.createTrace();for(let i=0;i<c.MAX+10;i++)capped.add(i*.21,{x:0,y:1});assert.equal(capped.finish().samples.length,c.MAX);assert.ok(capped.finish().truncated);
+const calls=[];const ctx={save(){},restore(){},createRadialGradient(){return {addColorStop(){}};},fillRect(){calls.push('spotlight');},beginPath(){},arc(){},stroke(){calls.push('ring');}};
+c.draw(ctx,{x:.4,y:.3},c.preset('tutorial'),1920,1080,50);assert.deepEqual(calls,['spotlight','ring','ring']);
+assert.equal(c.recipe({schema:c.RECIPE,action:'clip.cursor.zoom',at:12}).at,12);
+for(const file of ['recorder.html','clip-studio.html']){
+ const h=fs.readFileSync(file,'utf8');assert.ok(h.includes('cursor-effects-v073.js')&&h.includes('cursor-studio-v073.css'));
+}
+assert.ok(fs.readFileSync('recorder.js','utf8').includes('session.cursorTrace='));
+assert.ok(fs.readFileSync('clip-studio.js','utf8').includes('record.cursorTrace||null'));
+assert.ok(fs.readFileSync('linked-tab.js','utf8').includes('port.onDisconnect.addListener(dispose)'));
+console.log('Cursor presets, recipes, trace bounds, camera mapping and paint primitives passed');

@@ -2,7 +2,7 @@
 const byId=id=>document.getElementById(id),video=byId('video'),status=byId('status');
 let original=null,originalUrl=null,segments=[],layers=[],selectedLayerId=null,history=[],duration=0,sequencePlaying=false,exporting=false,cancelExport=false,originalFormat=null;
 let previewSequenceTime=null,loadVersion=0,selectedClipIndex=null,rangeSelected=false,redoHistory=[];
-let sequencePreview=null,zoomEvents=[],transitions=[];
+let sequencePreview=null,zoomEvents=[],transitions=[],cursorTrace=null;
 const clone=o=>JSON.parse(JSON.stringify(o));
 const hasGraphics=()=>layers.some(l=>l.visible&&l.end>l.start);
 const hasCreative=()=>zoomEvents.length>0||!!globalThis.MangoCreativeUI?.hasVoice?.();
@@ -84,8 +84,8 @@ function waitVideoEvent(type,timeout=8000){return new Promise((resolve,reject)=>
  const done=()=>{clear();resolve();};const failed=()=>{clear();reject(video.error||new Error('Video decoding failed.'));};
  video.addEventListener(type,done,{once:true});video.addEventListener('error',failed,{once:true});
  });}
-async function load(blob){if(exporting)throw new Error('Finish the current export first.');
- const request=++loadVersion;
+async function load(blob,attachedCursorTrace=null){if(exporting)throw new Error('Finish the current export first.');
+ const request=++loadVersion;cursorTrace=null;globalThis.MangoCursorClipV073?.refresh?.();
  if(!(blob instanceof Blob)||!blob.size)throw new Error('Select a nonempty video.');
  sequencePlaying=false;sequencePreview?.stop();video.pause();if(originalUrl)URL.revokeObjectURL(originalUrl);
  globalThis.MangoCreativeUI?.voice?.dispose?.();zoomEvents=[];
@@ -103,12 +103,13 @@ async function load(blob){if(exporting)throw new Error('Finish the current expor
    try{video.currentTime=0;}catch{}
  }
  if(!Number.isFinite(duration)||duration<=0||duration>86400)throw new Error('The browser could not determine video duration. Try importing a finalized MP4/WebM file.');
+ if(attachedCursorTrace&&globalThis.MangoCursorCoreV073){try{cursorTrace=globalThis.MangoCursorCoreV073.trace(attachedCursorTrace);}catch{cursorTrace=null;}}
  segments=[{start:0,end:duration}];layers=[];zoomEvents=[];transitions=[];selectedLayerId=null;selectedClipIndex=null;rangeSelected=false;history=[];redoHistory=[];byId('in').value='0';byId('out').value=duration.toFixed(2);
  byId('in').max=byId('out').max=duration.toFixed(2);
  const frame=byId('clip-preview-frame');if(frame&&video.videoWidth>0&&video.videoHeight>0){
    const aspect=video.videoWidth/video.videoHeight;frame.style.setProperty('--mango-ratio',String(aspect));frame.style.setProperty('--mango-aspect',video.videoWidth+' / '+video.videoHeight);
   }
-  render();sequencePreview?.seekOutput(0);globalThis.MangoClipTimeline?.reset?.();globalThis.MangoLayerUI?.render?.();paintPreview();globalThis.MangoAutoCutUI?.onEditorChange?.();label('Loaded '+time(duration)+' video · original is unchanged.');
+  render();globalThis.MangoCursorClipV073?.refresh?.();sequencePreview?.seekOutput(0);globalThis.MangoClipTimeline?.reset?.();globalThis.MangoLayerUI?.render?.();paintPreview();globalThis.MangoAutoCutUI?.onEditorChange?.();label('Loaded '+time(duration)+' video · original is unchanged.');
 }
 function readRange(){const clip=selectedClipIndex!==null&&!rangeSelected?MangoSequenceOps.bounds(segments,selectedClipIndex):null;
  return clip||MangoTimeline.range(Number(byId('in').value),Number(byId('out').value),MangoEditOps.length(segments));}
@@ -194,7 +195,7 @@ byId('reset').onclick=()=>{if(!original)return;remember();segments=[{start:0,end
  selectedClipIndex=null;rangeSelected=false;byId('in').value='0';byId('out').value=duration.toFixed(2);
  globalThis.MangoClipTimeline?.loadMarkers?.([]);refreshed();label('Source, graphics and markers reset.');};
 byId('file').addEventListener('change',event=>{if(event.target.files?.[0])load(event.target.files[0]).catch(e=>label('Open failed: '+e.message));});
-byId('open-last').onclick=async()=>{try{const record=await MangoClips.load();if(!record?.blob)throw new Error('No stored recording found.');await load(record.blob);}catch(e){label('Cannot open last recording: '+e.message);}};
+byId('open-last').onclick=async()=>{try{const record=await MangoClips.load();if(!record?.blob)throw new Error('No stored recording found.');await load(record.blob,record.cursorTrace||null);}catch(e){label('Cannot open last recording: '+e.message);}};
 byId('forget-last').onclick=async()=>{try{await MangoClips.clear();label('Last locally stored recording deleted.');}catch(e){label('Cannot remove stored video: '+e.message);}};
 async function seek(timepoint,v=video){v.pause();if(Math.abs(v.currentTime-timepoint)<.025)return;
  const ready=new Promise((resolve,reject)=>{const timer=setTimeout(()=>{v.removeEventListener('seeked',done);reject(new Error('Seeking timed out.'));},8000);
@@ -284,17 +285,17 @@ if(requestedRecording){
  MangoClips.load(requestedRecording).then(record=>{
   if(loadVersion>0)return; // user already imported a different file
   if(!record?.blob)throw new Error('This recording is no longer in the local clip library. Use Import video to open its downloaded file.');
-  return load(record.blob);
+  return load(record.blob,record.cursorTrace||null);
  }).catch(error=>label('Recording handoff failed: '+error.message));
 }else{
- MangoClips.load().then(record=>{if(record?.blob&&loadVersion===0)return load(record.blob);})
+ MangoClips.load().then(record=>{if(record?.blob&&loadVersion===0)return load(record.blob,record.cursorTrace||null);})
    .catch(error=>label('Could not auto-open latest video: '+error.message));
 }
 
 /* Read-only view model for the professional timeline. Mutations flow through
  * this editor's existing non-destructive edit decision list. */
 globalThis.MangoClipView={
- duration:()=>duration,outputDuration:()=>MangoEditOps.length(segments),video:()=>video,
+ cursorTrace:()=>cursorTrace, duration:()=>duration,outputDuration:()=>MangoEditOps.length(segments),video:()=>video,
  segments:()=>segments,layers:()=>layers,transitions:()=>clone(transitions),selectedLayer:()=>selectedLayerId,url:()=>originalUrl,original:()=>original,
  exporting:()=>exporting,isPlaying:()=>sequencePreview?.isPlaying?.()||false,updateControls:setControls,
   updateTransition(index,patch){
