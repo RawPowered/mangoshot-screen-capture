@@ -6,7 +6,7 @@
  if(!panel||!wrap||!ink)return;
  const api=root.chrome??root.browser,now=()=>performance.now();
  let settings=core.preset('off'),mode='preview',port=null,pointer=null,clicked=null,clickAt=-Infinity,lastAt=-Infinity,lastFrame=0,lastCamera=null;
- let trace=null,retain=false,focusTool=false,session=false;
+ let trace=null,retain=false,focusTool=false,session=false,pendingClick=null;
  const setStatus=t=>{el('cursor-status-v073').textContent=t;};
  const fields={spotlight:'cursor-spotlight-v073',ring:'cursor-ring-v073',zoomMode:'cursor-zoom-mode-v073',scale:'cursor-scale-v073',radius:'cursor-radius-v073',dim:'cursor-dim-v073',feather:'cursor-feather-v073',smooth:'cursor-smooth-v073',hold:'cursor-hold-v073',color:'cursor-color-v073'};
  function renderSettings(){
@@ -15,14 +15,14 @@
  }
  function applyRecipe(raw){const checked=core.recipe(raw);if(checked.action!=='recorder.cursor.configure')throw Error('This recipe is for Clip Studio');
   settings=checked.settings;clicked=null;clickAt=-Infinity;renderSettings();el('cursor-preset-v073').value='custom';if(!enabled())disconnect();return {...settings};}
- function clear(){pointer=null;clicked=null;clickAt=-Infinity;lastAt=-Infinity;}
+ function clear(){pointer=null;clicked=null;pendingClick=null;clickAt=-Infinity;lastAt=-Infinity;}
  function disconnect(){const old=port;port=null;if(old)try{old.disconnect();}catch{}mode='preview';clear();
   el('cursor-link-v073').textContent='Connect linked tab';el('cursor-link-v073').setAttribute('aria-pressed','false');}
  function enabled(){return retain||settings.spotlight||settings.ring||settings.zoomMode!=='off';}
  function ingest(p,click=false){
   if(!session||!host.active()||!enabled())return;
   pointer=core.point(p);lastAt=now();
-  if(pointer&&click){clicked={...pointer};clickAt=lastAt;}
+  if(pointer&&click){clicked={...pointer};clickAt=lastAt;if(retain)pendingClick={...pointer};}
  }
  function previewPoint(e,click=false){
   if(mode!=='preview'||!session||!host.active()||!enabled())return;
@@ -59,7 +59,7 @@
   try{settings=core.config({...settings,[k]:v});el('cursor-preset-v073').value='custom';renderSettings();if(!enabled())disconnect();}
   catch(err){setStatus(err.message);renderSettings();}
  });
- el('cursor-retain-v073').addEventListener('change',e=>{retain=e.target.checked;if(!enabled())disconnect();});
+ el('cursor-retain-v073').addEventListener('change',e=>{retain=e.target.checked;if(!retain)pendingClick=null;if(!enabled())disconnect();});
  el('cursor-focus-tool-v073').addEventListener('change',e=>{focusTool=e.target.checked;});
  el('cursor-apply-recipe-v073').addEventListener('click',()=>{try{
   const raw=el('cursor-recipe-v073').value;if(raw.length>4096)throw Error('Recipe exceeds 4 KB');
@@ -84,6 +84,7 @@
   if(trace&&seconds!=null&&(retain||traceStarted)){
    traceStarted=traceStarted||retain;
    trace.add(seconds,retain?output:null,!!output&&(settings.spotlight||settings.ring)||Math.abs(c.zoom-base.zoom)>.01);
+   if(retain&&pendingClick){trace.click(seconds,core.outputPoint(pendingClick,c));pendingClick=null;}
   }
   return c;
  }

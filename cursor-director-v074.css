@@ -1,0 +1,15 @@
+/* Source-anchored effect lane and compact inspector. Local stacking only. */
+body.studio-clip .cursor-director-v074{margin:5px 0;padding:8px;min-width:0}
+.cursor-director-v074 .cd-tabs-v074{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px;margin:8px 0}
+.cursor-director-v074 .cd-tabs-v074 button{min-width:0;text-align:center;font-size:10px;border-radius:3px}
+.cursor-director-v074 .cd-tabs-v074 button[aria-pressed=true]{background:#354e39;border-color:#b5ed8b;color:#e6ffd3}
+.cursor-director-v074 [hidden]{display:none!important}
+.cursor-director-v074 .cd-list-v074{display:grid;gap:4px;margin:6px 0;max-height:180px;overflow:auto}
+.cursor-director-v074 .cd-row-v074{display:flex;align-items:center;flex-wrap:wrap;gap:4px;background:#223129;border:1px solid #42584a;padding:4px;min-width:0}
+.cursor-director-v074 .cd-row-v074 button{min-width:0;flex:1 1 80px;font-size:10px}
+.cursor-director-v074 .cd-row-v074 [aria-pressed=true]{border-color:#b5ed8b;color:#d9ffc4}
+body.studio-clip .cd-track-v074{position:relative;isolation:isolate;height:26px;min-height:26px;background:#23332e;border-top:1px solid #526859;overflow:hidden}
+body.studio-clip .cd-track-v074:before{content:'CUR';position:absolute;left:4px;top:5px;color:#a8cbb3;font:700 9px system-ui;pointer-events:none}
+body.studio-clip .cd-track-v074 button{position:absolute;top:2px;height:21px;min-width:0;min-height:0;padding:1px 3px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;background:#55734a;color:#f4ffe9;border:1px solid #9ac278;border-radius:2px;font:650 10px system-ui;text-align:left;z-index:1}
+body.studio-clip .cd-track-v074 button[aria-pressed=true]{outline:2px solid #e1ffb8;outline-offset:-2px}
+body.studio-clip .cd-track-v074 button[data-disabled=true]{background:#414c43;color:#b5c3b7;border-style:dashed}

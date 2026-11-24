@@ -12,7 +12,7 @@
  document.body.classList.add('v062-workspace');
  const panels={},buttons={};
  const toolbar=make('nav','v062-property-tabs');toolbar.setAttribute('aria-label','Properties categories');
- const groups=[['clip','Clip'],['graphics','Callouts'],['camera','Camera'],['voice','Voiceover'],['autocut','AutoCut']];
+ const groups=[['clip','Clip'],['graphics','Callouts'],['camera','Camera'],['cursor','Cursor'],['voice','Voiceover'],['autocut','AutoCut']];
  for(const [key,title] of groups){
   const panel=make('section','v062-tab-panel');panel.id='v062-'+key+'-panel';
   panel.setAttribute('aria-label',title+' properties');panel.hidden=key!=='clip';
@@ -41,6 +41,7 @@
   section.open=true;section.classList.add('v062-property-tool');
   panels[key].append(section);
  }
+ for(const id of ['cursor-clip-v073','cursor-director-v074']){const section=el(id);if(section)panels.cursor.append(section);}
  for(const [key] of groups)tabsHost.appendChild(panels[key]);
  const header=q(props,':scope > .panel-heading');header?.after(toolbar,tabsHost);
  function activate(key){

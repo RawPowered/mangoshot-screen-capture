@@ -55,7 +55,7 @@
   }
   ctx.restore();
  }
- const MAX=18000,SCHEMA='mangoshot.cursor.trace.v1';
+ const MAX=18000,MAX_CLICKS=6000,SCHEMA='mangoshot.cursor.trace.v1';
  function trace(raw){
   if(!raw||raw.schema!==SCHEMA||raw.space!=='recorded-frame-normalized'||!Array.isArray(raw.samples)||raw.samples.length>MAX||
      typeof raw.truncated!=='boolean'||typeof raw.baked!=='boolean')throw Error('Invalid cursor trace');
@@ -67,7 +67,15 @@
    const p=point({x:s[1],y:s[2]});if(!p)throw Error('Invalid cursor position');
    return [s[0],p.x,p.y];
   });
-  return {schema:SCHEMA,space:'recorded-frame-normalized',samples,truncated:raw.truncated,baked:raw.baked};
+  const result={schema:SCHEMA,space:'recorded-frame-normalized',samples,truncated:raw.truncated,baked:raw.baked};
+  if(raw.clicks!=null){
+   if(!Array.isArray(raw.clicks)||raw.clicks.length>MAX_CLICKS)throw Error('Invalid cursor clicks');
+   let last=-1;result.clicks=raw.clicks.map(s=>{
+    if(!Array.isArray(s)||s.length!==3||!Number.isFinite(s[0])||s[0]<0||s[0]>86400||s[0]<=last||!point({x:s[1],y:s[2]}))throw Error('Invalid cursor click');
+    last=s[0];return [s[0],s[1],s[2]];
+   });
+  }
+  return result;
  }
  function sampleAt(raw,t){
   if(!raw?.samples?.length||!Number.isFinite(t)||t<0)return null;
@@ -78,7 +86,7 @@
   if(n&&n[1]!==null&&n[0]-s[0]<=.55){const k=clamp((t-s[0])/(n[0]-s[0]),0,1);return {x:s[1]+(n[1]-s[1])*k,y:s[2]+(n[2]-s[2])*k};}
   return {x:s[1],y:s[2]};
  }
- function createTrace(){let data={schema:SCHEMA,space:'recorded-frame-normalized',samples:[],truncated:false,baked:false};
+ function createTrace(){let data={schema:SCHEMA,space:'recorded-frame-normalized',samples:[],clicks:[],truncated:false,baked:false};
   return {add(t,p,baked=false){
    if(!Number.isFinite(t)||t<0||t>86400)return;
    if(baked)data.baked=true;
@@ -87,6 +95,11 @@
    if(a.length>=MAX){data.truncated=true;return;}
    a.push([Math.round(t*1000)/1000,valid?Math.round(valid.x*10000)/10000:null,valid?Math.round(valid.y*10000)/10000:null]);
    if(a.length>1&&a.at(-1)[0]<=a.at(-2)[0])a.pop();
+  },click(t,p){
+   const valid=point(p),a=data.clicks,stamp=Math.round(t*1000)/1000;
+   if(!valid||!Number.isFinite(t)||t<0||t>86400||stamp<=(a.at(-1)?.[0]??-1))return;
+   if(a.length>=MAX_CLICKS){data.truncated=true;return;}
+   a.push([stamp,Math.round(valid.x*10000)/10000,Math.round(valid.y*10000)/10000]);
   },finish(){return trace(data);}};
  }
  const RECIPE='mangoshot.cursor.recipe.v1';

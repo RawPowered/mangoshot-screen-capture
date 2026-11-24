@@ -2,14 +2,16 @@
 const byId=id=>document.getElementById(id),video=byId('video'),status=byId('status');
 let original=null,originalUrl=null,segments=[],layers=[],selectedLayerId=null,history=[],duration=0,sequencePlaying=false,exporting=false,cancelExport=false,originalFormat=null;
 let previewSequenceTime=null,loadVersion=0,selectedClipIndex=null,rangeSelected=false,redoHistory=[];
-let sequencePreview=null,zoomEvents=[],transitions=[],cursorTrace=null;
+let sequencePreview=null,zoomEvents=[],transitions=[],cursorTrace=null,cursorRegions=[];
+const director=()=>globalThis.MangoCursorDirectorCoreV074;
 const clone=o=>JSON.parse(JSON.stringify(o));
 const hasGraphics=()=>layers.some(l=>l.visible&&l.end>l.start);
-const hasCreative=()=>zoomEvents.length>0||!!globalThis.MangoCreativeUI?.hasVoice?.();
+const hasCreative=()=>cursorRegions.some(r=>r.enabled)||zoomEvents.length>0||!!globalThis.MangoCreativeUI?.hasVoice?.();
 const snapshot=()=>({segments:clone(segments),layers:clone(layers),markers:globalThis.MangoClipTimeline?.markers?.()||[],
- selectedLayerId,selectedClipIndex,rangeSelected,zoomFrames:clone(zoomEvents),transitions:clone(transitions),selection:{start:Number(byId('in').value),end:Number(byId('out').value)}});
+ selectedLayerId,selectedClipIndex,rangeSelected,zoomFrames:clone(zoomEvents),transitions:clone(transitions),cursorRegions:clone(cursorRegions),cursorTrace,selection:{start:Number(byId('in').value),end:Number(byId('out').value)}});
 const remember=()=>{history.push(snapshot());if(history.length>80)history.shift();redoHistory=[];};
 function restore(snap){segments=clone(snap.segments);layers=clone(snap.layers);selectedClipIndex=snap.selectedClipIndex??null;selectedLayerId=snap.selectedLayerId??null;
+ cursorRegions=clone(snap.cursorRegions||[]);cursorTrace=snap.cursorTrace||null;
  rangeSelected=!!snap.rangeSelected;zoomEvents=MangoCreativeZoom.check(snap.zoomFrames||[]);transitions=MangoMotion.checkTransitions(snap.transitions||[]);
  const length=MangoEditOps.length(segments),selection=snap.selection||{start:0,end:length};
  byId('in').max=byId('out').max=length.toFixed(2);
@@ -48,7 +50,7 @@ function setControls(){const loaded=!!original;
    'Edited or converted exports require re-encoding at approximately real-time playback speed. Preserve your original with Save original (instant).':
    'MP4 encoding unavailable in this browser; edited MP4 export is disabled. Save original (instant) does not convert the file.';
 }
-function render(){const durationOut=MangoTimeline.outputDuration(segments);
+function render(){globalThis.MangoCursorDirectorV074?.refresh?.();const durationOut=MangoTimeline.outputDuration(segments);
  byId('duration').textContent=original?'Sequence '+time(durationOut)+' · Source '+time(duration):'No video loaded';
  byId('timeline').replaceChildren();
  for(const [i,s] of segments.entries()){
@@ -85,7 +87,7 @@ function waitVideoEvent(type,timeout=8000){return new Promise((resolve,reject)=>
  video.addEventListener(type,done,{once:true});video.addEventListener('error',failed,{once:true});
  });}
 async function load(blob,attachedCursorTrace=null){if(exporting)throw new Error('Finish the current export first.');
- const request=++loadVersion;cursorTrace=null;globalThis.MangoCursorClipV073?.refresh?.();
+ const request=++loadVersion;cursorTrace=null;cursorRegions=[];globalThis.MangoCursorClipV073?.refresh?.();
  if(!(blob instanceof Blob)||!blob.size)throw new Error('Select a nonempty video.');
  sequencePlaying=false;sequencePreview?.stop();video.pause();if(originalUrl)URL.revokeObjectURL(originalUrl);
  globalThis.MangoCreativeUI?.voice?.dispose?.();zoomEvents=[];
@@ -170,7 +172,7 @@ function paintPreview(){
  if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
  const ctx=canvas.getContext('2d');ctx.clearRect(0,0,w,h);
  const mapped=previewSequenceTime===null?MangoSequenceMedia.atSource(segments,video.currentTime)?.output??null:previewSequenceTime;
- if(mapped!==null){MangoCreativeZoom.preview(video,zoomEvents,mapped);MangoMotion.paintTransition(ctx,video,zoomEvents,segments,transitions,mapped,w,h);MangoGraphics.render(ctx,layers,mapped,w,h);}
+ if(mapped!==null){const z=MangoCreativeZoom.preview(video,zoomEvents,mapped);const inTransition=MangoMotion.paintTransition(ctx,video,zoomEvents,segments,transitions,mapped,w,h);if(!inTransition)director()?.paint(ctx,cursorTrace,cursorRegions,segments,mapped,z,w,h);MangoGraphics.render(ctx,layers,mapped,w,h);}
  globalThis.MangoLayerUI?.selectionOutline?.(ctx,mapped,w,h);
 }
 
@@ -191,7 +193,7 @@ byId('trim').onclick=()=>edit('trim');byId('cut').onclick=()=>{
 };
 byId('undo').onclick=()=>{if(!history.length)return;redoHistory.push(snapshot());restore(history.pop());label('Undo complete.');};
 byId('redo').onclick=()=>{if(!redoHistory.length)return;history.push(snapshot());restore(redoHistory.pop());label('Redo complete.');};
-byId('reset').onclick=()=>{if(!original)return;remember();segments=[{start:0,end:duration}];layers=[];zoomEvents=[];selectedLayerId=null;
+byId('reset').onclick=()=>{if(!original)return;remember();segments=[{start:0,end:duration}];layers=[];zoomEvents=[];cursorRegions=[];selectedLayerId=null;
  selectedClipIndex=null;rangeSelected=false;byId('in').value='0';byId('out').value=duration.toFixed(2);
  globalThis.MangoClipTimeline?.loadMarkers?.([]);refreshed();label('Source, graphics and markers reset.');};
 byId('file').addEventListener('change',event=>{if(event.target.files?.[0])load(event.target.files[0]).catch(e=>label('Open failed: '+e.message));});
@@ -238,7 +240,7 @@ async function exportClip(format){if(!original||!segments.length||exporting)retu
   const paint=canvas.getContext('2d',{alpha:false});
   let exportSequenceTime=0;
   function draw(){paint.fillStyle='#000';paint.fillRect(0,0,width,height);
-   if(exportVideo.readyState>=2){if(!MangoMotion.paintTransition(paint,exportVideo,zoomEvents,segments,transitions,exportSequenceTime,width,height))MangoCreativeZoom.draw(paint,exportVideo,zoomEvents,exportSequenceTime,width,height);}
+   if(exportVideo.readyState>=2){if(!MangoMotion.paintTransition(paint,exportVideo,zoomEvents,segments,transitions,exportSequenceTime,width,height)){const z=MangoCreativeZoom.draw(paint,exportVideo,zoomEvents,exportSequenceTime,width,height);director()?.paint(paint,cursorTrace,cursorRegions,segments,exportSequenceTime,z,width,height);}}
    MangoGraphics.render(paint,layers,exportSequenceTime,width,height);
    paintHandle=requestAnimationFrame(draw);}draw();
   if(!canvas.captureStream)throw new Error('Canvas encoding unavailable.');
@@ -256,7 +258,7 @@ async function exportClip(format){if(!original||!segments.length||exporting)retu
   if(!rec)throw new Error('Failed to initialize '+format.toUpperCase()+' encoder.');
   rec.ondataavailable=e=>{if(e.data.size)recorded.push(e.data);};
   const done=new Promise((resolve,reject)=>{rec.onstop=()=>resolve();rec.onerror=e=>reject(e.error||new Error('Encoding failed.'));});
-  await seek(segments[0].start,exportVideo);if(exportVideo.readyState>=2){if(!MangoMotion.paintTransition(paint,exportVideo,zoomEvents,segments,transitions,exportSequenceTime,width,height))MangoCreativeZoom.draw(paint,exportVideo,zoomEvents,exportSequenceTime,width,height);}
+  await seek(segments[0].start,exportVideo);if(exportVideo.readyState>=2){if(!MangoMotion.paintTransition(paint,exportVideo,zoomEvents,segments,transitions,exportSequenceTime,width,height)){const z=MangoCreativeZoom.draw(paint,exportVideo,zoomEvents,exportSequenceTime,width,height);director()?.paint(paint,cursorTrace,cursorRegions,segments,exportSequenceTime,z,width,height);}MangoGraphics.render(paint,layers,exportSequenceTime,width,height);}
   rec.start(800);
   await playRanges(segments,()=>cancelExport,(value,output)=>{byId('progress').value=value;exportSequenceTime=output;voiceExport?.sync?.(output,true);},exportVideo);
   if(rec.state!=='inactive')rec.stop();await done;
@@ -295,7 +297,13 @@ if(requestedRecording){
 /* Read-only view model for the professional timeline. Mutations flow through
  * this editor's existing non-destructive edit decision list. */
 globalThis.MangoClipView={
- cursorTrace:()=>cursorTrace, duration:()=>duration,outputDuration:()=>MangoEditOps.length(segments),video:()=>video,
+ cursorTrace:()=>cursorTrace, cursorRegions:()=>clone(cursorRegions), cursorDirectorState:()=>({schema:'mangoshot.cursor.director.v1',regions:clone(cursorRegions),trace:cursorTrace}),
+ commitCursorDirector({regions:nextRegions=cursorRegions,zoomFrames:nextZoom=zoomEvents,trace:nextTrace=cursorTrace}={}){
+  if(!original||exporting||!director())throw Error('Load the source and finish export first');
+  const checked=director().check({schema:director().SCHEMA,regions:nextRegions,trace:nextTrace},duration),z=MangoCreativeZoom.check(nextZoom);
+  if(z.some(e=>e.start>=MangoEditOps.length(segments)))throw Error('Camera event outside edited sequence');
+  remember();cursorRegions=checked.regions;cursorTrace=nextTrace===cursorTrace?cursorTrace:checked.trace;zoomEvents=z;refreshed();return true;
+ }, duration:()=>duration,outputDuration:()=>MangoEditOps.length(segments),video:()=>video,
  segments:()=>segments,layers:()=>layers,transitions:()=>clone(transitions),selectedLayer:()=>selectedLayerId,url:()=>originalUrl,original:()=>original,
  exporting:()=>exporting,isPlaying:()=>sequencePreview?.isPlaying?.()||false,updateControls:setControls,
   updateTransition(index,patch){
@@ -326,10 +334,13 @@ globalThis.MangoClipView={
    remember();zoomEvents=next;refreshed();
   },
   sourceFormat:()=>originalFormat,
- restoreLegacyProject(data){
+ restoreLegacyProject(data,creative=null){
   if(!original||exporting)throw new Error('Load the matching source video before restoring a project.');
   const validated=MangoProject.check(data,{size:original.size,format:originalFormat,duration});
-  remember();segments=validated.segments;layers=validated.layers;transitions=reconcileTransitions(validated.transitions||[],segments);
+  const savedDirector=creative?.cursorDirector?director().check(creative.cursorDirector,duration):null;
+  const savedZoom=MangoCreativeZoom.check(creative?.zoomFrames||[]);
+  if(savedZoom.some(e=>e.start>=MangoEditOps.length(validated.segments)))throw Error('Saved camera event outside sequence');
+  remember();cursorRegions=savedDirector?.regions||[];if(savedDirector)cursorTrace=savedDirector.trace;zoomEvents=savedZoom;segments=validated.segments;layers=validated.layers;transitions=reconcileTransitions(validated.transitions||[],segments);
   selectedLayerId=null;selectedClipIndex=null;rangeSelected=false;
   const length=MangoEditOps.length(segments);
   byId('out').max=byId('in').max=length.toFixed(2);
@@ -435,6 +446,10 @@ sequencePreview=MangoSequencePreview.create(video,()=>segments,
  (playing,error)=>{globalThis.MangoCreativeUI?.onPlayback?.(playing);byId('program-play').textContent=playing?'❚❚ Pause':'▶ Play';if(error)label('Preview paused: '+error);});
 video.addEventListener('timeupdate',()=>{globalThis.MangoClipTimeline?.playhead?.();paintPreview();});
 video.addEventListener('seeked',paintPreview);video.addEventListener('loadeddata',paintPreview);
+let cursorFramePending=false;
+function cursorFrame(){cursorFramePending=false;if(!video.paused&&!video.ended){if(cursorRegions.some(r=>r.enabled))paintPreview();scheduleCursorFrame();}}
+function scheduleCursorFrame(){if(cursorFramePending||video.paused||video.ended||!director())return;cursorFramePending=true;if(video.requestVideoFrameCallback)video.requestVideoFrameCallback(cursorFrame);else requestAnimationFrame(cursorFrame);}
+video.addEventListener('play',scheduleCursorFrame);
 
 // Premiere-style transport in place of native over-video controls, which are
 // obscured by the editable graphics canvas.
@@ -447,6 +462,7 @@ document.addEventListener('keydown',e=>{if(globalThis.MangoShortcuts?.active)ret
  e.preventDefault();byId('program-play').click();});
 
 byId('save-project').addEventListener('click',()=>{if(!original||exporting)return;
+ if(cursorRegions.length||zoomEvents.length){label('Use Project Manager → Save v2 project to preserve cursor and camera effects.');return;}
  const project=MangoProject.pack({size:original.size,format:originalFormat,duration},segments,layers,globalThis.MangoClipTimeline?.markers?.()||[],transitions);
  const blob=new Blob([JSON.stringify(project,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);
  const link=document.createElement('a');link.href=url;link.download='MangoShot-Project-'+Date.now()+'.json';
@@ -456,7 +472,7 @@ byId('save-project').addEventListener('click',()=>{if(!original||exporting)retur
 byId('open-project').addEventListener('change',async event=>{if(!original||exporting)return;
  try{const file=event.target.files?.[0];if(!file||file.size>1000000)throw new Error('Select a project under 1 MB.');
   const data=JSON.parse(await file.text());const project=MangoProject.check(data,{size:original.size,format:originalFormat,duration});
-  remember();segments=project.segments;layers=project.layers;selectedLayerId=null;selectedClipIndex=null;rangeSelected=false;
+  remember();segments=project.segments;layers=project.layers;cursorRegions=[];zoomEvents=[];selectedLayerId=null;selectedClipIndex=null;rangeSelected=false;
   byId('out').max=MangoEditOps.length(segments).toFixed(2);byId('in').max=byId('out').max;
   byId('in').value='0';byId('out').value=byId('out').max;refreshed();globalThis.MangoClipTimeline?.loadMarkers?.(project.markers);label('Project decisions restored. Original video unchanged.');
  }catch(error){label('Cannot open project: '+error.message);}finally{event.target.value='';}

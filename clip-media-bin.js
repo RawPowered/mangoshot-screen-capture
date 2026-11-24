@@ -98,7 +98,8 @@
   try{const converted=root.MangoProjectV2.fromV1(current.legacy,current.source,root.MangoProject);
    const assets=[...converted.assets,...registry.snapshot().filter(x=>x.id!=='source-primary')];
    const project=root.MangoProjectV2.create({assets,clips:[...converted.timeline.clips,...staged],legacyV1:current.legacy});
-   project.creative={zoomFrames:view()?.zoomFrames?.()||[]};
+   project.creative={zoomFrames:view()?.zoomFrames?.()||[],cursorDirector:view()?.cursorDirectorState?.()||undefined};
+   root.MangoProjectV2.check(project);
    const blob=new Blob([JSON.stringify(project,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob);
    const anchor=document.createElement('a');anchor.href=url;anchor.download='MangoShot-v2-Project-'+Date.now()+'.json';
    document.body.append(anchor);anchor.click();anchor.remove();setTimeout(()=>URL.revokeObjectURL(url),15000);
@@ -110,7 +111,7 @@
   try{if(file.size>3*1024*1024)throw new Error('Project metadata exceeds 3 MiB.');
    const p=root.MangoProjectV2.check(JSON.parse(await file.text()));
    registry.clear();selected=null;loadedProject=p;staged=p.timeline.clips.filter(c=>c.staged);
-   if(p.creative?.zoomFrames&&view()?.original?.())view().setZoomFrames(p.creative.zoomFrames);
+   // Restore creative data only after the primary source identity check succeeds.
    for(const a of p.assets){if(a.id!=='source-primary')registry.addPlaceholder(a);}
    draw();preview(null);label(`Loaded ${p.assets.length} asset references. Relink local files; restore the primary timeline separately.`);
   }catch(error){label('Cannot open v2 project: '+error.message);}});
@@ -119,9 +120,8 @@
   const primary=loadedProject.assets.find(a=>a.id==='source-primary');
   const v=view();if(!primary||!v?.original()){label('Load the matching primary video using Import video before restoring decisions.');return;}
   try{if(typeof v.restoreLegacyProject!=='function')throw new Error('Legacy restore adapter unavailable.');
-   v.restoreLegacyProject(loadedProject.legacyV1);
-   if(loadedProject.creative?.zoomFrames)v.setZoomFrames(loadedProject.creative.zoomFrames);
-   label('Primary timeline and saved zooms restored; secondary assets remain staging-only.');}
+   v.restoreLegacyProject(loadedProject.legacyV1,loadedProject.creative||null);
+   label('Primary timeline, camera and cursor effects restored; secondary assets remain staging-only.');}
   catch(e){label('Cannot restore primary timeline: '+e.message);}
  };
  root.MangoMediaBin={registry,addFiles,refresh:draw,staged:()=>staged.map(x=>({...x})),snapshot:()=>registry.snapshot()};
