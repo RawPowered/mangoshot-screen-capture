@@ -45,6 +45,8 @@ jobs:
           node tests/bridge-core-v077.cjs
           node --check bridge-core-v077.js
           node --check bridge-ui-v077.js
+          python3 tests/tunnel-wizard-v0772.py
+          python3 -m py_compile companion/tunnel_wizard.py companion/mangoshot_bridge.py
           timeout 90s python3 tests/bridge-native-v077.py
           for src in sequence-engine-v076.js sequence-studio-v076.js; do node --check "$src"; done
           for src in automation-core-v075.js automation-adapters-v075.js automation-ui-v075.js; do node --check "$src"; done
@@ -74,7 +76,7 @@ jobs:
           retention-days: 14
 
   studio-precision-preview:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/fix/v0.7.7-bridge-permission'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.7.2-chatgpt-tunnel'
     runs-on: ubuntu-latest
     needs: browser-extension-unit-tests
     steps:
@@ -98,21 +100,64 @@ jobs:
           timeout 120s node tests/bridge-v077.browser.cjs /tmp/mangoshot-sequence-test.webm
       - name: Package development preview (not a release)
         run: |
-          python3 tools/package-extension.py --out dist --version v0.6.18-bridge-compatibility-preview
-          unzip -t dist/MangoShot-v0.6.18-bridge-compatibility-preview-Extension.zip
-          python3 -c "import json,zipfile; z=zipfile.ZipFile('dist/MangoShot-v0.6.18-bridge-compatibility-preview-Extension.zip'); assert z.read('manifest.json')==open('manifest.json','rb').read(); assert 'nativeMessaging' in json.loads(z.read('manifest.json'))['permissions']"
-          unzip -l dist/MangoShot-v0.6.18-bridge-compatibility-preview-Extension.zip | grep studio-precision-v072.css
-          unzip -l dist/MangoShot-v0.6.18-bridge-compatibility-preview-Extension.zip | grep studio-layout-core-v072.js
-          unzip -l dist/MangoShot-v0.6.18-bridge-compatibility-preview-Extension.zip | grep studio-overlays-v072.js
-          unzip -l dist/MangoShot-v0.6.18-bridge-compatibility-preview-Extension.zip | grep cursor-effects-v073.js
-          unzip -l dist/MangoShot-v0.6.18-bridge-compatibility-preview-Extension.zip | grep cursor-recorder-v073.js
-          unzip -l dist/MangoShot-v0.6.18-bridge-compatibility-preview-Extension.zip | grep cursor-clip-v073.js
-          unzip -l dist/MangoShot-v0.6.18-bridge-compatibility-preview-Extension.zip | grep cursor-director-core-v074.js
-          unzip -l dist/MangoShot-v0.6.18-bridge-compatibility-preview-Extension.zip | grep cursor-director-ui-v074.js
-          for src in bridge-core-v077.js bridge-ui-v077.js bridge-v077.css sequence-engine-v076.js sequence-studio-v076.js sequence-studio-v076.css automation-core-v075.js automation-adapters-v075.js automation-ui-v075.js automation-v075.css; do unzip -l dist/MangoShot-v0.6.18-bridge-compatibility-preview-Extension.zip | grep "$src"; done
+          python3 tools/package-extension.py --out dist --version v0.6.18-chatgpt-tunnel-preview
+          unzip -t dist/MangoShot-v0.6.18-chatgpt-tunnel-preview-Extension.zip
+          python3 -c "import json,zipfile; z=zipfile.ZipFile('dist/MangoShot-v0.6.18-chatgpt-tunnel-preview-Extension.zip'); assert z.read('manifest.json')==open('manifest.json','rb').read(); assert 'nativeMessaging' in json.loads(z.read('manifest.json'))['permissions']"
+          unzip -l dist/MangoShot-v0.6.18-chatgpt-tunnel-preview-Extension.zip | grep studio-precision-v072.css
+          unzip -l dist/MangoShot-v0.6.18-chatgpt-tunnel-preview-Extension.zip | grep studio-layout-core-v072.js
+          unzip -l dist/MangoShot-v0.6.18-chatgpt-tunnel-preview-Extension.zip | grep studio-overlays-v072.js
+          unzip -l dist/MangoShot-v0.6.18-chatgpt-tunnel-preview-Extension.zip | grep cursor-effects-v073.js
+          unzip -l dist/MangoShot-v0.6.18-chatgpt-tunnel-preview-Extension.zip | grep cursor-recorder-v073.js
+          unzip -l dist/MangoShot-v0.6.18-chatgpt-tunnel-preview-Extension.zip | grep cursor-clip-v073.js
+          unzip -l dist/MangoShot-v0.6.18-chatgpt-tunnel-preview-Extension.zip | grep cursor-director-core-v074.js
+          unzip -l dist/MangoShot-v0.6.18-chatgpt-tunnel-preview-Extension.zip | grep cursor-director-ui-v074.js
+          for src in bridge-core-v077.js bridge-ui-v077.js bridge-v077.css sequence-engine-v076.js sequence-studio-v076.js sequence-studio-v076.css automation-core-v075.js automation-adapters-v075.js automation-ui-v075.js automation-v075.css; do unzip -l dist/MangoShot-v0.6.18-chatgpt-tunnel-preview-Extension.zip | grep "$src"; done
       - uses: actions/upload-artifact@v4
         with:
-          name: MangoShot-v0.7.7.1-Bridge-Compatibility-Extension
-          path: dist/MangoShot-v0.6.18-bridge-compatibility-preview-Extension.zip
+          name: MangoShot-v0.7.7.2-ChatGPT-Tunnel-Extension
+          path: dist/MangoShot-v0.6.18-chatgpt-tunnel-preview-Extension.zip
           retention-days: 14
 
+
+  companion-windows-preview:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.7.2-chatgpt-tunnel'
+    runs-on: windows-latest
+    timeout-minutes: 12
+    needs: browser-extension-unit-tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build unsigned Windows companion preview
+        shell: pwsh
+        run: |
+          python -m pip install pyinstaller==6.16.0
+          python -m PyInstaller --noconfirm --clean --onefile --console --name MangoShotBridge --distpath companion-dist companion/mangoshot_bridge.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify launcher, native host and MCP stdio executable
+        shell: pwsh
+        run: |
+          python tests/tunnel-wizard-v0772.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $v = & companion-dist/MangoShotBridge.exe --version
+          if ($LASTEXITCODE -ne 0 -or $v -ne 'MangoShotBridge 0.7.7.2') { throw 'Wrong companion version' }
+          python tests/bridge-native-v077.py companion-dist/MangoShotBridge.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $tokens=$null; $errors=$null
+          [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path 'companion/install-windows.ps1'),[ref]$tokens,[ref]$errors)
+          if ($errors.Count) { throw 'Invalid PowerShell installer syntax' }
+      - name: Package companion with source and license
+        shell: pwsh
+        run: |
+          Copy-Item companion/install-windows.ps1 companion-dist/
+          Copy-Item companion/mangoshot_bridge.py companion-dist/
+          Copy-Item companion/tunnel_wizard.py companion-dist/
+          Copy-Item docs/V0.7.7.2-CHATGPT-TUNNEL.md companion-dist/README.md
+          Copy-Item LICENSE companion-dist/LICENSE
+          Compress-Archive -Path companion-dist/* -DestinationPath MangoShot-v0.7.7.2-Windows-Companion-Preview.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MangoShot-v0.7.7.2-Windows-Companion
+          path: MangoShot-v0.7.7.2-Windows-Companion-Preview.zip
+          retention-days: 14

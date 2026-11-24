@@ -24,7 +24,7 @@ assert.equal(bridge.receive('status',{requestId:frame.requestId}).status,'unknow
 p=bridge.receive('propose',{recipe:{}});bridge.reject();assert.equal(bridge.receive('status',{requestId:p.requestId}).status,'rejected');
 p=bridge.receive('propose',{recipe:{}});now+=C.REVIEW+1;assert.equal(bridge.receive('status',{requestId:p.requestId}).status,'expired');
 identity={};assert.equal(bridge.active(),false);assert.throws(()=>bridge.receive('inspect',{}));
-bridge.start(['inspect']);now+=C.TTL+1;assert.equal(bridge.active(),false);assert.equal(bridge.state().pending,null);
+bridge.start(['inspect'],3600000);now+=C.TTL+1;assert.equal(bridge.active(),true);now+=C.TTL;assert.equal(bridge.active(),false);assert.equal(bridge.state().pending,null);
 const m=JSON.parse(fs.readFileSync('manifest.json','utf8'));assert.ok(m.permissions.includes('nativeMessaging'));assert.ok(!m.optional_permissions?.includes('nativeMessaging'));
 assert.ok(!m.externally_connectable&&!m.host_permissions);assert.ok(canceled>0);
 console.log('Bridge scope, user-only application, stale/rejected/expired proposals, one-shot approved frames, source/expiry revocation and manifest gates passed');

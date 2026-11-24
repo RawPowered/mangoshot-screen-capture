@@ -7,7 +7,7 @@
  const hostName='com.rawpowered.mangoshot.bridge',permission={permissions:['nativeMessaging']},scopeKeys=['inspect','propose','frame'];
  const manifest=api?.runtime?.getManifest?.()||{},mode=manifest.permissions?.includes('nativeMessaging')?'required':manifest.optional_permissions?.includes('nativeMessaging')?'optional':'missing';
  const seq=S.controller({capture:()=>view.automationCapture(),draft:()=>view.sequenceDraft(),commit:(d,s)=>view.commitSequenceAutomation(d,s)});
- let port=null,endpoint=null,connecting=false,generation=0,pairTimer=null,decoder=null,lastRequest=null,rendering=false,connectionIdentity=null,lastRender=null;
+ let port=null,endpoint=null,connecting=false,generation=0,pairTimer=null,decoder=null,lastRequest=null,rendering=false,connectionIdentity=null,lastRender=null,requestedLifetime=1800,lastTool=null;
  const note=t=>{el('status').textContent=C.safe(t,350);},json=x=>JSON.stringify(x,null,2);
  function inspect(){
   const s=view.automationInspect();
@@ -17,17 +17,21 @@
  function stopDecoder(){if(decoder){const d=decoder;decoder=null;d.cancel?.();d.video.pause();d.video.removeAttribute('src');d.video.load();URL.revokeObjectURL(d.url);}rendering=false;}
  function clearImage(){el('image').removeAttribute('src');el('image').hidden=true;}
  function disconnect(reason='Disconnected'){
-  generation++;clearTimeout(pairTimer);pairTimer=null;connecting=false;endpoint=null;connectionIdentity=null;stopDecoder();clearImage();
+  generation++;clearTimeout(pairTimer);pairTimer=null;connecting=false;endpoint=null;connectionIdentity=null;lastTool=null;stopDecoder();clearImage();
   const p=port;port=null;bridge.disconnect();if(p){try{p.postMessage({type:'stop'});}catch{}try{p.disconnect();}catch{}}
-  el('config').value='';el('config-details').open=false;note(reason);render();
+  el('config').value='';el('tunnel-port').textContent='—';el('config-details').open=false;note(reason);render();
  }
  function render(){
   const s=bridge.state(),p=s.pending,linked=s.connected&&!!endpoint;
-  const signature=JSON.stringify([s,linked,connecting,!!port,!!view.original(),rendering]);if(signature===lastRender)return;lastRender=signature;
+  const signature=JSON.stringify([s,linked,connecting,!!port,!!view.original(),rendering,lastTool]);if(signature===lastRender)return;lastRender=signature;
   el('state').textContent=connecting?'Connecting…':linked?'Paired · local':'Disconnected';
   menu.textContent='Intelligence Bridge · '+(p?'Review pending':linked?'Paired':connecting?'Connecting':'Off');
   indicator.textContent=p?'LOCAL · REVIEW PENDING':linked?'LOCAL · BRIDGE ON':'LOCAL · NO CLOUD';
   for(const k of scopeKeys)el(k).disabled=connecting||linked;
+  el('lifetime').disabled=connecting||linked;
+  el('tunnel-setup').hidden=!linked;
+  el('tunnel-status').textContent=linked?(lastTool?'MCP activity: '+lastTool.method+' at '+new Date(lastTool.at).toLocaleTimeString()+' (client identity not verified)':'Local pair ready. No MCP tool call received yet.'):'Pair the local companion first.';
+  el('companion-version').textContent=linked?'Companion '+(endpoint.version||'0.7.7 (legacy)')+(endpoint.version==='0.7.7.2'?' · tunnel launcher available':' · update companion for guided tunnel setup'):'Companion not connected';
   el('connect').disabled=connecting||linked||!view.original()||mode==='missing';
   el('revoke').disabled=mode!=='optional';
   el('disconnect').disabled=!connecting&&!port;
@@ -52,16 +56,18 @@
  function onMessage(p,message){
   if(p!==port)return;
   if(message?.type==='ready'&&connecting&&!endpoint){
-   if(!Number.isInteger(message.port)||message.port<1||message.port>65535||typeof message.token!=='string'||!/^[a-f0-9]{64}$/.test(message.token)||message.expiresIn!==1800||view.original()!==connectionIdentity){disconnect('Invalid or stale pairing');return;}
-   try{const scopes=scopeKeys.filter(k=>el(k).checked);bridge.start(scopes,message.expiresIn*1000);endpoint={port:message.port,token:message.token};
+   if(!Number.isInteger(message.port)||message.port<1||message.port>65535||typeof message.token!=='string'||!/^[a-f0-9]{64}$/.test(message.token)||message.expiresIn!==requestedLifetime||view.original()!==connectionIdentity){disconnect('Invalid or stale pairing');return;}
+   try{const scopes=scopeKeys.filter(k=>el(k).checked);bridge.start(scopes,message.expiresIn*1000);endpoint={port:message.port,token:message.token,version:typeof message.version==='string'&&/^\d+\.\d+\.\d+(?:\.\d+)?$/.test(message.version)?message.version:null};
+    el('tunnel-port').textContent=String(endpoint.port);
     clearTimeout(pairTimer);connecting=false;
     el('config').value=json({mcpServers:{mangoshot:{command:'C:\\path\\to\\MangoShotBridge.exe',args:['--mcp'],env:{MANGOSHOT_BRIDGE_PORT:String(endpoint.port),MANGOSHOT_BRIDGE_TOKEN:endpoint.token}}}});
     note('Paired. Reveal configuration for your trusted local MCP client.');render();
    }catch(e){disconnect(e.message);}return;
   }
+  if(message?.type==='error'&&connecting){disconnect('Companion refused setup. Use the matching updated companion or the 30 minute legacy option.');return;}
   if(message?.type!=='request'||!C.identifier(message.id))return;
   if(!endpoint||!bridge.active()){disconnect('Session ended');return;}
-  try{const result=bridge.receive(message.method,message.args);post(p,{type:'response',id:message.id,ok:true,result});}
+  try{const result=bridge.receive(message.method,message.args);if(['catalog','inspect','propose','frame','status'].includes(message.method))lastTool={method:message.method,at:Date.now()};post(p,{type:'response',id:message.id,ok:true,result});}
   catch(e){post(p,{type:'response',id:message.id,ok:false,error:C.safe(e.message)});}
   render();
  }
@@ -71,6 +77,7 @@
   if(!state.ready||!scopes.length){note('Load and pause a video, then select at least one permission.');return;}
   if(mode==='missing'){note('Native messaging is missing from the loaded manifest. Reload the bridge-enabled extension directory.');return;}
   if(!api?.permissions?.contains||!api?.runtime){note('Native messaging is unavailable in this browser.');return;}
+  requestedLifetime=Number(el('lifetime').value);if(![900,1800,3600].includes(requestedLifetime))return;
   connecting=true;connectionIdentity=view.original();const run=++generation;render();
   try{
    // Required permission is granted through installation; do not request it as optional.
@@ -82,7 +89,7 @@
    p.onMessage.addListener(m=>onMessage(p,m));
    p.onDisconnect.addListener(()=>{if(p!==port)return;const error=api.runtime.lastError?.message;disconnect(error?'Companion unavailable: '+error:'Companion disconnected');});
    pairTimer=setTimeout(()=>{if(p===port&&connecting)disconnect('Companion pairing timed out. Check installation and extension ID.');},25000);
-   p.postMessage({type:'start',scopes});note('Starting local companion…');
+   p.postMessage({type:'start',scopes,...(requestedLifetime===1800?{}:{lifetime:requestedLifetime})});note('Starting local companion…');
   }catch(e){if(run===generation)disconnect(/Only permissions specified in the manifest/.test(e.message)?'The browser rejected the declared native messaging permission. Reload the correct bridge compatibility preview.':'Pairing failed: '+e.message);}
  }
  function wait(video,event,begin){return new Promise((resolve,reject)=>{
@@ -123,6 +130,12 @@
  el('disconnect').addEventListener('click',e=>{if(e.isTrusted)disconnect('Session revoked. Re-pair to connect again.');});
  el('revoke').addEventListener('click',async e=>{if(!e.isTrusted||mode!=='optional')return;disconnect('Session revoked');try{const removed=await browserPermission('remove');note(removed?'Native messaging permission removed.':'Permission was not removed. Check browser settings.');}catch(err){note('Permission removal failed: '+err.message);}});
  el('select-config').addEventListener('click',()=>{el('config').focus();el('config').select();});
+ el('select-launch').addEventListener('click',()=>{el('launch-command').focus();el('launch-command').select();});
+ el('tunnel-reveal').addEventListener('click',()=>{if(endpoint){el('config-details').open=true;el('config').focus();}});
+ el('launcher-doc').addEventListener('click',()=>root.open('https://developers.openai.com/api/docs/guides/secure-mcp-tunnels','_blank','noopener,noreferrer'));
+ el('tunnel-platform').addEventListener('click',()=>root.open('https://platform.openai.com/settings/organization/tunnels','_blank','noopener,noreferrer'));
+ el('tunnel-download').addEventListener('click',()=>root.open('https://github.com/openai/tunnel-client/releases/latest','_blank','noopener,noreferrer'));
+ el('tunnel-chatgpt').addEventListener('click',()=>root.open('https://chatgpt.com/','_blank','noopener,noreferrer'));
  el('render').addEventListener('click',renderFrame);
  el('approve').addEventListener('click',e=>{if(!e.isTrusted||!dialog.open||panel.hidden)return;try{const p=bridge.state().pending;if(p?.kind==='frame'&&(el('image').hidden||!el('image').complete||!el('image').naturalWidth))throw Error('Inspect the rendered JPEG before sharing');const s=bridge.approve();note(s==='applied'?'Sequence applied · undo in editor':'Frame approved · available to paired client for 60 seconds');}catch(err){note(err.message);}render();});
  el('reject').addEventListener('click',e=>{if(e.isTrusted){bridge.reject();note('Request rejected');render();}});

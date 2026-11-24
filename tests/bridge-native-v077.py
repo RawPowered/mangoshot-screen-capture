@@ -22,6 +22,7 @@ try:
     ready = mod.receive(host.stdout)
     assert ready["type"] == "ready" and ready["expiresIn"] == 1800
     assert len(ready["token"]) == 64
+    assert ready["version"] == "0.7.7.2"
     def local(token, ident, method, args):
         with socket.create_connection(("127.0.0.1", ready["port"]), timeout=3) as conn:
             conn.settimeout(16)
@@ -29,6 +30,9 @@ try:
                 mod.send(f, {"token": token, "client": ident, "method": method, "args": args})
                 return mod.receive(f)
     assert not local("0"*64, secrets.token_hex(16), "inspect", {})["ok"]
+    assert not local("0"*64, secrets.token_hex(16), "health", {})["ok"]
+    check = local(ready["token"], secrets.token_hex(16), "health", {})
+    assert check["ok"] and check["result"]["clientBound"] is False
     assert not local(ready["token"], secrets.token_hex(16), "approve", {})["ok"]
     env = {**os.environ, "MANGOSHOT_BRIDGE_PORT": str(ready["port"]), "MANGOSHOT_BRIDGE_TOKEN": ready["token"]}
     client = subprocess.Popen(command + ["--mcp"], env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -44,6 +48,18 @@ try:
         if notification:
             return None
         return json.loads(client.stdout.readline())
+    envelope = {"io.modelcontextprotocol/protocolVersion": "2026-07-28",
+                "io.modelcontextprotocol/clientCapabilities": {}}
+    discover = rpc("server/discover", {"_meta": envelope})["result"]
+    assert discover["resultType"] == "complete" and "2026-07-28" in discover["supportedVersions"]
+    assert discover["_meta"]["io.modelcontextprotocol/serverInfo"]["version"] == "0.7.7.2"
+    assert rpc("tools/list", {"_meta": {"io.modelcontextprotocol/protocolVersion":"2099-01-01"}})["error"]["code"] == -32022
+    assert rpc("tools/list", {"_meta": {"io.modelcontextprotocol/protocolVersion":"2026-07-28"}})["error"]["code"] == -32602
+    modern_tools = rpc("tools/list", {"_meta": envelope})["result"]
+    assert modern_tools["resultType"] == "complete" and modern_tools["cacheScope"] == "private"
+    assert modern_tools["tools"][0]["annotations"]["readOnlyHint"] is True
+    assert modern_tools["tools"][-1]["annotations"]["readOnlyHint"] is False
+    assert "error" in rpc("tools/call", {"name":"inspect_project"})
     init = rpc("initialize", {"protocolVersion": "2025-11-25", "capabilities": {}, "clientInfo": {"name": "test", "version": "1"}})
     assert init["result"]["protocolVersion"] == "2025-11-25"
     rpc("notifications/initialized", notification=True)
@@ -64,9 +80,10 @@ try:
             mod.send(host.stdin, {"type": "response", "id": request["id"], "ok": True, "result": response})
     thread = threading.Thread(target=editor, daemon=True)
     thread.start()
-    content = rpc("tools/call", {"name": "inspect_project"})["result"]["content"]
+    content = rpc("tools/call", {"_meta": envelope, "name": "inspect_project"})["result"]["content"]
     assert json.loads(content[0]["text"])["segments"][0]["end"] == 5
     assert not local(ready["token"], secrets.token_hex(16), "inspect", {})["ok"], "Second client must be rejected"
+    assert local(ready["token"], secrets.token_hex(16), "health", {})["result"]["clientBound"] is True
     proposal = rpc("tools/call", {"name": "propose_sequence", "arguments": {"recipe": {"schema": "mangoshot.sequence.recipe.v1"}}})["result"]
     assert json.loads(proposal["content"][0]["text"])["status"] == "pending"
     frame = rpc("tools/call", {"name": "request_frame", "arguments": {"time": 1}})["result"]

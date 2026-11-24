@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""MangoShot local native-messaging host / legacy MCP stdio adapter.
+"""MangoShot local native-messaging host / dual-era MCP stdio adapter.
 No remote listener, arbitrary file paths, shell execution or media persistence.
 """
 import argparse
@@ -15,9 +15,12 @@ import sys
 import threading
 import time
 
-VERSION = "0.7.7"
+VERSION = "0.7.7.2"
 MAX = 512 * 1024
 TTL = 1800
+LIFETIMES = (900, 1800, 3600)
+MODERN = "2026-07-28"
+META_PREFIX = "io.modelcontextprotocol/"
 HOST = "com.rawpowered.mangoshot.bridge"
 SCOPES = {"inspect", "propose", "frame"}
 VERSIONS = {"2024-11-05", "2025-03-26", "2025-06-18", "2025-11-25"}
@@ -92,7 +95,7 @@ TOOLS = [
 METHODS = {name: method for name, _, _, method in TOOLS}
 
 def validate(method, args):
-    if method in ("catalog", "inspect"):
+    if method in ("catalog", "inspect", "health"):
         if not shape(args, ()):
             raise ValueError("Unexpected arguments")
     elif method == "propose":
@@ -159,6 +162,9 @@ class Broker:
         with self.lock:
             if self.closed or time.monotonic() >= self.expires:
                 return fail("Session ended")
+            # Local-only preflight: does not claim the MCP-client slot.
+            if method == "health":
+                return {"ok": True, "result": {"remainingSeconds": max(0, int(self.expires - time.monotonic())), "clientBound": self.client is not None, "version": VERSION}}
             if needed and needed not in self.scopes:
                 return fail("Scope not granted")
             if self.client is None:
@@ -212,11 +218,15 @@ def native_main():
     broker = None
     try:
         first = receive(sys.stdin.buffer)
-        if not shape(first, ("type", "scopes")) or first["type"] != "start" or not isinstance(first["scopes"], list) or not first["scopes"] or any(not isinstance(s, str) or s not in SCOPES for s in first["scopes"]):
+        if not (shape(first, ("type", "scopes")) or shape(first, ("type", "scopes", "lifetime"))) or first["type"] != "start" or not isinstance(first["scopes"], list) or not first["scopes"] or any(not isinstance(s, str) or s not in SCOPES for s in first["scopes"]):
             send(sys.stdout.buffer, {"type": "error", "error": "Invalid session start"})
             return 1
-        broker = Broker(sys.stdout.buffer, first["scopes"])
-        broker.native({"type": "ready", "port": broker.port, "token": broker.token, "expiresIn": TTL})
+        lifetime = first.get("lifetime", TTL)
+        if type(lifetime) is not int or lifetime not in LIFETIMES or len(set(first["scopes"])) != len(first["scopes"]):
+            send(sys.stdout.buffer, {"type": "error", "error": "Invalid session lifetime or duplicate scopes"})
+            return 1
+        broker = Broker(sys.stdout.buffer, first["scopes"], lifetime)
+        broker.native({"type": "ready", "port": broker.port, "token": broker.token, "expiresIn": lifetime, "version": VERSION})
         while True:
             message = receive(sys.stdin.buffer)
             if message is None or message == {"type": "stop"}:
@@ -247,9 +257,32 @@ class MCP:
             if m == "notifications/initialized" and self.initialized:
                 self.ready = True
             return None
+        if not isinstance(p, dict):
+            return self.error(ident, -32602, "Invalid params")
+        meta = p.get("_meta", {})
+        if not isinstance(meta, dict):
+            return self.error(ident, -32602, "Invalid request metadata")
+        requested = meta.get(META_PREFIX + "protocolVersion")
+        modern = requested == MODERN
+        if requested is not None and (not isinstance(requested, str) or requested not in VERSIONS and not modern):
+            return {"jsonrpc": "2.0", "id": ident, "error": {"code": -32022, "message": "Unsupported protocol version", "data": {"supported": [MODERN, *sorted(VERSIONS, reverse=True)], "requested": requested}}}
+        if modern and not isinstance(meta.get(META_PREFIX + "clientCapabilities"), dict):
+            return self.error(ident, -32602, "Missing client capabilities")
+        if modern and META_PREFIX + "clientInfo" in meta:
+            info = meta[META_PREFIX + "clientInfo"]
+            if not isinstance(info, dict) or not all(isinstance(info.get(k), str) for k in ("name", "version")):
+                return self.error(ident, -32602, "Invalid client information")
         def result(value):
+            if modern:
+                value = {**value, "resultType": "complete", "_meta": {META_PREFIX + "serverInfo": {"name": "MangoShot Intelligence Bridge", "version": VERSION}}}
             return {"jsonrpc": "2.0", "id": ident, "result": value}
+        if m == "server/discover":
+            if not modern:
+                return self.error(ident, -32602, "Use modern protocol metadata for discovery")
+            return result({"supportedVersions": [MODERN, *sorted(VERSIONS, reverse=True)], "capabilities": {"tools": {}}, "instructions": "Use the private paired Clip Studio. Edits and frame requests require local approval. Poll request_status. No direct apply tool.", "ttlMs": 0, "cacheScope": "private"})
         if m == "initialize":
+            if modern:
+                return self.error(ident, -32601, "Modern requests do not initialize")
             if self.initialized or not isinstance(p, dict) or not isinstance(p.get("protocolVersion"), str):
                 return self.error(ident, -32602, "Invalid initialize")
             v = p["protocolVersion"]
@@ -257,10 +290,16 @@ class MCP:
             return result({"protocolVersion": v if v in VERSIONS else LATEST, "capabilities": {"tools": {}}, "serverInfo": {"name": "MangoShot Intelligence Bridge", "version": VERSION}, "instructions": "Local Clip Studio session only. Proposals and frame requests require explicit approval inside MangoShot. Poll request_status with returned ID. No tool applies edits directly."})
         if m == "ping":
             return result({})
-        if not self.ready:
-            return self.error(ident, -32601 if m == "server/discover" else -32002, "Use the legacy initialize handshake")
+        if not modern and not self.ready:
+            return self.error(ident, -32002, "Use the legacy initialize handshake")
         if m == "tools/list":
-            return result({"tools": [{"name": n, "description": d, "inputSchema": s} for n, d, s, _ in TOOLS]})
+            if p.get("cursor") is not None:
+                return self.error(ident, -32602, "No further tool pages")
+            tools = [{"name": n, "description": d, "inputSchema": s,
+                      "annotations": {"readOnlyHint": method in ("catalog", "inspect"),
+                                      "destructiveHint": False, "idempotentHint": method in ("catalog", "inspect"),
+                                      "openWorldHint": False}} for n, d, s, method in TOOLS]
+            return result({"tools": tools, **({"ttlMs": 0, "cacheScope": "private"} if modern else {})})
         if m == "tools/call":
             if not isinstance(p, dict) or not isinstance(p.get("name"), str) or p["name"] not in METHODS:
                 return self.error(ident, -32602, "Unknown tool")
@@ -290,6 +329,8 @@ class MCP:
 
 def mcp_main():
     # Token is passed via client environment, not argv or a file written by MangoShot.
+    # The tunnel runtime key is not needed by the MCP child.
+    os.environ.pop("CONTROL_PLANE_API_KEY", None)
     port_text, token = os.environ.get("MANGOSHOT_BRIDGE_PORT", ""), os.environ.get("MANGOSHOT_BRIDGE_TOKEN", "")
     if not port_text.isdecimal() or len(port_text) > 5 or not 1 <= int(port_text) <= 65535 or not TOKEN.fullmatch(token):
         print("Set the current pairing port and token from MangoShot.", file=sys.stderr)
@@ -320,6 +361,12 @@ def mcp_main():
                 return 1
 
 if __name__ == "__main__":
+    if sys.argv[1:] == ["--version"]:
+        print("MangoShotBridge " + VERSION)
+        sys.exit(0)
+    if sys.argv[1:] == ["--connect-chatgpt"]:
+        from tunnel_wizard import run_wizard
+        sys.exit(run_wizard(send, receive, TOKEN, VERSION))
     if os.name == "nt":
         import msvcrt
         msvcrt.setmode(sys.stdin.fileno(), os.O_BINARY)

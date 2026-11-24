@@ -27,7 +27,8 @@
   function start(scopes,expires=TTL){
    const identity=host.identity(),state=host.capture();
    if(!state.ready||!identity||!Array.isArray(scopes)||!scopes.length||new Set(scopes).size!==scopes.length||scopes.some(s=>!['inspect','propose','frame'].includes(s)))throw Error('Load and pause a video, then select access scopes');
-   disconnect();session={identity,scopes:[...scopes],expires:now()+Math.min(TTL,expires)};log('paired','session');
+   if(![900000,1800000,3600000].includes(expires))throw Error('Invalid session lifetime');
+   disconnect();session={identity,scopes:[...scopes],expires:now()+expires};log('paired','session');
   }
   function assertScope(scope){if(!active())throw Error('Pairing expired or source changed');if(scope&&!session.scopes.includes(scope))throw Error('Scope not granted');}
   function ready(){const s=host.capture();if(!s.ready)throw Error('Pause editing/playback/export before review');return s;}

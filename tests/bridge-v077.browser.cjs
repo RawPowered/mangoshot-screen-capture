@@ -23,18 +23,25 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('nod
  assert.match(await p.locator('#br-permission-info-v077').textContent(),/Native messaging: required/);assert.ok(await p.locator('#br-revoke-v077').isDisabled());
  assert.ok(await p.evaluate(()=>new Promise(resolve=>chrome.permissions.contains({permissions:['nativeMessaging']},resolve))));
  for(const k of ['inspect','propose','frame'])await p.locator('#br-'+k+'-v077').check();
+ await p.locator('#br-lifetime-v077').selectOption('900');
  await p.locator('#br-connect-v077').click();
  await p.waitForFunction(()=>MangoBridgeV077.inspect().connected,null,{timeout:30000}).catch(async e=>{throw Error('Native host pairing failed: '+await p.locator('#br-status-v077').textContent());});
+ assert.match(await p.locator('#br-companion-version-v077').textContent(),/0\.7\.7\.2/);
+ assert.ok(await p.locator('#br-lifetime-v077').isDisabled());
+ await p.locator('#br-tunnel-setup-v077').waitFor({state:'visible'});
  const secret=JSON.parse(await p.locator('#br-config-v077').inputValue()).mcpServers.mangoshot.env;
+ assert.equal(await p.locator('#br-tunnel-port-v077').textContent(),secret.MANGOSHOT_BRIDGE_PORT);
+ const launcher=await p.locator('#br-launch-command-v077').inputValue();assert.ok(launcher.includes('--connect-chatgpt')&&!launcher.includes(secret.MANGOSHOT_BRIDGE_TOKEN));
  child=spawn('python3',[host,'--mcp'],{env:{...process.env,...secret},stdio:['pipe','pipe','pipe']});
  let req=0;const pending=new Map(),lines=readline.createInterface({input:child.stdout});
  lines.on('line',line=>{const r=JSON.parse(line),resolve=pending.get(r.id);if(resolve){pending.delete(r.id);resolve(r);}});
  function rpc(method,params={}){const id=++req;return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{pending.delete(id);reject(Error('MCP response timeout: '+method));},20000);pending.set(id,r=>{clearTimeout(timer);resolve(r);});child.stdin.write(JSON.stringify({jsonrpc:'2.0',id,method,params})+'\n');});}
- const handshake=await rpc('initialize',{protocolVersion:'2025-11-25',capabilities:{},clientInfo:{name:'browser-test',version:'1'}});assert.equal(handshake.result.protocolVersion,'2025-11-25');
- child.stdin.write(JSON.stringify({jsonrpc:'2.0',method:'notifications/initialized'})+'\n');
- const call=async(name,args={})=>(await rpc('tools/call',{name,arguments:args})).result;
+ const meta={'io.modelcontextprotocol/protocolVersion':'2026-07-28','io.modelcontextprotocol/clientCapabilities':{}};
+ const discover=await rpc('server/discover',{_meta:meta});assert.equal(discover.result.resultType,'complete');assert.ok(discover.result.supportedVersions.includes('2026-07-28'));
+ const call=async(name,args={})=>(await rpc('tools/call',{_meta:meta,name,arguments:args})).result;
  const data=r=>JSON.parse(r.content[0].text);
  assert.ok(data(await call('inspect_project')).segments.length);
+ await p.waitForFunction(()=>document.getElementById('br-tunnel-status-v077').textContent.includes('MCP activity: inspect'));
  const recipe={schema:'mangoshot.sequence.recipe.v1',steps:[{command:'clip.graphics.add',args:{kind:'text',text:'Approved title',start:0,duration:3}}]};
  let proposal=data(await call('propose_sequence',{recipe}));assert.equal(proposal.status,'pending');assert.equal(await p.evaluate(()=>MangoClipView.layers().length),0);
  await p.locator('#br-approve-v077').click();assert.equal(await p.evaluate(()=>MangoClipView.layers().length),1);
