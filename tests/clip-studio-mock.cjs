@@ -71,10 +71,10 @@ run('cursor-effects-v073.js');run('cursor-director-core-v074.js');run('clip-stud
  const invalid={schema:SQ.SCHEMA,steps:[{command:'clip.graphics.add',args:{kind:'text',text:'Draft only',start:0,duration:2}},{command:'clip.timeline.rippleDelete',args:{start:0,end:24}}]};
  assert.throws(()=>controller.preview(invalid));assert.equal(st.layers().length,0);assert.equal(st.outputDuration(),24);
  // Inject a one-time render error after mutation to verify rollback of model and undo stacks.
- batch=controller.preview(SQ.example());const before=JSON.stringify(st.sequenceDraft());const oldRender=ctx.MangoGraphics.render;let failOnce=true;
+ batch=controller.preview(SQ.example());const beforeBatch=JSON.stringify(st.sequenceDraft());const oldRender=ctx.MangoGraphics.render;let failOnce=true;
  ctx.MangoGraphics.render=(...args)=>{if(failOnce){failOnce=false;throw Error('injected renderer error');}return oldRender(...args);};
  assert.throws(()=>controller.apply(batch.ticket),/rolled back/);ctx.MangoGraphics.render=oldRender;
- assert.equal(JSON.stringify(st.sequenceDraft()),before,'Failed commit must restore exact edit decisions');
+ assert.equal(JSON.stringify(st.sequenceDraft()),beforeBatch,'Failed commit must restore exact edit decisions');
  st.addLayer('text','none');st.addLayer('text','none');
  assert.equal(st.layers().length,2);
  const a=st.layers()[0].id,b=st.layers()[1].id;
