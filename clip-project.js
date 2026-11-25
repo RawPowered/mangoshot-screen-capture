@@ -26,9 +26,9 @@
     if(typeof l.background!=='string'||!(/^transparent$/i.test(l.background)||/^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(l.background)))fail('background');
     if(typeof l.color!=='string'||!/^#[0-9a-f]{6}$/i.test(l.color))fail('text color');
     if(typeof l.outline!=='string'||!/^#[0-9a-f]{6}$/i.test(l.outline))fail('outline color');
-    if(!['400','500','600','700','800'].includes(String(l.weight))||l.fadeIn<0||l.fadeIn>10||l.fadeOut<0||l.fadeOut>10)fail('weight/fade');
+    if(!(root.MangoCreativeV079?.font(l.font)?/^[2-9]00$/.test(String(l.weight)):['400','500','600','700','800'].includes(String(l.weight)))||l.fadeIn<0||l.fadeIn>10||l.fadeOut<0||l.fadeOut>10)fail('weight/fade');
     if(typeof l.visible!=='boolean'||typeof l.locked!=='boolean')fail('layer toggles');
-    if(!['sans','mono','serif','rounded','condensed','display','handwritten'].includes(l.font)||!['left','right','center'].includes(l.align))fail('font/alignment');
+    if(!(['sans','mono','serif','rounded','condensed','display','handwritten'].includes(l.font)||root.MangoCreativeV079?.font(l.font))||!['left','right','center'].includes(l.align))fail('font/alignment');
     if(l.motion!=null){if(!root.MangoMotion)fail('motion schema unavailable');root.MangoMotion.checkLayer(l.motion);}
     if(l.premium!=null){if(!root.MangoPremium)fail('premium schema unavailable');root.MangoPremium.validate(l.premium);}
     return {...l};

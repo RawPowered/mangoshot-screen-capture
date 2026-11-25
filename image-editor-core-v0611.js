@@ -19,8 +19,8 @@
  const clamp=(v,min,max)=>Math.min(max,Math.max(min,Number.isFinite(Number(v))?Number(v):min));
  function textMetrics(ctx,stroke){
   const fontSize=clamp(stroke.fontSize||Math.max(18,(stroke.size||6)*5),12,400);
-  const family=fonts[stroke.fontFamily]||fonts.sans,style=styles[stroke.styleId]||styles.plain;
-  const weight=stroke.fontWeight||style.weight,font=weight+' '+fontSize+'px '+family;
+  const family=root.MangoCreativeV079?.family(stroke.fontFamily,fonts[stroke.fontFamily]||fonts.sans)||fonts[stroke.fontFamily]||fonts.sans,style=styles[stroke.styleId]||styles.plain;
+  const weight=root.MangoCreativeV079?.weight(stroke.fontFamily,stroke.fontWeight||style.weight)||stroke.fontWeight||style.weight,font=weight+' '+fontSize+'px '+family;
   const lines=String(stroke.text||'').split(/\r?\n/).slice(0,32);
   const lineHeight=Math.ceil(fontSize*1.3),padding=style.panel?Math.max(8,Math.round(fontSize*.24)):2;
   ctx.save?.();ctx.font=font;

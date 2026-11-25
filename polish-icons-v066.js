@@ -30,7 +30,7 @@
  ];
  for(const [selector,icon,title] of commands){
   const b=document.querySelector(selector);if(!b||b.querySelector('.v066-command-icon'))continue;
-  const graphic=svg(geometry[icon]);graphic.classList.add('v066-command-icon');b.prepend(graphic);
+  const graphic=root.MangoIconsV079?.has(icon)?root.MangoIconsV079.svg(icon,16):svg(geometry[icon]);graphic.classList.add('v066-command-icon');b.prepend(graphic);
   b.classList.add('v066-icon-command');b.setAttribute('aria-label',title);
   if(!b.title)b.title=title;
  }

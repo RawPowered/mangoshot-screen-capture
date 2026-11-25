@@ -14,6 +14,7 @@ def build(out,release_tag):
     files=sorted(set(p for ext in ('*.js','*.css','*.html','manifest.json') for p in BASE.glob(ext) if p.is_file()) |
                  set(p for p in (BASE/'icons').glob('*.png') if p.is_file()) |
                  set(p for p in (BASE/'assets').glob('*.webp') if p.is_file()) |
+                 set(p for p in (BASE/'assets'/'fonts').glob('*') if p.is_file() and p.suffix in ('.ttf','.txt','.json')) |
                  set(p for p in (BASE/'LICENSE',BASE/'README.md') if p.is_file()))
     required=['manifest.json','popup.html','capture-store.js','content.js','background.js','editor.js','recorder.js','clip-studio.js','pdf-export.js']
     for name in required:
@@ -27,6 +28,12 @@ def build(out,release_tag):
             z.writestr(info,file.read_bytes(),compress_type=ZIP_DEFLATED,compresslevel=9)
     with ZipFile(target) as z:
         if z.testzip() is not None:raise ValueError('Corrupt extension ZIP')
+        if (BASE/'assets'/'fonts'/'PROVENANCE.json').exists():
+            provenance=json.loads(z.read('assets/fonts/PROVENANCE.json'))
+            for entry in provenance['fonts']:
+                data=z.read('assets/fonts/'+entry['file'])
+                assert hashlib.sha1(('blob '+str(len(data))+'\0').encode()+data).hexdigest()==entry['gitBlobSha1'], 'Font provenance mismatch'
+                assert b'SIL OPEN FONT LICENSE' in z.read('assets/fonts/'+entry['license']), 'Missing font license'
         actual=json.loads(z.read('manifest.json'))
         if actual['version']!=version:raise ValueError('Invalid archive manifest')
         for html in ('popup.html','editor.html'):

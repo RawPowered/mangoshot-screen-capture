@@ -25,6 +25,8 @@
   checklist:{fontSize:42,font:'mono',weight:'700',color:'#eaffdf',background:'#234331e9',outline:'#4fbc77',outlineWidth:1,shadow:7,align:'left',opacity:1}
  };
  const cp=value=>JSON.parse(JSON.stringify(value));
+ const resolveFont=id=>root.MangoCreativeV079?.family(id,fontFamilies[id]||fontFamilies.sans)||fontFamilies[id]||fontFamilies.sans;
+ const resolveWeight=(id,w)=>root.MangoCreativeV079?.weight(id,w)||w||'600';
  function create(kind,preset='none',at=0,opts={}){
   const isCallout=kind==='callout';const style=styles[preset]||styles.none;
   const id=(root.crypto?.randomUUID?.()||String(Date.now())+'-'+Math.random().toString(36).slice(2));
@@ -42,10 +44,12 @@
   if(['techNote','checklist'].includes(preset)){layer.y=.76;layer.x=.06;layer.width=.68;}
   if(['softBadge','pointerPop'].includes(preset)){layer.y=.34;layer.x=.28;layer.width=.44;}
   if(isCallout&&preset==='none')layer.background='#ffffffdc';
+  const creative=root.MangoCreativeV079?.preset(preset);if(creative)Object.assign(layer,root.MangoCreativeV079.videoPatch(preset),{name:creative.name,fontSize:creative.category==='Signature'?76:64,x:.08,y:.26,width:.84,text:creative.sample});
   return {...layer,...opts};
  }
  function style(layer,preset){const p=styles[preset]||styles.none;
-  return {...layer,...cp(p),preset};
+  if(root.MangoCreativeV079?.preset(preset))return {...layer,...root.MangoCreativeV079.videoPatch(preset)};
+  return {...layer,...cp(p),...(root.MangoCreativeV079?.preset(layer.preset)?{premium:null}:{}),preset};
  }
  function at(layers,seconds){return layers.filter(l=>l.visible&&l.start<=seconds&&seconds<l.end).slice().sort((a,b)=>a.track-b.track);}
  function fade(layer,sec){const age=sec-layer.start,remaining=layer.end-sec;
@@ -77,7 +81,7 @@
   let fontsize=clamp(l.fontSize*scale,9,200),pad,lineH,boxH,rendered;
   ctx.save();ctx.globalAlpha=clamp(l.opacity,0,1)*fade(l,sec);
   for(let i=0;i<16;i++){
-   ctx.font=`${l.weight||'600'} ${fontsize}px ${fontFamilies[l.font]||fontFamilies.sans}`;
+   ctx.font=`${resolveWeight(l.font,l.weight)} ${fontsize}px ${resolveFont(l.font)}`;
    pad=Math.max(5,fontsize*.32);rendered=lines(ctx,root.MangoMotion?.textFrame?.(l,sec)?.text??l.text,width-pad*2,7);
    lineH=fontsize*1.22;boxH=rendered.length*lineH+2*pad;
    if(boxH<=h-y-4||fontsize<=10)break;fontsize=Math.max(10,fontsize*.87);
@@ -159,6 +163,6 @@
    if(b-a>=.04)result.push({...cp(l),start:a-start,end:b-start});
   }return result;
  }
- function bounds(layer,w,h,ctx){const fh=clamp(layer.fontSize*h/1080,9,200),x=clamp(layer.x*w,0,w-40),y=clamp(layer.y*h,0,h-24),width=clamp(layer.width*w,40,Math.max(40,w-x));if(ctx){ctx.save();ctx.font=`${layer.weight||'600'} ${fh}px ${fontFamilies[layer.font]||fontFamilies.sans}`;const rows=lines(ctx,layer.text,width-2*Math.max(5,fh*.32),7);ctx.restore();return {x,y,w:width,h:Math.min(h-y,rows.length*fh*1.22+fh*.64)};}return {x,y,w:width,h:Math.min(h-y,fh*2.5)};}
+ function bounds(layer,w,h,ctx){const fh=clamp(layer.fontSize*h/1080,9,200),x=clamp(layer.x*w,0,w-40),y=clamp(layer.y*h,0,h-24),width=clamp(layer.width*w,40,Math.max(40,w-x));if(ctx){ctx.save();ctx.font=`${resolveWeight(layer.font,layer.weight)} ${fh}px ${resolveFont(layer.font)}`;const rows=lines(ctx,layer.text,width-2*Math.max(5,fh*.32),7);ctx.restore();return {x,y,w:width,h:Math.min(h-y,rows.length*fh*1.22+fh*.64)};}return {x,y,w:width,h:Math.min(h-y,fh*2.5)};}
  root.MangoGraphics={styles,create,style,render,ripple,trim,bounds,at,clone:cp};
 })(typeof globalThis!=='undefined'?globalThis:this);

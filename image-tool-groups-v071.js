@@ -43,6 +43,7 @@
   'mask-erase':'Mask Erase','mask-restore':'Mask Restore'})[id]||id;
  const ns='http://www.w3.org/2000/svg';
  function icon(id){
+  if(root.MangoIconsV079?.has(id))return root.MangoIconsV079.svg(id,22);
   const svg=document.createElementNS(ns,'svg');
   svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('width','22');svg.setAttribute('height','22');
   svg.setAttribute('fill','none');svg.setAttribute('stroke','currentColor');

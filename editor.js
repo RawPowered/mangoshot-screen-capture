@@ -1569,6 +1569,7 @@ async function copyImage(includeInk=true){
   return false;
  }
  try{
+  if(includeInk)globalThis.MangoCreativeV079?.requireFonts(strokes.filter(l=>l.type==='text').map(l=>l.fontFamily));
   const composed=flatten(includeInk);
   // Promise-backed PNG keeps the clipboard.write call inside the click gesture,
   // even for large full-page screenshots that take time to encode.
@@ -1637,7 +1638,7 @@ function download(blob,extension){const url=URL.createObjectURL(blob),a=document
   document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
 }
 async function exportFile(type){if(!ready)return;if(textDraft)commitInline();document.querySelector('#png').disabled=true;document.querySelector('#pdf').disabled=true;
-  try{label('Preparing '+type.toUpperCase()+'…');const canvas=flatten();
+  try{globalThis.MangoCreativeV079?.requireFonts(strokes.filter(l=>l.type==='text').map(l=>l.fontFamily));label('Preparing '+type.toUpperCase()+'…');const canvas=flatten();
     if(type==='png'){
       const blob=await toPng(canvas);
       download(blob,'png');
@@ -1759,6 +1760,21 @@ globalThis.MangoImageActions={
 };
 /* Local typed adapter: selection is explicit and the review token is bound
  * to the source identity and all intervening editor revisions. */
+globalThis.MangoCreativeImageV079=Object.freeze({
+ state(){const l=selectedStroke();return {ready:globalThis.MangoImageAutomationV075?.capture().ready===true,selected:!!l&&!l.locked,font:l?.fontFamily||'sans',weight:l?.fontWeight||'600'};},
+ apply(kind,id,w){
+  const c=globalThis.MangoCreativeV079,l=selectedStroke();if(!this.state().ready||!l||l.locked)throw Error('Select an unlocked text layer and finish the active gesture.');
+  const p=kind==='fonts'?{fontFamily:id,fontWeight:c.weight(id,w)}:c.imagePatch(id);
+  c.requireFonts([p.fontFamily]);updateSelectedText(p);switchInspectorTab('type');label('Creative style applied. Ctrl+Z to undo.');return true;
+ },
+ insert(kind,id,w,text){
+  const c=globalThis.MangoCreativeV079;if(!this.state().ready)throw Error('Import a screenshot and finish the active gesture.');
+  const p=kind==='fonts'?{fontFamily:id,fontWeight:c.weight(id,w),color:'#ffffff',styleId:'plain',effects:typeEffects.initial()}:c.imagePatch(id);c.requireFonts([p.fontFamily]);
+  const l={type:'text',id:crypto.randomUUID(),name:kind==='fonts'?c.font(id).name:c.preset(id).name,points:[{x:base.width*.10,y:base.height*.24,p:1}],text:String(text).slice(0,400),fontSize:Math.max(12,Math.min(140,base.width*.065)),size:6,scaleX:1,scaleY:1,visible:true,locked:false,opacity:1,...p};
+  const b=editorCore.textMetrics(pen,l);if(b.width>base.width*.8)l.fontSize=Math.max(12,Math.floor(l.fontSize*base.width*.8/b.width));
+  snapshot();strokes.push(l);selectedText=strokes.length-1;selectedImage=-1;selectedObject=-1;tool.value='select';syncTool();redraw();setReady(true);syncSelectedText();switchInspectorTab('type');label('Editable creative text layer inserted. Ctrl+Z to undo.');return true;
+ }
+});
 globalThis.MangoImageAutomationV075=Object.freeze({
  capture(){
   const busy=!!(drawing||active||textDraft||dragText||dragImage||maskDraw||dragVector||entireErase||layerDrag||layerStackDrag!==null||resizeDrag||appearanceGesture);
@@ -1795,3 +1811,4 @@ globalThis.MangoImageAutomationV075=Object.freeze({
  }
 });
 begin();
+globalThis.MangoCreativeV079?.ready.then(()=>{if(ready)redraw();});

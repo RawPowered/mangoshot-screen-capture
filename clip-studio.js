@@ -230,6 +230,7 @@ async function exportClip(format){if(!original||!segments.length||exporting)retu
  exporting=true;cancelExport=false;sequencePlaying=false;render();byId('progress').hidden=false;byId('progress').value=0;
  let ctx=null,rec=null,exportStream=null,paintHandle=0,recorded=[],tempTracks=[],exportVideo=null,voiceExport=null;
  try{
+  globalThis.MangoCreativeV079?.requireFonts(layers.map(l=>l.font));
   exportVideo=document.createElement('video');exportVideo.preload='auto';exportVideo.playsInline=true;exportVideo.src=originalUrl;
   exportVideo.style.cssText='position:fixed;left:-9999px;width:2px;height:2px;opacity:0;pointer-events:none';document.body.appendChild(exportVideo);
   await new Promise((resolve,reject)=>{exportVideo.onloadedmetadata=resolve;exportVideo.onerror=()=>reject(new Error('Could not decode export source.'));});
@@ -296,6 +297,19 @@ if(requestedRecording){
 
 /* Read-only view model for the professional timeline. Mutations flow through
  * this editor's existing non-destructive edit decision list. */
+globalThis.MangoCreativeClipV079=Object.freeze({
+ state(){const v=globalThis.MangoClipView,l=v?.layers().find(x=>x.id===v.selectedLayer());return {ready:v?.automationCapture().ready===true,selected:!!l&&!l.locked,font:l?.font||'sans',weight:l?.weight||'600'};},
+ apply(kind,id,w){const c=globalThis.MangoCreativeV079,v=globalThis.MangoClipView;if(!this.state().ready||!this.state().selected)throw Error('Select an unlocked graphic and pause the video.');
+  const patch=kind==='fonts'?{font:id,weight:c.weight(id,w),preset:'none'}:c.videoPatch(id);c.requireFonts([patch.font]);v.updateLayer(v.selectedLayer(),patch);label('Creative style applied. Ctrl+Z to undo.');return true;},
+ insert(kind,id,w,text){const c=globalThis.MangoCreativeV079,v=globalThis.MangoClipView;if(!this.state().ready)throw Error('Load and pause a video first.');
+  if(layers.length>=200)throw Error('Portable project graphic limit reached');
+  const length=MangoEditOps.length(segments);if(length<.1)throw Error('Sequence too short for text');
+  const at=Math.max(0,Math.min(v.sequencePosition()??0,length-.1)),p=kind==='fonts'?{font:id,weight:c.weight(id,w)}:c.videoPatch(id);
+  c.requireFonts([p.font]);const l=MangoGraphics.create('text',kind==='fonts'?'title':id,at,{...p,name:kind==='fonts'?c.font(id).name:c.preset(id).name,text:String(text).slice(0,400),end:Math.min(length,at+4)});
+  const checked=MangoProject.check(MangoProject.pack({size:original.size,format:originalFormat,duration},segments,[l],[],[]),{size:original.size,format:originalFormat,duration});
+  remember();layers.push(checked.layers[0]);selectedLayerId=l.id;selectedClipIndex=null;rangeSelected=false;refreshed();label('Editable creative graphic inserted. Ctrl+Z to undo.');return true;
+ }
+});
 globalThis.MangoClipView={
  automationCapture(){
   const voiceState=globalThis.MangoCreativeUI?.voice?.state?.(),busy=exporting||!!sequencePreview?.isPlaying?.()||!!voiceState?.recording;
@@ -452,7 +466,7 @@ globalThis.MangoClipView={
  endLayerMove(){refreshed();},
  setLayerHidden(id,value){const l=layers.find(x=>x.id===id);if(!l)return;remember();l.visible=!value;refreshed();},
  setLayerLocked(id,value){const l=layers.find(x=>x.id===id);if(!l)return;remember();l.locked=!!value;refreshed();},
- styleLayer(id,preset){const index=layers.findIndex(l=>l.id===id);if(index<0||layers[index].locked)return;
+ styleLayer(id,preset){const index=layers.findIndex(l=>l.id===id);if(index<0||layers[index].locked||exporting)return;
    remember();layers[index]=MangoGraphics.style(layers[index],preset);refreshed();},
  reorderLayer(id,direction){const source=layers.find(l=>l.id===id);
    if(!source||source.locked||exporting)return false;
@@ -513,3 +527,5 @@ byId('open-project').addEventListener('change',async event=>{if(!original||expor
   byId('in').value='0';byId('out').value=byId('out').max;refreshed();globalThis.MangoClipTimeline?.loadMarkers?.(project.markers);label('Project decisions restored. Original video unchanged.');
  }catch(error){label('Cannot open project: '+error.message);}finally{event.target.value='';}
 });
+
+globalThis.MangoCreativeV079?.ready.then(()=>{if(original)paintPreview();});

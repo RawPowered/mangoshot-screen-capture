@@ -33,6 +33,7 @@
  ];
  const icons=[];
  function svgFor(name){
+  if(root.MangoIconsV079?.has(name))return root.MangoIconsV079.svg(name,19);
   const svg=make('svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('width','19');svg.setAttribute('height','19');
   svg.setAttribute('stroke','currentColor');svg.setAttribute('stroke-width','1.8');svg.setAttribute('stroke-linecap','round');
   svg.setAttribute('stroke-linejoin','round');svg.setAttribute('fill','none');svg.setAttribute('aria-hidden','true');
