@@ -19,8 +19,10 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   await p.keyboard.press('Numpad1');assert.equal(await spotlight(),'true');await p.keyboard.down('Numpad1');await p.waitForTimeout(350);await p.keyboard.up('Numpad1');assert.equal(await spotlight(),'true');
   await p.keyboard.press('Digit1');assert.equal(await spotlight(),'false');
   await p.locator('#cursor-scale-v073').focus();await p.keyboard.press('Digit1');assert.equal(await spotlight(),'false');
-  await p.locator('#cursor-scale-v073').blur();await p.locator('body').click({position:{x:200,y:15}});
+  await p.locator('#cursor-scale-v073').fill('1.75');await p.locator('#cursor-scale-v073').blur();await p.locator('body').click({position:{x:200,y:15}});
   await p.keyboard.down('Digit1');await p.evaluate(()=>window.dispatchEvent(new Event('blur')));await p.keyboard.up('Digit1');assert.equal(await spotlight(),'false');
+  assert.ok(await p.evaluate(()=>document.scrollingElement.scrollHeight<=innerHeight+2),'Desktop recorder must fit viewport');
+  const quick=await p.locator('#spotlight-quick-v0710').boundingBox();assert.ok(quick.y>=0&&quick.y+quick.height<=768);
   await p.screenshot({path:path.join(out,'01-recorder-compact.png')});
   assert.equal(await p.locator('.cursor-fold-v0710[open]').count(),0);
   await p.locator('.cursor-fold-v0710').first().locator('summary').click();assert.ok(await p.locator('#cursor-radius-v073').isVisible());
@@ -54,9 +56,10 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   await p.keyboard.press('Control+Backquote');assert.equal((await inspect()).interaction,true);
   await p.keyboard.press('Control+Backquote');assert.equal((await inspect()).interaction,false);
   // Keep a real recorded interval before switching. Spotlight is burned into the composite.
-  const rect=await p.locator('#ink').boundingBox();await p.mouse.move(rect.x+rect.width/2,rect.y+rect.height/2);
-  await p.keyboard.down('Numpad1');await p.waitForTimeout(400);
-  assert.ok((await pixel(25,25))[0]<140,'Held spotlight dims the recorded composite');await p.keyboard.up('Numpad1');assert.equal(await spotlight(),'false');
+  await p.locator('#ink').hover();
+  await p.keyboard.down('Numpad1');assert.equal((await cursor()).effectiveSpotlight,true);
+  await p.waitForFunction(()=>document.getElementById('live-composite').getContext('2d').getImageData(25,25,1,1).data[0]<140,null,{timeout:3000});
+  await p.waitForTimeout(300);await p.keyboard.up('Numpad1');assert.equal(await spotlight(),'false');
   await p.waitForTimeout(450);
   await p.keyboard.press('Shift+Backquote');const dlg=p.locator('#source-dialog-v0710');await dlg.waitFor({state:'visible'});
   assert.match(await p.locator('#source-current-v0710').textContent(),/Entire screen/);
@@ -90,7 +93,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   assert.equal(frames.status,0,frames.stderr.toString());let red=false,blue=false;
   for(let i=0;i+2<frames.stdout.length;i+=3){const [r,g,b]=frames.stdout.subarray(i,i+3);if(r>140&&b<100)red=true;if(b>140&&r<100)blue=true;}
   assert.ok(red&&blue,'One decoded output must contain both capture sources');
-  await p.setViewportSize({width:1024,height:600});await p.screenshot({path:path.join(out,'04-recorder-1024.png')});
+  await p.setViewportSize({width:1024,height:600});assert.ok(await p.evaluate(()=>document.scrollingElement.scrollHeight<=innerHeight+2));await p.screenshot({path:path.join(out,'04-recorder-1024.png')});
   console.log('Actual recorder: tap/hold both keys, focus/blur, interaction toggle, canceled and accepted source swap, fixed resolution, shared audio/mic continuity, stale candidate cleanup, one decoded two-source recording passed');
  }finally{await ctx.close();fs.rmSync(tmp,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

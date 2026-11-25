@@ -169,7 +169,7 @@ function resetControls(){start.disabled=false;stop.disabled=true;pause.disabled=
  for(const id of ['zoomIn','zoomOut','zoomRegion'])get(id).disabled=true;
  get('resetZoom').disabled=false;regionEnabled(false);ctrlHeld=false;altHeld=false;interaction=false;forwardBusy=false;get('switch-source-v0710').disabled=true;updateMode();}
 function cleanup(){globalThis.MangoRecorderCursorV073?.end?.();stopTracks();stopClock();screen=null;mic=null;
- preview.srcObject=null;sourceVideo=preview;wrap.dataset.recording='false';wrap.style.aspectRatio='';recorder=null;controller=null;captureSource='';scrollPermission=false;forwardingActive=false;sharedAudio=false;
+ preview.srcObject=null;sourceVideo=preview;wrap.dataset.recording='false';wrap.style.aspectRatio='';wrap.style.removeProperty?.('--record-aspect');recorder=null;controller=null;captureSource='';scrollPermission=false;forwardingActive=false;sharedAudio=false;
  get('video-placeholder').hidden=false;composite.style.display='none';ink.style.opacity='1';
  get('enable-scroll').disabled=true;get('enable-scroll').textContent='Enable captured-tab wheel control';
  recording=false;stopping=false;resetControls();}
@@ -473,7 +473,7 @@ start.addEventListener('click',async()=>{
   const settings=screen.getVideoTracks()[0].getSettings();const w=settings.width||preview.videoWidth||1280;
   const h=settings.height||preview.videoHeight||720;
   if(w*h>16000000)throw new Error('Screen exceeds safe recording dimensions; choose a smaller window.');
-  ink.width=w;ink.height=h;composite.width=w;composite.height=h;wrap.style.aspectRatio=w+' / '+h;wrap.dataset.recording='true';
+  ink.width=w;ink.height=h;composite.width=w;composite.height=h;wrap.style.aspectRatio=w+' / '+h;wrap.style.setProperty?.('--record-aspect',String(w/h));wrap.dataset.recording='true';
   composite.style.display='block';ink.style.opacity='0';
   const ctx=composite.getContext('2d',{alpha:false});
   const render=()=>{if(!screen||stopping)return;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);

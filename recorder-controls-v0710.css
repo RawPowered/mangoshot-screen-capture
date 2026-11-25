@@ -32,3 +32,32 @@ body.studio-recorder #source-dialog-v0710{width:min(510px,calc(100vw - 24px));ma
 body.studio-recorder #screen-wrap[data-recording=true] #preview{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
 body.studio-recorder .monitor-tools{flex-wrap:wrap;gap:6px;min-width:0}
 body.studio-recorder .capture-context p{font-size:11px;line-height:1.4}
+
+/* Keep transport and monitor controls on-screen. Only the inspector/recovery
+ * surfaces scroll on normal desktop viewports; narrow mobile layouts stack. */
+@media(min-width:900px) and (min-height:560px){
+ body.studio-recorder{height:100dvh;min-height:0;display:grid;grid-template-rows:60px auto minmax(0,1fr) auto;overflow:hidden}
+ body.studio-recorder .studio-record-workspace{min-height:0;overflow:hidden;grid-template-columns:68px minmax(0,1fr) 278px}
+ body.studio-recorder .studio-record-workspace>.studio-toolrail{min-height:0;overflow:auto}
+ body.studio-recorder .studio-record-workspace>.studio-inspector{grid-column:auto;min-height:0;display:block;overflow:auto;overscroll-behavior:contain}
+ body.studio-recorder .studio-inspector .inspector-section{padding:9px 11px;border-right:0}
+ body.studio-recorder .studio-inspector .inspector-section h3{margin:0 0 7px}
+ body.studio-recorder .studio-monitor-panel{min-height:0;overflow:hidden}
+ body.studio-recorder .studio-monitor-panel>.panel-heading,body.studio-recorder .monitor-controls{flex-shrink:0}
+ body.studio-recorder .monitor-stage{min-height:0;flex:1 1 0;overflow:hidden;padding:8px;container-type:size}
+ body.studio-recorder .monitor-stage .screen-wrap{width:min(100%,calc(100cqh * var(--record-aspect,1.7777778)));aspect-ratio:var(--record-aspect,1.7777778);max-height:100%;margin:0}
+ body.studio-recorder #screen-wrap #preview{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+ body.studio-recorder .capture-context{flex:0 1 auto;max-height:104px;overflow:auto;padding:6px 10px}
+ body.studio-recorder .capture-context-top{gap:6px}
+ body.studio-recorder .capture-context-top button{margin-left:auto;width:auto;min-height:26px;padding:3px 6px;font-size:11px}
+ body.studio-recorder .studio-result{flex:0 1 auto;max-height:90px;overflow:auto}
+ body.studio-recorder .studio-bottom{max-height:105px;overflow:auto;padding:5px 12px}
+ body.studio-recorder .studio-bottom .bottom-heading{padding:3px 0}
+}
+@media(min-width:900px) and (max-width:1100px) and (min-height:560px){
+ body.studio-recorder .studio-record-workspace{grid-template-columns:62px minmax(0,1fr) 260px}
+ body.studio-recorder .studio-record-workspace .studio-inspector>.cursor-studio-v073{margin:4px 0}
+ body.studio-recorder .monitor-controls{padding:5px 7px}
+ body.studio-recorder .capture-context{max-height:86px}
+ body.studio-recorder .studio-bottom{max-height:78px}
+}
