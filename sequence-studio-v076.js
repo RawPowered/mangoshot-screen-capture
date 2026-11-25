@@ -48,7 +48,9 @@ async function renderFrame(){
   const fresh=engine.frame(ticket,t),s=fresh.draft,canvas=el('canvas'),factor=Math.min(1,960/Math.max(1,video.videoWidth),540/Math.max(1,video.videoHeight));
   canvas.width=Math.max(1,Math.round(video.videoWidth*factor));canvas.height=Math.max(1,Math.round(video.videoHeight*factor));
   const w=canvas.width,h=canvas.height,ctx=canvas.getContext('2d');ctx.clearRect(0,0,w,h);
-  if(!root.MangoMotion.paintTransition(ctx,video,s.zoomFrames,s.segments,s.transitions,t,w,h)){
+  const cinematic=await root.MangoCinematicV0713?.exact(ctx,url,s.source.duration,s.segments,s.transitions,t,w,h,s.zoomFrames);
+  if(run!==serial)return;engine.frame(ticket,t);
+  if(!cinematic&&!root.MangoMotion.paintTransition(ctx,video,s.zoomFrames,s.segments,s.transitions,t,w,h)){
    const z=root.MangoCreativeZoom.draw(ctx,video,s.zoomFrames,t,w,h);
    root.MangoCursorDirectorCoreV074.paint(ctx,s.cursorTrace,s.cursorRegions,s.segments,t,z,w,h);
   }

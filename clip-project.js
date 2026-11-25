@@ -41,6 +41,7 @@
   const transitions=root.MangoMotion?.checkTransitions?.(data.transitions||[])||[];
   const boundaries=new Set(segments.slice(1).map((p,i)=>segments[i].end.toFixed(5)+':'+p.start.toFixed(5)));
   if(transitions.some(t=>!boundaries.has(t.fromEnd.toFixed(5)+':'+t.toStart.toFixed(5))))fail('transition boundary');
+  if(root.MangoCinematicV0713)root.MangoCinematicV0713.plans(segments,transitions,source.duration);
   return {segments,layers,markers,transitions};
  }
  function pack(source,segments,layers,markers=[],transitions=[]){return {schema:'mangoshot.project.v1',created:new Date().toISOString(),source,segments,layers,markers,transitions};}

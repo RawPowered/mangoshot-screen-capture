@@ -43,6 +43,10 @@
  const [useFx,fxLabel]=checkbox('ls-use-fx-v0712','Apply layer effect');
  const [useFade,fadeLabel]=checkbox('ls-use-fade-v0712','Apply graphic fades');
  const [useOutline,outlineLabel]=checkbox('ls-use-outline-v0712','Apply graphic outline');
+ const [useMotion,motionLabel]=checkbox('ls-use-motion-v0713','Apply entry and exit motion');
+ const motionChoices=(root.MangoMotion?.motionTypes||['none']).map(x=>[x,x.replace(/([A-Z])/g,' $1').replace(/^./,c=>c.toUpperCase())]);
+ const easyChoices=(root.MangoMotion?.easing||['linear']).map(x=>[x,x.replace(/([A-Z])/g,' $1')]);
+ const enter=select('ls-enter-v0713',motionChoices),exit=select('ls-exit-v0713',motionChoices),enterDuration=field('ls-enter-duration-v0713','number','.45',{min:'.08',max:'5',step:'.05'}),exitDuration=field('ls-exit-duration-v0713','number','.35',{min:'.08',max:'5',step:'.05'}),enterEase=select('ls-enter-ease-v0713',easyChoices),exitEase=select('ls-exit-ease-v0713',easyChoices),scrub=field('ls-motion-scrub-v0713','range','50',{min:'0',max:'100',step:'1','aria-label':'Graphic motion preview position'});
  const opacity=field('ls-opacity-v0712','range','100',{min:'0',max:'100',step:'1'}),opacityValue=e('output',{id:'ls-opacity-value-v0712'},'100%');
  const kind=select('ls-kind-v0712',[['none','None'],['shadow','Drop shadow'],['glow','Outer glow']]);
  const color=field('ls-color-v0712','color','#000000'),blur=field('ls-blur-v0712','number','0',{min:'0',max:'100',step:'1'}),x=field('ls-x-v0712','number','0',{min:'-100',max:'100',step:'1'}),y=field('ls-y-v0712','number','0',{min:'-100',max:'100',step:'1'});
@@ -53,11 +57,12 @@
  function loadFx(v){kind.value=v.kind;color.value=v.color;blur.value=v.blur;x.value=v.offsetX;y.value=v.offsetY;blend.value=v.blend;}
  for(const p of C.presets){const b=btn('ls-preset-'+p.id+'-v0712',p.name,()=>{loadFx(p.fx);useFx.checked=true;preview();});b.style.setProperty('--ls-preset-color',p.fx.color);presets.append(b);}
  const previewCanvas=e('canvas',{id:'ls-preview-v0712',width:'480',height:'270','aria-label':'Draft appearance preview'});
- const previewHint=e('small',{class:'ls-muted-v0712'},image?'Draft preview of the current composition, scaled to fit.':'Selected graphics at the midpoint of the first selected graphic, over a neutral background.');
+ const previewHint=e('small',{class:'ls-muted-v0712'},image?'Draft preview of the current composition, scaled to fit.':'Selected graphics at the scrubbed time of the first selected graphic, over a neutral background.');
  const apply=btn('ls-apply-v0712','Apply effects',()=>{try{run('effects',effectArgs());}catch(err){message(err.message,true);}});apply.className='primary';
  fxPanel.append(e('h3',{},'Draft appearance'),previewCanvas,previewHint,line('ls-actions-v0712',opacityLabel,opacity,opacityValue),e('h3',{},'Layer effects'),fxLabel,presets,
   line('ls-fx-grid-v0712',label('Effect',kind),label('Color',color),label('Blur',blur),label('Blend',blend),label('Offset X',x),label('Offset Y',y)));
  if(!image)fxPanel.append(e('h3',{},'Graphic-specific effects'),fadeLabel,line('ls-fx-grid-v0712',label('Fade in (s)',fadeIn),label('Fade out (s)',fadeOut)),outlineLabel,line('ls-fx-grid-v0712',label('Outline color',outline),label('Outline width',outlineWidth)));
+ if(!image){const motionPresets=line('ls-presets-v0712');for(const [labelText,a,z] of [['Clean fade','fade','fade'],['Slide & settle','slideUp','fade'],['Impact pop','pop','zoom'],['Kinetic letters','spinLetters','fade'],['Typewriter','typeIn','fade'],['Flip reveal','flip','slideRight']])motionPresets.append(btn('',''+labelText,()=>{useMotion.checked=true;enter.value=a;exit.value=z;enterDuration.value='.65';exitDuration.value='.35';enterEase.value='easeOut';exitEase.value='easeIn';scrub.value='10';preview();}));fxPanel.append(e('h3',{},'Motion presets & timing'),motionLabel,motionPresets,line('ls-fx-grid-v0712',label('Entry',enter),label('Exit',exit),label('Entry duration (s)',enterDuration),label('Exit duration (s)',exitDuration),label('Entry easing',enterEase),label('Exit easing',exitEase)),label('Scrub first selected graphic',scrub));}
  fxPanel.append(line('ls-actions-v0712',btn('ls-reset-draft-v0712','Reset draft',()=>syncEffects()),apply));
  right.append(organize,fxPanel);
  const status=e('span',{id:'ls-status-v0712',role:'status','aria-live':'polite'},'Ready');
@@ -75,7 +80,7 @@
  function updateButtons(){
   const selected=(state?.layers||[]).filter(l=>chosen.has(l.id)),locked=selected.some(l=>l.locked),can=!!state?.ready&&selected.length>0;
   for(const {b,command} of actions)b.disabled=!can||(locked&&!['lock','visibility'].includes(command));
-  apply.disabled=!can||locked||selected.some(l=>!l.eligible)||!(useOpacity.checked||useFx.checked||(!image&&(useFade.checked||useOutline.checked)));
+  apply.disabled=!can||locked||selected.some(l=>!l.eligible)||!(useOpacity.checked||useFx.checked||(!image&&(useFade.checked||useOutline.checked||useMotion.checked)));
   locate.disabled=!can;
   selectedLabel.textContent=chosen.size+' selected / '+(state?.layers.length||0);
  }
@@ -111,6 +116,7 @@
   if(useFx.checked)out.fx=C.checkFx({kind:kind.value,color:color.value,blur:blur.valueAsNumber,offsetX:x.valueAsNumber,offsetY:y.valueAsNumber,blend:blend.value});
   if(!image&&useFade.checked)out.fade={in:fadeIn.valueAsNumber,out:fadeOut.valueAsNumber};
   if(!image&&useOutline.checked)out.outline={color:outline.value,width:outlineWidth.valueAsNumber};
+  if(!image&&useMotion.checked)out.motion={enter:{type:enter.value,duration:enterDuration.valueAsNumber,ease:enterEase.value},exit:{type:exit.value,duration:exitDuration.valueAsNumber,ease:exitEase.value}};
   return out;
  }
  function preview(){
@@ -118,13 +124,14 @@
   if(tab!=='effects'||!dlg.open)return;
   if(previewFrame)root.cancelAnimationFrame(previewFrame);
   previewFrame=root.requestAnimationFrame(()=>{previewFrame=0;
-   try{host.preview(previewCanvas,[...chosen],effectArgs(),state.stamp);message(state.ready?'Draft only · Apply effects to commit.':state.reason,!state.ready);}
+   try{host.preview(previewCanvas,[...chosen],effectArgs(),state.stamp,Number(scrub.value)/100);message(state.ready?'Draft only · Apply effects to commit.':state.reason,!state.ready);}
    catch(err){message(err.message,true);const p=previewCanvas.getContext('2d');p.clearRect(0,0,previewCanvas.width,previewCanvas.height);}
   });
  }
  function syncEffects(){
   const first=(state?.layers||[]).find(l=>chosen.has(l.id));
-  useOpacity.checked=useFx.checked=useFade.checked=useOutline.checked=false;
+  useOpacity.checked=useFx.checked=useFade.checked=useOutline.checked=useMotion.checked=false;
+  if(!image){const m=first?.motion||root.MangoMotion.defaults();enter.value=m.enter.type;exit.value=m.exit.type;enterDuration.value=m.enter.duration;exitDuration.value=m.exit.duration;enterEase.value=m.enter.ease;exitEase.value=m.exit.ease;scrub.value='50';}
   opacity.value=Math.round((first?.opacity??1)*100);loadFx(first?.fx||C.appearance(null));fadeIn.value=first?.fadeIn??0;fadeOut.value=first?.fadeOut??0;outline.value=first?.outline||'#000000';outlineWidth.value=first?.outlineWidth??0;
   path.value=first?.group.join(' / ')||'';name.value=chosen.size===1?first?.name||'':'';
   updateButtons();preview();
@@ -138,12 +145,14 @@
   chosen=new Set(r.selection);refresh();message('Applied · Ctrl+Z restores the complete operation.');
  }
  function open(event,next='layers'){
-  if(dlg.open||doc.querySelector('dialog[open]'))return;
+  if(dlg.open){refresh(false);mode(next);search.focus();return;}
+  if(doc.querySelector('dialog[open]'))return;
   returnFocus=event?.currentTarget||doc.activeElement;for(const m of doc.querySelectorAll('.v06-menu[open]'))m.open=false;
   root.MangoToolGroupsV071?.close?.();search.value='';type.value='all';filter.value='all';collapsed.clear();refresh(false);dlg.showModal();mode(next);search.focus();if(!state.ready)message(state.reason,true);else if(next==='layers')message('Select layers to organize or apply effects.');
  }
  for(const input of [search,type,filter])input.addEventListener('input',renderTree);
- for(const input of [useOpacity,useFx,useFade,useOutline,opacity,kind,color,blur,x,y,blend,fadeIn,fadeOut,outline,outlineWidth])input.addEventListener('input',preview);
+ for(const input of [useOpacity,useFx,useFade,useOutline,opacity,kind,color,blur,x,y,blend,fadeIn,fadeOut,outline,outlineWidth,useMotion,enter,exit,enterDuration,exitDuration,enterEase,exitEase,scrub])input.addEventListener('input',preview);
+ dlg.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();dlg.close();}},true);
  dlg.addEventListener('close',()=>{if(previewFrame)root.cancelAnimationFrame(previewFrame);previewFrame=0;if(returnFocus?.isConnected){const summary=returnFocus.closest('.v06-menu')?.querySelector('summary');(summary||returnFocus).focus({preventScroll:true});}});
  for(const [id,next] of [['layer-studio-open-v0712','layers'],['effects-studio-open-v0712','effects'],['layer-studio-menu-v0712','layers'],['effects-studio-menu-v0712','effects']])doc.getElementById(id)?.addEventListener('click',event=>open(event,next));
  root.MangoLayerStudioUIV0712=Object.freeze({open:(mode='layers')=>open(null,mode)});

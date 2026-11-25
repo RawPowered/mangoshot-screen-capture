@@ -55,12 +55,13 @@
  const clipBody=document.createElement('div');clipBody.className='v067-motion-content';
  clipBody.append(select('Transition','v067-transition-type',[
   ['none','Hard cut / None'],['dipBlack','Dip to black'],['dipWhite','Dip to white'],['flash','White flash'],['wipeLeft','Reveal wipe left'],
-  ['wipeRight','Reveal wipe right'],['iris','Iris reveal'],['slideIn','Slide in'],['zoomPunch','Zoom punch'],['spinIn','Spin reveal']]));
+  ['wipeRight','Reveal wipe right'],['iris','Iris reveal'],['slideIn','Slide in'],['zoomPunch','Zoom punch'],['spinIn','Spin reveal'],...(root.MangoCinematicV0713?.catalog||[]).map(x=>[x.id,x.name+' · Cinematic Studio'])]));
+ for(const option of clipBody.querySelectorAll('option'))if(root.MangoCinematicV0713?.isType(option.value))option.disabled=true;
  const clipRow=document.createElement('div');clipRow.className='v067-grid';
  clipRow.append(number('Duration (seconds)','v067-transition-duration',.08,2,.05),select('Easing','v067-transition-ease',easy));clipBody.append(clipRow);
  const note=document.createElement('p');note.className='inspector-hint';
  note.textContent='Select the second or later V1 clip to apply an opening cut treatment. Single-decoder effects are not two-source crossfades. Audio follows existing hard-cut edit boundaries.';
- clipBody.append(note);clipPanel.append(clipBody);inspector.after(clipPanel);
+ clipBody.append(note);const cinematicButton=document.createElement('button');cinematicButton.type='button';cinematicButton.id='cinematic-open-v0713';cinematicButton.textContent='Open Cinematic Studio…';clipBody.append(cinematicButton);clipPanel.append(clipBody);inspector.after(clipPanel);
  const ids=['v067-enter-type','v067-enter-duration','v067-enter-ease','v067-exit-type','v067-exit-duration','v067-exit-ease',
   'v067-number-type','v067-number-from','v067-number-to','v067-number-duration','v067-number-decimals','v067-number-prefix','v067-number-suffix'];
  const textLayer=()=>view()?.layers?.().find(l=>l.id===view()?.selectedLayer?.());

@@ -115,7 +115,9 @@
    const canvas=doc.createElement('canvas'),factor=Math.min(1,640/Math.max(1,v.videoWidth),360/Math.max(1,v.videoHeight));
    canvas.width=Math.max(1,Math.round(v.videoWidth*factor));canvas.height=Math.max(1,Math.round(v.videoHeight*factor));
    const w=canvas.width,h=canvas.height,ctx=canvas.getContext('2d');
-   if(!root.MangoMotion.paintTransition(ctx,v,s.zoomFrames,s.segments,s.transitions,request.time,w,h)){const z=root.MangoCreativeZoom.draw(ctx,v,s.zoomFrames,request.time,w,h);root.MangoCursorDirectorCoreV074.paint(ctx,s.cursorTrace,s.cursorRegions,s.segments,request.time,z,w,h);}
+   const cinematic=await root.MangoCinematicV0713?.exact(ctx,url,s.source.duration,s.segments,s.transitions,request.time,w,h,s.zoomFrames);
+   if(!current()||bridge.frameRequest().id!==request.id)return;
+   if(!cinematic&&!root.MangoMotion.paintTransition(ctx,v,s.zoomFrames,s.segments,s.transitions,request.time,w,h)){const z=root.MangoCreativeZoom.draw(ctx,v,s.zoomFrames,request.time,w,h);root.MangoCursorDirectorCoreV074.paint(ctx,s.cursorTrace,s.cursorRegions,s.segments,request.time,z,w,h);}
    root.MangoGraphics.render(ctx,s.layers,request.time,w,h);
    const data=canvas.toDataURL('image/jpeg',.78),prefix='data:image/jpeg;base64,';
    if(!data.startsWith(prefix)||data.length-prefix.length>300000)throw Error('Rendered frame exceeds sharing limit');

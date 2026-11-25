@@ -5,7 +5,7 @@
  const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
  const finite=(v)=>typeof v==='number'&&Number.isFinite(v);
  const motionTypes=['none','fade','slideUp','slideDown','slideLeft','slideRight','pop','bounce','zoom','spin','flip','typeIn','spinLetters'];
- const transitionTypes=['none','dipBlack','dipWhite','flash','wipeLeft','wipeRight','iris','slideIn','zoomPunch','spinIn'];
+ const transitionTypes=['none','dipBlack','dipWhite','flash','wipeLeft','wipeRight','iris','slideIn','zoomPunch','spinIn',...(root.MangoCinematicV0713?.ids||[])];
  const numberTypes=['none','countUp','countDown','timerUp','timerDown'];
  const easing=['linear','easeIn','easeOut','easeInOut','back'];
  const defaults=()=>({enter:{type:'none',duration:.45,ease:'easeOut'},exit:{type:'none',duration:.35,ease:'easeIn'},
@@ -114,6 +114,7 @@
  }
  function paintTransition(ctx,video,zoom,segments,items,seconds,w,h){
   const a=transitionAt(segments,items,seconds);if(!a||!video||video.readyState<2)return false;
+  if(root.MangoCinematicV0713?.isType(a.type))return false; // two-frame transitions require prepared source frames
   const p=clamp(ease(a.progress,a.ease)),after=seconds>=a.boundary;
   const amount=after?clamp((a.progress-.5)*2):0;
   ctx.save();ctx.fillStyle='#070a0c';ctx.fillRect(0,0,w,h);

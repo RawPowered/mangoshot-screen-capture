@@ -32,7 +32,7 @@
  const eligible=(studio,l)=>studio==='clip'?['text','callout'].includes(l.kind):!['redact','erase-brush','eraser','erase-stroke'].includes(l.type);
  function describe(studio,l){return {id:l.id,name:l.name||(l.type==='text'?String(l.text||'Text').slice(0,40):l.type)||l.kind,
   type:l.type||l.kind,group:l.layerGroup?checkGroup(l.layerGroup):[],track:l.track,start:l.start,end:l.end,visible:l.visible!==false,locked:!!l.locked,
-  opacity:l.opacity??1,fx:appearance(l),eligible:eligible(studio,l),fadeIn:l.fadeIn??0,fadeOut:l.fadeOut??0,outline:l.outline||'#000000',outlineWidth:l.outlineWidth??0};}
+  opacity:l.opacity??1,fx:appearance(l),eligible:eligible(studio,l),fadeIn:l.fadeIn??0,fadeOut:l.fadeOut??0,outline:l.outline||'#000000',outlineWidth:l.outlineWidth??0,motion:studio==='clip'?root.MangoMotion?.checkLayer(l.motion):null};}
  function effects(studio,layer,args){
   if(!eligible(studio,layer))throw Error('Redaction and eraser layers cannot receive appearance effects.');
   const next={...layer};
@@ -47,6 +47,12 @@
    if(studio!=='clip'||!hex(args.outline?.color)||!range(args.outline?.width,0,16))throw Error('Invalid graphic outline.');
    if(layer.premium&&args.outline.width!==0)throw Error('Premium material outlines are authored by the material preset. Use the shared shadow/glow instead.');
    next.outline=args.outline.color;next.outlineWidth=args.outline.width;
+  }
+  if(Object.hasOwn(args,'motion')){
+   if(studio!=='clip'||!root.MangoMotion)throw Error('Graphic motion is unavailable.');
+   const prior=root.MangoMotion.checkLayer(layer.motion),draft=args.motion;
+   if(!draft||!draft.enter||!draft.exit)throw Error('Entry and exit settings are required.');
+   next.motion=root.MangoMotion.checkLayer({enter:draft.enter,exit:draft.exit,numeric:prior.numeric});
   }
   return next;
  }
