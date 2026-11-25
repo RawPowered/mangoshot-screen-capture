@@ -61,7 +61,7 @@
  fxPanel.append(line('ls-actions-v0712',btn('ls-reset-draft-v0712','Reset draft',()=>syncEffects()),apply));
  right.append(organize,fxPanel);
  const status=e('span',{id:'ls-status-v0712',role:'status','aria-live':'polite'},'Ready');
- const locate=btn('ls-locate-v0712','Select in editor',()=>{try{if(!chosen.size)throw Error('Select at least one layer.');host.select([...chosen]);dlg.close();}catch(err){message(err.message,true);}});
+ const locate=btn('ls-locate-v0712',image?'Select in editor':'Select primary in editor',()=>{try{if(!chosen.size)throw Error('Select at least one layer.');host.select([...chosen]);dlg.close();}catch(err){message(err.message,true);}});
  const footer=line('ls-footer-v0712',status,locate);
  dlg.append(header,line('ls-tabs-v0712',layerTab,fxTab),line('ls-work-v0712',left,right),footer);doc.body.append(dlg);
  let state=null,chosen=new Set(),collapsed=new Set(),tab='layers',returnFocus=null,previewFrame=0;
@@ -86,12 +86,12 @@
   for(const l of ordered){let n=base;n.all.push(l);for(const part of l.group){if(!n.children.has(part))n.children.set(part,makeGroup());n=n.children.get(part);n.all.push(l);}n.layers.push(l);}
   function checkRow(ids,accessible){
    const n=field('','checkbox','1');n.removeAttribute('id');n.checked=ids.every(id=>chosen.has(id));n.indeterminate=!n.checked&&ids.some(id=>chosen.has(id));n.setAttribute('aria-label',accessible);
-   n.addEventListener('change',()=>{for(const id of ids)n.checked?chosen.add(id):chosen.delete(id);renderTree();syncEffects();});return n;
+   n.addEventListener('change',()=>{for(const id of ids)n.checked?chosen.add(id):chosen.delete(id);renderTree();syncEffects();const restored=[...tree.querySelectorAll('input[type=checkbox]')].find(x=>x.getAttribute('aria-label')===accessible);restored?.focus({preventScroll:true});});return n;
   }
   function render(n,level,prefix=[]){
    for(const [name,g] of n.children){
     const groupPath=[...prefix,name],key=JSON.stringify(groupPath),fold=collapsed.has(key);
-    const toggle=btn('','',()=>{fold?collapsed.delete(key):collapsed.add(key);renderTree();});toggle.removeAttribute('id');toggle.textContent=fold?'▸':'▾';toggle.className='ls-fold-v0712';toggle.setAttribute('aria-label',(fold?'Expand ':'Collapse ')+groupPath.join(' / '));toggle.setAttribute('aria-expanded',String(!fold));
+    const toggle=btn('','',()=>{fold?collapsed.delete(key):collapsed.add(key);renderTree();const restored=[...tree.querySelectorAll('.ls-fold-v0712')].find(b=>b.getAttribute('aria-label')===(fold?'Collapse ':'Expand ')+groupPath.join(' / '));restored?.focus({preventScroll:true});});toggle.removeAttribute('id');toggle.textContent=fold?'▸':'▾';toggle.className='ls-fold-v0712';toggle.setAttribute('aria-label',(fold?'Expand ':'Collapse ')+groupPath.join(' / '));toggle.setAttribute('aria-expanded',String(!fold));
     const row=line('ls-group-v0712',toggle,checkRow(g.all.map(l=>l.id),'Select folder '+groupPath.join(' / ')),e('strong',{},name),e('small',{},String(g.all.length)));row.style.setProperty('--ls-depth',String(level));tree.append(row);
     if(!fold)render(g,level+1,groupPath);
    }
@@ -144,7 +144,7 @@
  }
  for(const input of [search,type,filter])input.addEventListener('input',renderTree);
  for(const input of [useOpacity,useFx,useFade,useOutline,opacity,kind,color,blur,x,y,blend,fadeIn,fadeOut,outline,outlineWidth])input.addEventListener('input',preview);
- dlg.addEventListener('close',()=>{if(previewFrame)root.cancelAnimationFrame(previewFrame);previewFrame=0;if(returnFocus?.isConnected)returnFocus.focus({preventScroll:true});});
+ dlg.addEventListener('close',()=>{if(previewFrame)root.cancelAnimationFrame(previewFrame);previewFrame=0;if(returnFocus?.isConnected){const summary=returnFocus.closest('.v06-menu')?.querySelector('summary');(summary||returnFocus).focus({preventScroll:true});}});
  for(const [id,next] of [['layer-studio-open-v0712','layers'],['effects-studio-open-v0712','effects'],['layer-studio-menu-v0712','layers'],['effects-studio-menu-v0712','effects']])doc.getElementById(id)?.addEventListener('click',event=>open(event,next));
  root.MangoLayerStudioUIV0712=Object.freeze({open:(mode='layers')=>open(null,mode)});
 })(typeof globalThis!=='undefined'?globalThis:this);

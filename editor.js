@@ -201,45 +201,46 @@ function drawStroke(stroke){
  if(layerOps?.apply)layerOps.apply(pen,stroke,()=>drawStrokeRaw(stroke));
  else drawStrokeRaw(stroke);
 }
-function drawStrokeRaw(stroke,target=pen){
+const imageStrokeContext=pen;
+function drawStrokeRaw(stroke,pen=imageStrokeContext){
   if(!stroke||stroke.visible===false)return;
-  if(stroke.type==='image'){layerCore?.paint(target,stroke);return;}
-  if(penInput?.paintEraser?.(target,stroke))return;
-  if(vectorCore?.isVector?.(stroke)){vectorCore.paint(target,stroke);return;}
+  if(stroke.type==='image'){layerCore?.paint(pen,stroke);return;}
+  if(penInput?.paintEraser?.(pen,stroke))return;
+  if(vectorCore?.isVector?.(stroke)){vectorCore.paint(pen,stroke);return;}
   const [start,...rest]=stroke.points,finish=stroke.points.at(-1)||start;
   if(!start)return;
-  target.save();target.lineCap='round';target.lineJoin='round';target.strokeStyle=stroke.color;
-  target.lineWidth=stroke.size*(stroke.type==='highlighter'?5:stroke.type==='eraser'?5:1);
-  target.globalAlpha=(stroke.type==='highlighter'?.27:1)*Math.max(0,Math.min(1,stroke.opacity??1));
-  if(stroke.type==='eraser')target.globalCompositeOperation='destination-out';
+  pen.save();pen.lineCap='round';pen.lineJoin='round';pen.strokeStyle=stroke.color;
+  pen.lineWidth=stroke.size*(stroke.type==='highlighter'?5:stroke.type==='eraser'?5:1);
+  pen.globalAlpha=(stroke.type==='highlighter'?.27:1)*Math.max(0,Math.min(1,stroke.opacity??1));
+  if(stroke.type==='eraser')pen.globalCompositeOperation='destination-out';
   if(['pen','highlighter','eraser'].includes(stroke.type)){
     const factor=stroke.type==='highlighter'||stroke.type==='eraser'?5:1;
     let previous=start;
     if(!rest.length){
-      target.lineWidth=stroke.size*factor*(start.p||1);
-      target.beginPath();target.moveTo(start.x,start.y);target.lineTo(start.x+.01,start.y+.01);target.stroke();
+      pen.lineWidth=stroke.size*factor*(start.p||1);
+      pen.beginPath();pen.moveTo(start.x,start.y);pen.lineTo(start.x+.01,start.y+.01);pen.stroke();
     }
     for(const next of rest){
-      target.lineWidth=stroke.size*factor*Math.max(.2,((previous.p||1)+(next.p||1))/2);
-      target.beginPath();target.moveTo(previous.x,previous.y);target.lineTo(next.x,next.y);target.stroke();
+      pen.lineWidth=stroke.size*factor*Math.max(.2,((previous.p||1)+(next.p||1))/2);
+      pen.beginPath();pen.moveTo(previous.x,previous.y);pen.lineTo(next.x,next.y);pen.stroke();
       previous=next;
     }
   }else if(stroke.type==='rectangle'||stroke.type==='redact'){
     const x=Math.min(start.x,finish.x),y=Math.min(start.y,finish.y),w=Math.abs(finish.x-start.x),h=Math.abs(finish.y-start.y);
-    if(stroke.type==='redact'){target.globalAlpha=1;target.fillStyle='#111';target.fillRect(x,y,w,h);}
-    else target.strokeRect(x,y,w,h);
+    if(stroke.type==='redact'){pen.globalAlpha=1;pen.fillStyle='#111';pen.fillRect(x,y,w,h);}
+    else pen.strokeRect(x,y,w,h);
   }else if(stroke.type==='arrow'){
     const angle=Math.atan2(finish.y-start.y,finish.x-start.x),head=Math.max(12,stroke.size*4);
-    target.beginPath();target.moveTo(start.x,start.y);target.lineTo(finish.x,finish.y);
-    target.moveTo(finish.x,finish.y);target.lineTo(finish.x-head*Math.cos(angle-.55),finish.y-head*Math.sin(angle-.55));
-    target.moveTo(finish.x,finish.y);target.lineTo(finish.x-head*Math.cos(angle+.55),finish.y-head*Math.sin(angle+.55));target.stroke();
+    pen.beginPath();pen.moveTo(start.x,start.y);pen.lineTo(finish.x,finish.y);
+    pen.moveTo(finish.x,finish.y);pen.lineTo(finish.x-head*Math.cos(angle-.55),finish.y-head*Math.sin(angle-.55));
+    pen.moveTo(finish.x,finish.y);pen.lineTo(finish.x-head*Math.cos(angle+.55),finish.y-head*Math.sin(angle+.55));pen.stroke();
   }else if(stroke.type==='text'){
-    if(typeEffects?.draw)typeEffects.draw(target,stroke);
-    else if(editorCore?.drawText)editorCore.drawText(target,stroke);
-    else{target.globalAlpha=Math.max(0,Math.min(1,stroke.opacity??1));target.fillStyle=stroke.color;target.font='bold '+Math.max(14,stroke.size*5)+'px system-ui';
-      target.fillText(stroke.text||'Note',start.x,start.y);}
+    if(typeEffects?.draw)typeEffects.draw(pen,stroke);
+    else if(editorCore?.drawText)editorCore.drawText(pen,stroke);
+    else{pen.globalAlpha=Math.max(0,Math.min(1,stroke.opacity??1));pen.fillStyle=stroke.color;pen.font='bold '+Math.max(14,stroke.size*5)+'px system-ui';
+      pen.fillText(stroke.text||'Note',start.x,start.y);}
   }
-  target.restore();
+  pen.restore();
 }
 function draftTextLayer(){
  if(!textDraft||!inlineInput)return null;
