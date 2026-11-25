@@ -148,7 +148,10 @@
   ctx.restore();return {x,y,width,height:boxH};
  }
  function render(ctx,layers,seconds,w,h){if(!ctx||!Number.isFinite(seconds))return;
-  for(const layer of at(layers,seconds))paintOne(ctx,layer,w,h,seconds);
+  for(const layer of at(layers,seconds)){
+   if(layer.layerFx&&root.MangoLayerStudioV0712)root.MangoLayerStudioV0712.composite(ctx,layer,w,h,p=>paintOne(p,layer,w,h,seconds));
+   else paintOne(ctx,layer,w,h,seconds);
+  }
  }
  function ripple(layers,start,end){const d=end-start;if(d<=0)return cp(layers);
   const result=[];

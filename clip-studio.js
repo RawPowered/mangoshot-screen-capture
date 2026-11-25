@@ -491,6 +491,28 @@ globalThis.MangoClipView={
    selectedLayerId=id;refreshed();label('Graphic timing updated: '+candidate.start.toFixed(2)+'–'+candidate.end.toFixed(2)+' s on G'+candidate.track+'. Ctrl+Z to undo.');return true;
  },
 };
+
+globalThis.MangoLayerClipV0712=Object.freeze({
+ state(){const s=globalThis.MangoClipView.automationCapture();return {ready:s.ready,reason:s.reason,stamp:automationRevisionV075+':'+loadVersion,layers:layers.map(l=>MangoLayerStudioV0712.describe('clip',l)),selection:selectedLayerId?[selectedLayerId]:[]};},
+ apply(command,ids,args,stamp){
+  const s=this.state();if(!s.ready||s.stamp!==stamp)throw Error('Clip changed or is busy. Reopen Layer Studio.');
+  const r=MangoLayerStudioV0712.plan('clip',layers,ids,command,args,()=>crypto.randomUUID());
+  if(!r.changed)return {changed:false,selection:r.selection};
+  const source={size:original.size,format:originalFormat,duration};
+  MangoProject.check(MangoProject.pack(source,segments,r.layers,globalThis.MangoClipTimeline?.markers?.()||[],transitions),source);
+  remember();layers=r.layers;selectedLayerId=r.selection.at(-1)||null;selectedClipIndex=null;rangeSelected=false;refreshed();label('Layer Studio edit applied. Ctrl+Z to undo.');
+  return {changed:true,selection:r.selection};
+ },
+ select(ids){if(!this.state().ready)throw Error('Clip editor is not ready.');globalThis.MangoClipView.selectLayer(ids.at(-1)||null);},
+ preview(canvas,ids,args,stamp){
+  const s=this.state();if(!s.ready||s.stamp!==stamp)throw Error('Clip changed or is busy. Reopen Layer Studio.');
+  let draft=layers;if(ids.length&&Object.keys(args).length)draft=MangoLayerStudioV0712.plan('clip',layers,ids,'effects',args).layers;
+  const selected=draft.filter(l=>ids.includes(l.id)),ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height;
+  ctx.fillStyle='#202630';ctx.fillRect(0,0,w,h);ctx.fillStyle='#303844';ctx.fillRect(0,h*.5,w,h*.5);
+  if(selected.length){const first=selected[0],at=(first.start+first.end)/2;MangoGraphics.render(ctx,selected,at,w,h);}
+ }
+});
+
 sequencePreview=MangoSequencePreview.create(video,()=>segments,
  output=>{previewSequenceTime=output;globalThis.MangoClipTimeline?.playhead?.();paintPreview();globalThis.MangoCreativeUI?.onPosition?.(output);},
  (playing,error)=>{globalThis.MangoCreativeUI?.onPlayback?.(playing);byId('program-play').textContent=playing?'❚❚ Pause':'▶ Play';if(error)label('Preview paused: '+error);});

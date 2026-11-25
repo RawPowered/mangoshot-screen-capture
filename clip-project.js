@@ -31,6 +31,8 @@
     if(!(['sans','mono','serif','rounded','condensed','display','handwritten'].includes(l.font)||root.MangoCreativeV079?.font(l.font))||!['left','right','center'].includes(l.align))fail('font/alignment');
     if(l.motion!=null){if(!root.MangoMotion)fail('motion schema unavailable');root.MangoMotion.checkLayer(l.motion);}
     if(l.premium!=null){if(!root.MangoPremium)fail('premium schema unavailable');root.MangoPremium.validate(l.premium);}
+    if(l.layerGroup!=null){if(!root.MangoLayerStudioV0712)fail('layer group schema unavailable');root.MangoLayerStudioV0712.checkGroup(l.layerGroup);}
+    if(l.layerFx!=null){if(!root.MangoLayerStudioV0712)fail('layer effect schema unavailable');root.MangoLayerStudioV0712.checkFx(l.layerFx);}
     return {...l};
   });
   const markers=Array.isArray(data.markers)?data.markers:[];

@@ -1,0 +1,16 @@
+const assert=require('node:assert/strict'),C=require('../layer-studio-core-v0712.js');
+const fx=C.presets.find(x=>x.id==='gold').fx;
+const image=[{id:'a',type:'text',name:'A',points:[{x:10,y:20}],opacity:1,visible:true},{id:'b',type:'image',name:'B',points:[{x:0,y:0}],locked:false},{id:'redact',type:'redact',name:'Secret'}];
+let r=C.plan('image',image,['a','b'],'group',{path:C.path('Brand / Intro / Title')});assert.deepEqual(r.layers[0].layerGroup,['Brand','Intro','Title']);assert.equal(image[0].layerGroup,undefined);
+r=C.plan('image',r.layers,['a','b'],'effects',{opacity:.4,fx});assert.equal(r.layers[0].opacity,.4);assert.equal(r.layers[1].layerFx.color,'#d5ab54');assert.equal(image[0].opacity,1);
+assert.throws(()=>C.plan('image',image,['a','redact'],'effects',{opacity:.5}),/Redaction/);
+assert.throws(()=>C.plan('image',[{...image[0],locked:true}],['a'],'effects',{fx}),/Unlock/);
+assert.throws(()=>C.plan('image',image,['missing'],'delete'),/stale/);
+assert.throws(()=>C.checkGroup(['a/b']),/folder/);assert.throws(()=>C.path('a//b'),/folder/);assert.throws(()=>C.checkFx({...fx,blur:Infinity}),/appearance/);
+let id=0;r=C.plan('image',r.layers,['a','b'],'duplicate',{},()=>String(++id));assert.equal(r.layers.length,5);assert.deepEqual(r.selection,['1','2']);assert.deepEqual(r.layers[3].points,[{x:30,y:40}]);assert.deepEqual(r.layers[3].layerGroup,['Brand','Intro','Title']);
+const clip=[{id:'a',kind:'text',track:2,start:0,end:2},{id:'b',kind:'callout',track:3,start:0,end:3},{id:'c',kind:'text',track:2,start:1,end:3}];
+r=C.plan('clip',clip,['a','b'],'effects',{fade:{in:.2,out:.3},outline:{color:'#aabbcc',width:3},fx});assert.equal(r.layers[1].fadeOut,.3);assert.equal(r.layers[0].outlineWidth,3);
+assert.throws(()=>C.plan('clip',clip,['a'],'effects',{fade:{in:2,out:1}}),/duration/);
+r=C.plan('clip',clip,['a'],'stack',{direction:'front'});assert.deepEqual(r.layers.map(l=>l.id),['c','b','a']);assert.deepEqual(r.layers.map(l=>l.track),[2,3,2]);
+r=C.plan('clip',clip,['a','b'],'track',{track:3});assert.equal(r.layers[0].track,3);assert.equal(r.layers[0].start,0);
+console.log('Layer Studio path, batch appearance, atomic validation, lock/redaction guards, duplication, stacking and timing passed');

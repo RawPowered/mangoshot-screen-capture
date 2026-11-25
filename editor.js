@@ -201,45 +201,45 @@ function drawStroke(stroke){
  if(layerOps?.apply)layerOps.apply(pen,stroke,()=>drawStrokeRaw(stroke));
  else drawStrokeRaw(stroke);
 }
-function drawStrokeRaw(stroke){
+function drawStrokeRaw(stroke,target=pen){
   if(!stroke||stroke.visible===false)return;
-  if(stroke.type==='image'){layerCore?.paint(pen,stroke);return;}
-  if(penInput?.paintEraser?.(pen,stroke))return;
-  if(vectorCore?.isVector?.(stroke)){vectorCore.paint(pen,stroke);return;}
+  if(stroke.type==='image'){layerCore?.paint(target,stroke);return;}
+  if(penInput?.paintEraser?.(target,stroke))return;
+  if(vectorCore?.isVector?.(stroke)){vectorCore.paint(target,stroke);return;}
   const [start,...rest]=stroke.points,finish=stroke.points.at(-1)||start;
   if(!start)return;
-  pen.save();pen.lineCap='round';pen.lineJoin='round';pen.strokeStyle=stroke.color;
-  pen.lineWidth=stroke.size*(stroke.type==='highlighter'?5:stroke.type==='eraser'?5:1);
-  pen.globalAlpha=(stroke.type==='highlighter'?.27:1)*Math.max(0,Math.min(1,stroke.opacity??1));
-  if(stroke.type==='eraser')pen.globalCompositeOperation='destination-out';
+  target.save();target.lineCap='round';target.lineJoin='round';target.strokeStyle=stroke.color;
+  target.lineWidth=stroke.size*(stroke.type==='highlighter'?5:stroke.type==='eraser'?5:1);
+  target.globalAlpha=(stroke.type==='highlighter'?.27:1)*Math.max(0,Math.min(1,stroke.opacity??1));
+  if(stroke.type==='eraser')target.globalCompositeOperation='destination-out';
   if(['pen','highlighter','eraser'].includes(stroke.type)){
     const factor=stroke.type==='highlighter'||stroke.type==='eraser'?5:1;
     let previous=start;
     if(!rest.length){
-      pen.lineWidth=stroke.size*factor*(start.p||1);
-      pen.beginPath();pen.moveTo(start.x,start.y);pen.lineTo(start.x+.01,start.y+.01);pen.stroke();
+      target.lineWidth=stroke.size*factor*(start.p||1);
+      target.beginPath();target.moveTo(start.x,start.y);target.lineTo(start.x+.01,start.y+.01);target.stroke();
     }
     for(const next of rest){
-      pen.lineWidth=stroke.size*factor*Math.max(.2,((previous.p||1)+(next.p||1))/2);
-      pen.beginPath();pen.moveTo(previous.x,previous.y);pen.lineTo(next.x,next.y);pen.stroke();
+      target.lineWidth=stroke.size*factor*Math.max(.2,((previous.p||1)+(next.p||1))/2);
+      target.beginPath();target.moveTo(previous.x,previous.y);target.lineTo(next.x,next.y);target.stroke();
       previous=next;
     }
   }else if(stroke.type==='rectangle'||stroke.type==='redact'){
     const x=Math.min(start.x,finish.x),y=Math.min(start.y,finish.y),w=Math.abs(finish.x-start.x),h=Math.abs(finish.y-start.y);
-    if(stroke.type==='redact'){pen.globalAlpha=1;pen.fillStyle='#111';pen.fillRect(x,y,w,h);}
-    else pen.strokeRect(x,y,w,h);
+    if(stroke.type==='redact'){target.globalAlpha=1;target.fillStyle='#111';target.fillRect(x,y,w,h);}
+    else target.strokeRect(x,y,w,h);
   }else if(stroke.type==='arrow'){
     const angle=Math.atan2(finish.y-start.y,finish.x-start.x),head=Math.max(12,stroke.size*4);
-    pen.beginPath();pen.moveTo(start.x,start.y);pen.lineTo(finish.x,finish.y);
-    pen.moveTo(finish.x,finish.y);pen.lineTo(finish.x-head*Math.cos(angle-.55),finish.y-head*Math.sin(angle-.55));
-    pen.moveTo(finish.x,finish.y);pen.lineTo(finish.x-head*Math.cos(angle+.55),finish.y-head*Math.sin(angle+.55));pen.stroke();
+    target.beginPath();target.moveTo(start.x,start.y);target.lineTo(finish.x,finish.y);
+    target.moveTo(finish.x,finish.y);target.lineTo(finish.x-head*Math.cos(angle-.55),finish.y-head*Math.sin(angle-.55));
+    target.moveTo(finish.x,finish.y);target.lineTo(finish.x-head*Math.cos(angle+.55),finish.y-head*Math.sin(angle+.55));target.stroke();
   }else if(stroke.type==='text'){
-    if(typeEffects?.draw)typeEffects.draw(pen,stroke);
-    else if(editorCore?.drawText)editorCore.drawText(pen,stroke);
-    else{pen.globalAlpha=Math.max(0,Math.min(1,stroke.opacity??1));pen.fillStyle=stroke.color;pen.font='bold '+Math.max(14,stroke.size*5)+'px system-ui';
-      pen.fillText(stroke.text||'Note',start.x,start.y);}
+    if(typeEffects?.draw)typeEffects.draw(target,stroke);
+    else if(editorCore?.drawText)editorCore.drawText(target,stroke);
+    else{target.globalAlpha=Math.max(0,Math.min(1,stroke.opacity??1));target.fillStyle=stroke.color;target.font='bold '+Math.max(14,stroke.size*5)+'px system-ui';
+      target.fillText(stroke.text||'Note',start.x,start.y);}
   }
-  pen.restore();
+  target.restore();
 }
 function draftTextLayer(){
  if(!textDraft||!inlineInput)return null;
@@ -1878,6 +1878,35 @@ globalThis.MangoImageActions={
 /* Local typed adapter: selection is explicit and the review token is bound
  * to the source identity and all intervening editor revisions. */
 globalThis.MangoToolImageV0711=Object.freeze({state:()=>({selection:batchLayers().map(l=>l.id),layers:strokes.map(l=>({id:l.id,name:l.name||l.type,type:l.type,locked:!!l.locked,visible:l.visible!==false,bounds:tsBounds(l)})),tool:tool.value})});
+
+globalThis.MangoLayerImageV0712=Object.freeze({
+ state(){
+  ensureLayerIds();const C=globalThis.MangoLayerStudioV0712,primary=selectedAnyStroke(),busy=!!(drawing||active||textDraft||dragText||dragImage||maskDraw||dragVector||entireErase||layerDrag||layerStackDrag!==null||resizeDrag||appearanceGesture||batchDrag||marqueeDrag);
+  return {ready:ready&&!busy,reason:busy?'Finish the active gesture or text draft.':'Capture or import an image first.',stamp:automationRevisionV075,
+   layers:strokes.map(l=>C.describe('image',l)),selection:batchLayers().length?batchLayers().map(l=>l.id):primary?[primary.id]:[]};
+ },
+ apply(command,ids,args,stamp){
+  const s=this.state();if(!s.ready||s.stamp!==stamp)throw Error('Image changed or is busy. Reopen Layer Studio.');
+  const r=MangoLayerStudioV0712.plan('image',strokes,ids,command,args,()=>crypto.randomUUID());
+  if(!r.changed)return {changed:false,selection:r.selection};
+  snapshot();strokes=r.layers;setBatch(r.selection);redraw();setReady(ready);syncSelectedText();syncLayerProperties();label('Layer Studio edit applied. Ctrl+Z to undo.');
+  return {changed:true,selection:r.selection};
+ },
+ select(ids){if(!this.state().ready)throw Error('Image editor is not ready.');setBatch(ids);},
+ preview(canvas,ids,args,stamp){
+  const s=this.state();if(!s.ready||stamp!==s.stamp)throw Error('Image changed or is busy. Reopen Layer Studio.');
+  let draft=strokes;if(ids.length&&Object.keys(args).length)draft=MangoLayerStudioV0712.plan('image',strokes,ids,'effects',args).layers;
+  const w=canvas.width,h=canvas.height,scale=Math.min(w/base.width,h/base.height),rw=Math.max(1,Math.round(base.width*scale)),rh=Math.max(1,Math.round(base.height*scale));
+  const off=document.createElement('canvas');off.width=rw;off.height=rh;const p=off.getContext('2d'),out=canvas.getContext('2d');
+  p.scale(rw/base.width,rh/base.height);
+  for(const l of draft){if(l.visible===false)continue;let x=l;
+   if(l.layerFx){const f=MangoLayerStudioV0712.appearance(l);x={...l,layerFx:{...f,blur:f.blur*scale,offsetX:f.offsetX*scale,offsetY:f.offsetY*scale}};}
+   layerOps.apply(p,x,()=>drawStrokeRaw(x,p));
+  }
+  out.clearRect(0,0,w,h);out.fillStyle='#111315';out.fillRect(0,0,w,h);const left=(w-rw)/2,top=(h-rh)/2;out.drawImage(base,left,top,rw,rh);out.drawImage(off,left,top);
+ }
+});
+
 globalThis.MangoCreativeImageV079=Object.freeze({
  state(){const l=selectedStroke();return {ready:globalThis.MangoImageAutomationV075?.capture().ready===true,selected:!!l&&!l.locked,font:l?.fontFamily||'sans',weight:l?.fontWeight||'600'};},
  apply(kind,id,w){

@@ -47,6 +47,9 @@ jobs:
           node tests/creative-foundation-v079.cjs
           node tests/recorder-control-v0710.cjs
           node tests/tool-studio-v0711.cjs
+          node tests/layer-studio-v0712.cjs
+          node --check layer-studio-core-v0712.js
+          node --check layer-studio-ui-v0712.js
           node --check tool-studio-ui-v0711.js
           node --check recorder-control-v0710.js
           node --check creative-library-v079.js
@@ -84,7 +87,7 @@ jobs:
           retention-days: 14
 
   studio-precision-preview:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.11-tool-studio'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.12-layer-effects-studio'
     runs-on: ubuntu-latest
     needs: browser-extension-unit-tests
     steps:
@@ -110,35 +113,37 @@ jobs:
           timeout 120s node tests/creative-foundation-v079.browser.cjs /tmp/mangoshot-sequence-test.webm
           timeout 120s node tests/recorder-precision-v0710.browser.cjs
           timeout 120s node tests/tool-studio-v0711.browser.cjs /tmp/mangoshot-sequence-test.webm
+          timeout 120s node tests/layer-studio-v0712.browser.cjs /tmp/mangoshot-sequence-test.webm
       - name: Package development preview (not a release)
         run: |
-          python3 tools/package-extension.py --out dist --version v0.6.18-tool-studio-preview
-          unzip -t dist/MangoShot-v0.6.18-tool-studio-preview-Extension.zip
-          python3 -c "import json,zipfile; z=zipfile.ZipFile('dist/MangoShot-v0.6.18-tool-studio-preview-Extension.zip'); assert z.read('manifest.json')==open('manifest.json','rb').read(); assert 'nativeMessaging' in json.loads(z.read('manifest.json'))['permissions']"
-          unzip -l dist/MangoShot-v0.6.18-tool-studio-preview-Extension.zip | grep studio-precision-v072.css
-          unzip -l dist/MangoShot-v0.6.18-tool-studio-preview-Extension.zip | grep studio-layout-core-v072.js
-          unzip -l dist/MangoShot-v0.6.18-tool-studio-preview-Extension.zip | grep studio-overlays-v072.js
-          unzip -l dist/MangoShot-v0.6.18-tool-studio-preview-Extension.zip | grep cursor-effects-v073.js
-          unzip -l dist/MangoShot-v0.6.18-tool-studio-preview-Extension.zip | grep cursor-recorder-v073.js
-          unzip -l dist/MangoShot-v0.6.18-tool-studio-preview-Extension.zip | grep cursor-clip-v073.js
-          unzip -l dist/MangoShot-v0.6.18-tool-studio-preview-Extension.zip | grep cursor-director-core-v074.js
-          unzip -l dist/MangoShot-v0.6.18-tool-studio-preview-Extension.zip | grep cursor-director-ui-v074.js
-          for src in tool-studio-core-v0711.js tool-studio-ui-v0711.js tool-studio-v0711.css recorder-control-v0710.js recorder-controls-v0710.css theme-carbon-v078.css bridge-core-v077.js bridge-ui-v077.js bridge-v077.css sequence-engine-v076.js sequence-studio-v076.js sequence-studio-v076.css automation-core-v075.js automation-adapters-v075.js automation-ui-v075.js automation-v075.css; do unzip -l dist/MangoShot-v0.6.18-tool-studio-preview-Extension.zip | grep "$src"; done
+          python3 tools/package-extension.py --out dist --version v0.6.18-layer-effects-preview
+          unzip -t dist/MangoShot-v0.6.18-layer-effects-preview-Extension.zip
+          python3 -c "import json,zipfile; z=zipfile.ZipFile('dist/MangoShot-v0.6.18-layer-effects-preview-Extension.zip'); assert z.read('manifest.json')==open('manifest.json','rb').read(); assert 'nativeMessaging' in json.loads(z.read('manifest.json'))['permissions']"
+          unzip -l dist/MangoShot-v0.6.18-layer-effects-preview-Extension.zip | grep studio-precision-v072.css
+          unzip -l dist/MangoShot-v0.6.18-layer-effects-preview-Extension.zip | grep studio-layout-core-v072.js
+          unzip -l dist/MangoShot-v0.6.18-layer-effects-preview-Extension.zip | grep studio-overlays-v072.js
+          unzip -l dist/MangoShot-v0.6.18-layer-effects-preview-Extension.zip | grep cursor-effects-v073.js
+          unzip -l dist/MangoShot-v0.6.18-layer-effects-preview-Extension.zip | grep cursor-recorder-v073.js
+          unzip -l dist/MangoShot-v0.6.18-layer-effects-preview-Extension.zip | grep cursor-clip-v073.js
+          unzip -l dist/MangoShot-v0.6.18-layer-effects-preview-Extension.zip | grep cursor-director-core-v074.js
+          unzip -l dist/MangoShot-v0.6.18-layer-effects-preview-Extension.zip | grep cursor-director-ui-v074.js
+          for src in layer-studio-core-v0712.js layer-studio-ui-v0712.js layer-studio-v0712.css tool-studio-core-v0711.js tool-studio-ui-v0711.js tool-studio-v0711.css recorder-control-v0710.js recorder-controls-v0710.css theme-carbon-v078.css bridge-core-v077.js bridge-ui-v077.js bridge-v077.css sequence-engine-v076.js sequence-studio-v076.js sequence-studio-v076.css automation-core-v075.js automation-adapters-v075.js automation-ui-v075.js automation-v075.css; do unzip -l dist/MangoShot-v0.6.18-layer-effects-preview-Extension.zip | grep "$src"; done
       - uses: actions/upload-artifact@v4
         with:
-          name: MangoShot-v0.7.11-Tool-Studio-Extension
-          path: dist/MangoShot-v0.6.18-tool-studio-preview-Extension.zip
+          name: MangoShot-v0.7.12-Layer-Effects-Extension
+          path: dist/MangoShot-v0.6.18-layer-effects-preview-Extension.zip
           retention-days: 14
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: MangoShot-v0.7.11-Tool-Studio-Screenshots
+          name: MangoShot-v0.7.12-Layer-Effects-Screenshots
           path: |
             carbon-screenshots/
             creative-screenshots/
             recorder-screenshots/
             tool-studio-screenshots/
+            layer-studio-screenshots/
           if-no-files-found: ignore
           retention-days: 14
 
