@@ -1,0 +1,1 @@
+These unmodified typefaces are separate third-party assets distributed under their respective SIL Open Font License 1.1 notices, not the MangoShot application license. See PROVENANCE.json and the individual OFL.txt notices for upstream authors, pinned source paths, and file identity. No font downloads occur at runtime.
