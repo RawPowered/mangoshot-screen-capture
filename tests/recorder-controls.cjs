@@ -45,7 +45,7 @@ const keyboard=(key,ctrl=false,alt=false)=>({key,code:'Key'+key.toUpperCase(),ct
  assert.equal(el('stop').disabled,false);assert.match(el('status').textContent,/Microphone unavailable/);
  await el('source-focus').listeners.click();assert.equal(sourceActivated,1,'Source tab activation should be user-triggered');
  assert.equal(el('enable-scroll').disabled,true);
- windowEvents.keydown(keyboard('`',true));assert.equal(el('mode').textContent,'Interaction: ON');
+ windowEvents.keydown(keyboard('`',true));windowEvents.keyup(keyboard('`'));assert.equal(el('mode').textContent,'Interaction: ON');
  assert.equal(el('enable-scroll').disabled,false);
  await el('enable-scroll').listeners.click();assert.equal(scrollForwarded,true);
  assert.equal(forwardElement,el('screen-wrap'),'Wheel forwarding covers composed monitor, not hidden video only');
