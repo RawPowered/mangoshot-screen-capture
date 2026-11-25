@@ -177,7 +177,7 @@ function paintCinematic(ctx,items,time,w,h){
 }
 function queueCinematicPreview(){
  const key=JSON.stringify([originalUrl,segments,transitions]);
- if(cinematicRequest===key||cinematic?.ready(originalUrl,duration,segments,transitions))return;
+ if(exporting||document.getElementById('cinematic-studio-v0713')?.open||cinematicRequest===key||cinematic?.ready(originalUrl,duration,segments,transitions))return;
  cinematicRequest=key;
  prepareCinematic().then(()=>{if(cinematicRequest===key&&!exporting)paintPreview();}).catch(e=>{if(cinematicRequest===key&&!exporting)label('Cinematic preview unavailable: '+e.message);});
 }
@@ -219,7 +219,7 @@ byId('trim').onclick=()=>edit('trim');byId('cut').onclick=()=>{
 };
 byId('undo').onclick=()=>{if(!history.length)return;redoHistory.push(snapshot());restore(history.pop());label('Undo complete.');};
 byId('redo').onclick=()=>{if(!redoHistory.length)return;history.push(snapshot());restore(redoHistory.pop());label('Redo complete.');};
-byId('reset').onclick=()=>{if(!original)return;remember();segments=[{start:0,end:duration}];layers=[];zoomEvents=[];cursorRegions=[];selectedLayerId=null;
+byId('reset').onclick=()=>{if(!original||exporting)return;remember();segments=[{start:0,end:duration}];layers=[];zoomEvents=[];cursorRegions=[];transitions=[];cinematic?.clear();cinematicRequest=null;selectedLayerId=null;
  selectedClipIndex=null;rangeSelected=false;byId('in').value='0';byId('out').value=duration.toFixed(2);
  globalThis.MangoClipTimeline?.loadMarkers?.([]);refreshed();label('Source, graphics and markers reset.');};
 byId('file').addEventListener('change',event=>{if(event.target.files?.[0])load(event.target.files[0]).catch(e=>label('Open failed: '+e.message));});
@@ -387,7 +387,7 @@ globalThis.MangoClipView={
   updateTransition(index,patch){
    if(!original||exporting)return false;
    try{if(globalThis.MangoCinematicV0713?.isType(patch.type)&&patch.allowHandles!==true)throw Error('Use Cinematic Studio to review source handles and prepare the two-frame transition.');const next=MangoMotion.setTransition(transitions,segments,index,patch);
-    if(globalThis.MangoCinematicV0713){globalThis.MangoCinematicV0713.plans(segments,next,duration);if(cinematicActive(next)&&!cinematic.ready(originalUrl,duration,segments,next))throw Error('Prepare the complete cinematic transition set first.');}
+    if(globalThis.MangoCinematicV0713){globalThis.MangoCinematicV0713.plans(segments,next,duration);if(globalThis.MangoCinematicV0713.isType(patch.type)&&!cinematic.ready(originalUrl,duration,segments,next))throw Error('Prepare the complete cinematic transition set first.');}
     if(JSON.stringify(next)===JSON.stringify(transitions))return false;
     remember();transitions=next;refreshed();label('Clip opening transition updated.');return true;
    }catch(error){label(error.message);return false;}

@@ -34,7 +34,7 @@
  dialog.append(header,row('cs-content-v0713',catalog,controls),row('cs-footer-v0713',status,remove,apply));doc.body.append(dialog);
  function fail(err){status.textContent=err.message||String(err);status.dataset.error='true';}
  function stop(){if(playing)cancelAnimationFrame(playing);playing=0;play.textContent='Play preview';}
- function sync(){for(const tile of catalog.children)tile.setAttribute('aria-pressed',String(tile.dataset.type===selected));const valid=!!captured?.ready&&cut.options.length>0&&!busy;preview.disabled=!valid||!check.checked;apply.disabled=!valid||!prepared||!check.checked;play.disabled=!prepared;remove.disabled=!valid;}
+ function sync(){for(const tile of catalog.children)tile.setAttribute('aria-pressed',String(tile.dataset.type===selected));const valid=!!captured?.ready&&cut.options.length>0&&!busy;for(const el of [cut,duration,ease,check,...catalog.children])el.disabled=busy;preview.disabled=!valid||!check.checked;apply.disabled=!valid||!prepared||!check.checked;play.disabled=!prepared||busy;scrub.disabled=!prepared||busy;remove.disabled=!valid;}
  function invalidate(){serial++;stop();cache.clear();prepared=null;busy=false;info.textContent='No preview prepared';const p=canvas.getContext('2d');p.fillStyle='#111315';p.fillRect(0,0,canvas.width,canvas.height);status.dataset.error='false';status.textContent='Preview draft before applying.';sync();}
  function fresh(){const s=V.automationCapture();if(!captured?.ready||!s.ready||s.stamp!==captured.stamp||s.identity!==captured.identity)throw Error('Source or edit changed. Reopen Cinematic Studio.');return s;}
  function draft(){
@@ -44,7 +44,7 @@
   return {parts,items,plan,patch};
  }
  function paint(){
-  if(!prepared)return;const p=prepared.plan,at=p.start+(p.duration*Math.min(.999999,Number(scrub.value)/1000));
+  if(!prepared||busy)return;const p=prepared.plan,at=p.start+(p.duration*Math.min(.999999,Number(scrub.value)/1000));
   cache.paint(canvas.getContext('2d'),V.url(),V.duration(),prepared.parts,prepared.items,at,canvas.width,canvas.height,V.zoomFrames());
  }
  async function prepare(){
@@ -52,17 +52,19 @@
   try{
    const d=draft();duration.value=d.plan.duration;status.dataset.error='false';status.textContent='Preparing local source frames…';
    const q=await cache.prepare(V.url(),V.duration(),d.parts,d.items,V.video().videoWidth,V.video().videoHeight,(n,total)=>{if(run===serial)status.textContent='Preparing frame pairs '+n+' / '+total;});
-   if(run!==serial||!dialog.open)return;fresh();prepared=d;info.textContent=q.width+' × '+q.height+' cached at '+q.fps+' fps · '+(q.bytes/1048576).toFixed(1)+' MiB raster budget';scrub.value='500';paint();status.textContent='Preview ready · Apply to commit.';
+   if(run!==serial||!dialog.open)return;fresh();prepared=d;busy=false;const scale=Math.min(640/V.video().videoWidth,360/V.video().videoHeight);canvas.width=Math.max(1,Math.round(V.video().videoWidth*scale));canvas.height=Math.max(1,Math.round(V.video().videoHeight*scale));canvas.style.aspectRatio=canvas.width+' / '+canvas.height;info.textContent=q.width+' × '+q.height+' cached at '+q.fps+' fps · '+(q.bytes/1048576).toFixed(1)+' MiB raster budget';scrub.value='500';paint();status.textContent='Preview ready · Apply to commit.';
   }catch(err){if(run===serial)fail(err);}
   finally{if(run===serial){busy=false;sync();}}
  }
  async function commit(){
+  const run=serial;
   try{fresh();if(!check.checked||!prepared)throw Error('Prepare and review the transition first.');const d=draft();if(JSON.stringify(d.items)!==JSON.stringify(prepared.items))throw Error('Settings changed. Prepare again.');
    busy=true;sync();status.textContent='Installing prepared transition…';
-   await V.prepareCinematic(d.items);fresh();
+   // Release the modal raster cache before preparing the same frames for the live editor.
+   cache.clear();await V.prepareCinematic(d.items);if(run!==serial||!dialog.open)return;fresh();
    if(!V.updateTransition(d.plan.index,{...d.patch,allowHandles:true}))throw Error('Transition unchanged or not accepted.');
    dialog.close();
-  }catch(err){fail(err);}finally{busy=false;sync();}
+  }catch(err){if(run===serial){prepared=null;fail(err);}}finally{if(run===serial){busy=false;sync();}}
  }
  function open(event){
   if(dialog.open||doc.querySelector('dialog[open]'))return;
@@ -77,7 +79,7 @@
  for(const control of [cut,duration,ease,check])control.addEventListener('change',()=>{if(control===cut){const i=Number(cut.value),a=V.segments()[i-1],b=V.segments()[i],tr=a&&b&&V.transitions().find(t=>t.fromEnd===a.end&&t.toStart===b.start);selected=tr&&C.isType(tr.type)?tr.type:'crossDissolve';duration.value=tr?.duration||.5;ease.value=tr?.ease||'easeInOut';}invalidate();});
  scrub.addEventListener('input',()=>{stop();paint();});
  dialog.addEventListener('keydown',ev=>{if(ev.key==='Escape'){ev.preventDefault();ev.stopPropagation();dialog.close();}},true);
- dialog.addEventListener('close',()=>{serial++;stop();cache.clear();prepared=null;busy=false;if(returnFocus?.isConnected)(returnFocus.closest('.v06-menu')?.querySelector('summary')||returnFocus).focus({preventScroll:true});});
+ dialog.addEventListener('close',()=>{serial++;stop();cache.clear();prepared=null;busy=false;V.paintPreview();if(returnFocus?.isConnected)(returnFocus.closest('.v06-menu')?.querySelector('summary')||returnFocus).focus({preventScroll:true});});
  for(const id of ['cinematic-open-v0713','cinematic-menu-v0713'])doc.getElementById(id)?.addEventListener('click',open);
  root.MangoCinematicUIV0713=Object.freeze({open:()=>open(null)});
 })(typeof globalThis!=='undefined'?globalThis:this);
