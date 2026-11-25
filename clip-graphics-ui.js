@@ -170,7 +170,7 @@
   if(field==='fontSize'&&(value<12||value>220))return;
   if(field==='font'||field==='weight'){
    const nextFont=field==='font'?value:layer.font,nextWeight=field==='weight'?value:layer.weight;
-   const c=root.MangoCreativeV079,validLegacy=['400','500','600','700','800'];
+   const c=globalThis.MangoCreativeV079,validLegacy=['400','500','600','700','800'];
    const weight=c?.font(nextFont)?c.weight(nextFont,nextWeight):validLegacy.includes(String(nextWeight))?String(nextWeight):String(Math.max(400,Math.min(800,Math.round(Number(nextWeight)/100)*100)));
    st.updateLayer(layer.id,{font:nextFont,weight,preset:'none'});return;
   }
@@ -184,7 +184,7 @@
  el('graphic-duplicate').addEventListener('click',()=>{const l=activeLayer();if(l)current().duplicateLayer(l.id);});
  for(const [id,delta] of [['graphic-front',1],['graphic-back',-1]])el(id).addEventListener('click',()=>{const l=activeLayer();if(l)current().reorderLayer(l.id,delta);});
  el('graphics-snap').addEventListener('click',()=>{snapping=!snapping;
-  el('graphics-snap').setAttribute('aria-pressed',String(snapping));el('graphics-snap').replaceChildren(...(root.MangoIconsV079?.has('magnet')?[root.MangoIconsV079.svg('magnet',16)]:[]),document.createTextNode(' Snap: '+(snapping?'ON':'OFF')));
+  el('graphics-snap').setAttribute('aria-pressed',String(snapping));if(globalThis.MangoIconsV079?.has('magnet'))el('graphics-snap').replaceChildren(globalThis.MangoIconsV079.svg('magnet',16),document.createTextNode(' Snap: '+(snapping?'ON':'OFF')));else el('graphics-snap').textContent='🧲 Snap: '+(snapping?'ON':'OFF');
  });
  const canvas=el('graphics-preview');
  function canvasPoint(e){const rect=canvas.getBoundingClientRect();return {x:(e.clientX-rect.left)/rect.width,y:(e.clientY-rect.top)/rect.height};}
