@@ -661,7 +661,7 @@ async function importImages(files){
    layer.width=Math.max(1,Math.round(layer.width*scale));layer.height=Math.max(1,Math.round(layer.height*scale));
    layer.points[0]={...layer.points[0],x:Math.max(0,Math.round((base.width-layer.width)/2)),
     y:Math.max(0,Math.round((base.height-layer.height)/2))};
-   snapshot();clearBatch();strokes.push(layer);selectedImage=strokes.length-1;selectedText=-1;selectedObject=-1;
+   clearBatch();snapshot();strokes.push(layer);selectedImage=strokes.length-1;selectedText=-1;selectedObject=-1;
    redraw();setReady(true);switchInspectorTab('layers');syncLayerProperties();
    label('Image layer imported. Select to drag; use Mask to refine.');
   }catch(error){label('Image import failed: '+error.message);}
@@ -1177,6 +1177,7 @@ function syncTool(){
   else if(selectedStroke())switchInspectorTab('type');
   else switchInspectorTab('layers');
  }else if(tool.value==='marquee')switchInspectorTab('layers');else switchInspectorTab('tools');
+ globalThis.MangoToolGroupsV071?.sync?.();
 }
 function chooseImageTool(name){
  if(textDraft)commitInline();
@@ -1889,7 +1890,7 @@ globalThis.MangoCreativeImageV079=Object.freeze({
   const p=kind==='fonts'?{fontFamily:id,fontWeight:c.weight(id,w),color:'#ffffff',styleId:'plain',effects:typeEffects.initial()}:c.imagePatch(id);c.requireFonts([p.fontFamily]);
   const l={type:'text',id:crypto.randomUUID(),name:kind==='fonts'?c.font(id).name:c.preset(id).name,points:[{x:base.width*.10,y:base.height*.24,p:1}],text:String(text).slice(0,400),fontSize:Math.max(12,Math.min(140,base.width*.065)),size:6,scaleX:1,scaleY:1,visible:true,locked:false,opacity:1,...p};
   const b=editorCore.textMetrics(pen,l);if(b.width>base.width*.8)l.fontSize=Math.max(12,Math.floor(l.fontSize*base.width*.8/b.width));
-  snapshot();clearBatch();strokes.push(l);selectedText=strokes.length-1;selectedImage=-1;selectedObject=-1;tool.value='select';syncTool();redraw();setReady(true);syncSelectedText();switchInspectorTab('type');label('Editable creative text layer inserted. Ctrl+Z to undo.');return true;
+  clearBatch();snapshot();strokes.push(l);selectedText=strokes.length-1;selectedImage=-1;selectedObject=-1;tool.value='select';syncTool();redraw();setReady(true);syncSelectedText();switchInspectorTab('type');label('Editable creative text layer inserted. Ctrl+Z to undo.');return true;
  }
 });
 globalThis.MangoImageAutomationV075=Object.freeze({

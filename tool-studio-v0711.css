@@ -38,3 +38,12 @@ body.studio-image .image-layer-row{grid-template-columns:20px 23px minmax(0,1fr)
 body.studio-image .image-layer-row>button{min-width:0;padding:3px!important;min-height:25px!important}
 body.studio-image .image-layer-row>button:not(.image-object-select){display:flex;align-items:center;justify-content:center}
 body.studio-image .ts-layer-actions-v0711 label{display:flex;align-items:center;gap:4px;font-size:11px}
+
+body.studio-image .image-layer-toolbar,body.studio-image .image-layer-clipboard-tools{gap:4px;margin:4px 0}
+body.studio-image .image-layer-toolbar button,body.studio-image .image-layer-clipboard-tools button{min-height:28px;padding:3px 5px;font-size:11px}
+body.studio-image .ts-layer-help-v0711{font-size:11px;color:var(--carbon-muted);padding:4px 0}
+body.studio-image .ts-layer-help-v0711 p{margin:4px 0;font-size:11px}
+body.studio-image .ts-layer-actions-v0711{margin:3px 0}
+body.studio-image .ts-layer-actions-v0711 label{white-space:nowrap}
+body.studio-image .image-layer-stack{min-height:72px;max-height:clamp(100px,23vh,280px);margin:5px 0}
+body.studio-image .ts-batch-v0711{padding:6px;margin:5px 0}

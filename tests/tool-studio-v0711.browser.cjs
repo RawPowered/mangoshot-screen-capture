@@ -12,7 +12,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   for(const [a,b] of [[[.12,.15],[.26,.28]],[[.38,.36],[.52,.49]],[[.68,.19],[.82,.32]]])await drag(a,b);
   assert.equal((await state()).layers.length,3);assert.equal(new Set((await state()).layers.map(l=>l.id)).size,3);
   await p.evaluate(()=>MangoToolGroupsV071.activate('marquee'));await drag([.06,.06],[.9,.6]);
-  let sel=await state();assert.equal(sel.selection.length,3);assert.equal(await p.locator('#ts-selection-overlay-v0711 .ts-box-v0711').count(),3);
+  let sel=await state();assert.equal(sel.selection.length,3);assert.equal(await p.locator('.v071-tool-slot[data-group=select] .v071-tool-main').getAttribute('aria-label'),'Select / Move tool');assert.equal(await p.locator('#ts-selection-overlay-v0711 .ts-box-v0711').count(),3);
   await p.screenshot({path:path.join(out,'01-marquee-layers.png')});
   const before=sel.layers.map(l=>l.bounds.y);
   await p.locator('[data-ts-batch=top]').click();let aligned=await state();assert.ok(aligned.layers.every(l=>Math.abs(l.bounds.y-aligned.layers[0].bounds.y)<.001));
