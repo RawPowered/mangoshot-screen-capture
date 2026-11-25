@@ -93,13 +93,13 @@ body.studio-clip.v065-viewport .v062-media-dock>.panel-heading{
  display:flex;align-items:center;gap:8px;justify-content:space-between;
  padding:4px 9px;overflow:hidden;white-space:nowrap;
 }
-body.studio-clip.v065-viewport .v065-dock-title{font-size:10px;letter-spacing:.8px;font-weight:850;color:#daf0b7;}
-body.studio-clip.v065-viewport .v065-dock-count{min-width:0;flex:1;color:#b2d0be;font-size:10px;overflow:hidden;text-overflow:ellipsis;}
-body.studio-clip.v065-viewport .v065-media-count{font-size:10px;background:transparent;border:0;color:#bed7c3;padding:0;}
+body.studio-clip.v065-viewport .v065-dock-title{font-size:10px;letter-spacing:.8px;font-weight:850;color:var(--carbon-text);}
+body.studio-clip.v065-viewport .v065-dock-count{min-width:0;flex:1;color:var(--carbon-text);font-size:10px;overflow:hidden;text-overflow:ellipsis;}
+body.studio-clip.v065-viewport .v065-media-count{font-size:10px;background:transparent;border:0;color:var(--carbon-text);padding:0;}
 body.studio-clip.v065-viewport .v065-dock-tools{display:flex;align-items:center;gap:5px;flex:0 0 auto;}
 body.studio-clip.v065-viewport .v065-dock-tools button{min-height:23px;padding:3px 9px!important;font-size:11px;border-radius:4px;font-weight:740;}
-body.studio-clip.v065-viewport #v065-import-media{background:#aee975;border:1px solid #c6fa88;color:#192b19;}
-body.studio-clip.v065-viewport #v065-media-toggle{color:#d9e8d8;background:#324038;border:1px solid #5c7765;}
+body.studio-clip.v065-viewport #v065-import-media{background:var(--carbon-active);border:1px solid var(--carbon-line-strong);color:var(--carbon-text);}
+body.studio-clip.v065-viewport #v065-media-toggle{color:var(--carbon-text);background:var(--carbon-elevated);border:1px solid var(--carbon-line-strong);}
 body.studio-clip.v065-viewport .v065-original-picker{
  position:absolute!important;width:1px!important;height:1px!important;
  overflow:hidden!important;clip-path:inset(50%);white-space:nowrap;
@@ -133,9 +133,9 @@ body.studio-clip.v065-viewport .v062-media-dock #v06-asset-preview video{max-hei
 /* Tool icons: actual SVG artwork, labels remain exposed through aria-label. */
 body.studio-clip.v065-viewport .v06-rail .v065-icon-tool{display:flex;flex-direction:column;gap:1px;align-items:center;justify-content:center;padding:3px!important;}
 body.studio-clip.v065-viewport .v06-rail .v065-icon-tool svg{display:block;flex:0 0 auto;width:19px;height:19px;}
-body.studio-clip.v065-viewport .v06-rail .v065-icon-tool .v065-keyhint{color:#b6d6b2;font:800 9px/1 system-ui;letter-spacing:0;min-height:9px;margin:1px 0 0;}
-body.studio-clip.v065-viewport .v06-rail .v065-icon-tool[aria-pressed=true]{background:#425c34;color:#e4ffbf;border-color:#b1ee76;}
-body.studio-clip.v065-viewport .v06-rail .v065-icon-tool:focus-visible{outline:2px solid #e3ff94;}
+body.studio-clip.v065-viewport .v06-rail .v065-icon-tool .v065-keyhint{color:var(--carbon-text);font:800 9px/1 system-ui;letter-spacing:0;min-height:9px;margin:1px 0 0;}
+body.studio-clip.v065-viewport .v06-rail .v065-icon-tool[aria-pressed=true]{background:var(--carbon-hover);color:var(--carbon-accent);border-color:var(--carbon-accent);}
+body.studio-clip.v065-viewport .v06-rail .v065-icon-tool:focus-visible{outline:2px solid var(--carbon-accent);}
 body.studio-clip.v065-viewport .v064-rail-actions .v065-icon-tool{min-height:36px!important;width:100%;}
 body.studio-clip.v065-viewport .v065-inline-tool{display:inline-flex!important;align-items:center;justify-content:center;gap:5px;}
 body.studio-clip.v065-viewport .v065-inline-tool svg{width:15px;height:15px;flex:none;}
@@ -147,24 +147,24 @@ body.studio-clip.v065-viewport .v062-shortcuts-modal>.v062-modal-head{flex:0 0 a
 body.studio-clip.v065-viewport .v065-shortcut-manager{display:flex;flex-direction:column;gap:8px;min-height:0;flex:1;overflow:hidden;padding:11px 15px 13px;}
 body.studio-clip.v065-viewport .v065-shortcut-search{display:grid;grid-template-columns:minmax(150px,1fr) minmax(110px,180px);gap:8px;flex:0 0 auto;}
 body.studio-clip.v065-viewport .v065-shortcut-search input,
-body.studio-clip.v065-viewport .v065-shortcut-search select{background:#132122;border:1px solid #5b7867;border-radius:5px;color:#e9f8e9;padding:7px 9px;font-size:12px;min-width:0;min-height:35px;width:100%;}
-body.studio-clip.v065-viewport .v065-shortcut-help{margin:0;flex:0 0 auto;line-height:1.4;color:#b8cdbb;font-size:11px;}
-body.studio-clip.v065-viewport .v065-shortcut-results{flex:1 1 auto;min-height:130px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;border:1px solid #354f47;background:#142021;border-radius:7px;padding:3px 8px;}
-body.studio-clip.v065-viewport .v065-shortcut-group{font-size:10px;letter-spacing:.6px;color:#c4fa83;text-transform:uppercase;position:sticky;top:0;z-index:1;background:#20312c;padding:7px;margin:7px 0 4px;border-radius:4px;}
-body.studio-clip.v065-viewport .v065-shortcut-row{display:grid;grid-template-columns:minmax(0,1fr) 150px 30px 30px;gap:6px;align-items:center;border-bottom:1px solid #31453e;padding:6px 2px;}
-body.studio-clip.v065-viewport .v065-shortcut-name{font-size:12px;color:#e5f2e3;line-height:1.35;overflow:hidden;text-overflow:ellipsis;}
-body.studio-clip.v065-viewport .v065-shortcut-row button{min-height:29px!important;padding:4px 5px!important;border:1px solid #4e6b5b;background:#273a32;color:#eafbea;font-size:11px;border-radius:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+body.studio-clip.v065-viewport .v065-shortcut-search select{background:var(--carbon-panel);border:1px solid var(--carbon-line-strong);border-radius:5px;color:var(--carbon-text);padding:7px 9px;font-size:12px;min-width:0;min-height:35px;width:100%;}
+body.studio-clip.v065-viewport .v065-shortcut-help{margin:0;flex:0 0 auto;line-height:1.4;color:var(--carbon-text);font-size:11px;}
+body.studio-clip.v065-viewport .v065-shortcut-results{flex:1 1 auto;min-height:130px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;border:1px solid var(--carbon-line);background:var(--carbon-panel);border-radius:7px;padding:3px 8px;}
+body.studio-clip.v065-viewport .v065-shortcut-group{font-size:10px;letter-spacing:.6px;color:var(--carbon-text);text-transform:uppercase;position:sticky;top:0;z-index:1;background:var(--carbon-panel-alt);padding:7px;margin:7px 0 4px;border-radius:4px;}
+body.studio-clip.v065-viewport .v065-shortcut-row{display:grid;grid-template-columns:minmax(0,1fr) 150px 30px 30px;gap:6px;align-items:center;border-bottom:1px solid var(--carbon-line);padding:6px 2px;}
+body.studio-clip.v065-viewport .v065-shortcut-name{font-size:12px;color:var(--carbon-text);line-height:1.35;overflow:hidden;text-overflow:ellipsis;}
+body.studio-clip.v065-viewport .v065-shortcut-row button{min-height:29px!important;padding:4px 5px!important;border:1px solid var(--carbon-line-strong);background:var(--carbon-elevated);color:var(--carbon-text);font-size:11px;border-radius:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 body.studio-clip.v065-viewport .v065-shortcut-key{font-weight:800;font-variant-numeric:tabular-nums;}
-body.studio-clip.v065-viewport .v065-shortcut-key[aria-pressed=true]{color:#132511;background:#c4f587;border-color:#d2ffa4;}
+body.studio-clip.v065-viewport .v065-shortcut-key[aria-pressed=true]{color:var(--carbon-text);background:var(--carbon-active);border-color:var(--carbon-accent);}
 body.studio-clip.v065-viewport .v065-shortcut-row .v065-shortcut-clear{font-size:17px;}
 body.studio-clip.v065-viewport .v065-shortcut-row .v065-shortcut-reset{font-size:17px;}
-body.studio-clip.v065-viewport .v065-shortcut-feedback{margin:0;color:#ecf4b5;min-height:17px;font-size:11px;}
-body.studio-clip.v065-viewport .v065-shortcut-actions{display:flex;flex-wrap:wrap;align-items:center;gap:7px;padding-top:7px;border-top:1px solid #38534a;}
+body.studio-clip.v065-viewport .v065-shortcut-feedback{margin:0;color:var(--carbon-text);min-height:17px;font-size:11px;}
+body.studio-clip.v065-viewport .v065-shortcut-actions{display:flex;flex-wrap:wrap;align-items:center;gap:7px;padding-top:7px;border-top:1px solid var(--carbon-line);}
 body.studio-clip.v065-viewport .v065-shortcut-actions button,
-body.studio-clip.v065-viewport .v065-shortcut-import{display:inline-flex;gap:5px;align-items:center;cursor:pointer;min-height:30px!important;font:700 11px system-ui;border:1px solid #557d63;border-radius:5px;background:#2b4036;color:#e8f7e5;padding:5px 10px!important;}
+body.studio-clip.v065-viewport .v065-shortcut-import{display:inline-flex;gap:5px;align-items:center;cursor:pointer;min-height:30px!important;font:700 11px system-ui;border:1px solid var(--carbon-line-strong);border-radius:5px;background:var(--carbon-elevated);color:var(--carbon-text);padding:5px 10px!important;}
 body.studio-clip.v065-viewport .v065-shortcut-import input{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;}
 body.studio-clip.v065-viewport .v065-shortcut-actions button:hover,
-body.studio-clip.v065-viewport .v065-shortcut-import:hover{background:#3a5842;}
+body.studio-clip.v065-viewport .v065-shortcut-import:hover{background:var(--carbon-hover);}
 @media(max-width:680px){
  body.studio-clip.v065-viewport .v065-shortcut-manager{padding:8px;}
  body.studio-clip.v065-viewport .v065-shortcut-row{grid-template-columns:minmax(0,1fr) 100px 26px 26px;gap:3px;}

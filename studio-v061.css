@@ -1,8 +1,8 @@
 /* MangoShot v0.6.1 — panel separation, matched-aspect monitor, camera and A2. */
-.studio-clip .clip-properties>.panel-heading{color:#d5f7bd}
-.studio-clip .v061-export-dialog{background:#182126;color:#e4f1eb;border:1px solid #92c95c;border-radius:12px;box-shadow:0 24px 80px #000b;width:min(600px,calc(100vw - 24px));max-height:85vh;padding:0;overflow:auto}
+.studio-clip .clip-properties>.panel-heading{color:var(--carbon-text)}
+.studio-clip .v061-export-dialog{background:var(--carbon-panel);color:var(--carbon-text);border:1px solid var(--carbon-line-strong);border-radius:12px;box-shadow:0 24px 80px #000b;width:min(600px,calc(100vw - 24px));max-height:85vh;padding:0;overflow:auto}
 .studio-clip .v061-export-dialog::backdrop{background:#000b;backdrop-filter:blur(3px)}
-.studio-clip .v061-export-header{padding:14px 18px;background:#263334;border-bottom:1px solid #536e53;display:flex;justify-content:space-between;align-items:center}
+.studio-clip .v061-export-header{padding:14px 18px;background:var(--carbon-elevated);border-bottom:1px solid var(--carbon-line-strong);display:flex;justify-content:space-between;align-items:center}
 .studio-clip .v061-export-header h2{margin:0;font-size:17px;letter-spacing:.3px}
 .studio-clip .v061-export-content{padding:8px 12px}
 .studio-clip .v061-export-content .inspector-section{padding:12px 8px}
@@ -10,21 +10,21 @@
 .studio-clip .clip-preview-frame{aspect-ratio:var(--mango-aspect,16/9);width:min(100%,calc(46vh * var(--mango-ratio,1.77778)));max-width:100%;overflow:hidden;line-height:0;height:auto;flex-shrink:0}
 .studio-clip .clip-preview-frame>video{width:100%;height:100%;max-height:none!important;display:block;object-fit:fill}
 .studio-clip .clip-preview-frame #graphics-preview{position:absolute;inset:0;width:100%;height:100%;pointer-events:auto}
-.studio-clip .v061-creative-panel{background:#202b2d;border:1px solid #3b5450;border-radius:6px;margin:7px 10px;padding:0 12px 10px}
-.studio-clip .v061-creative-panel summary{cursor:pointer;color:#ccf58f;font-size:12px;font-weight:700;padding:10px 0;list-style:none}
+.studio-clip .v061-creative-panel{background:var(--carbon-panel-alt);border:1px solid var(--carbon-line);border-radius:6px;margin:7px 10px;padding:0 12px 10px}
+.studio-clip .v061-creative-panel summary{cursor:pointer;color:var(--carbon-text);font-size:12px;font-weight:700;padding:10px 0;list-style:none}
 .studio-clip .v061-creative-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:7px 0}
-.studio-clip .v061-creative-row label{display:flex;align-items:center;gap:5px;color:#d2e3de;font-size:11px}
-.studio-clip .v061-creative-row input[type=number],.studio-clip .v061-creative-row select{max-width:82px;background:#0f191a;border:1px solid #537267;color:#eff9eb;border-radius:4px;padding:6px}
-.studio-clip .v061-creative-row button{border-color:#5a7460;background:#30443a;color:#e7f3e4;font-size:12px}
-.studio-clip .v061-creative-row .v061-action{background:#b6ef63;color:#14231a;font-weight:750}
-.studio-clip .v061-creative-note{color:#aebfba;font-size:11px;line-height:1.45;margin:6px 0}
-.studio-clip .v061-zoom-events{display:flex;gap:6px;flex-wrap:wrap;padding-top:5px;color:#b7c9c2;font-size:11px}
-.studio-clip .v061-zoom-row{display:flex;align-items:center;gap:7px;background:#162124;border-radius:5px;padding:4px 8px}
+.studio-clip .v061-creative-row label{display:flex;align-items:center;gap:5px;color:var(--carbon-text);font-size:11px}
+.studio-clip .v061-creative-row input[type=number],.studio-clip .v061-creative-row select{max-width:82px;background:var(--carbon-field);border:1px solid var(--carbon-line-strong);color:var(--carbon-text);border-radius:4px;padding:6px}
+.studio-clip .v061-creative-row button{border-color:var(--carbon-line-strong);background:var(--carbon-elevated);color:var(--carbon-text);font-size:12px}
+.studio-clip .v061-creative-row .v061-action{background:var(--carbon-active);color:var(--carbon-text);font-weight:750}
+.studio-clip .v061-creative-note{color:var(--carbon-text);font-size:11px;line-height:1.45;margin:6px 0}
+.studio-clip .v061-zoom-events{display:flex;gap:6px;flex-wrap:wrap;padding-top:5px;color:var(--carbon-text);font-size:11px}
+.studio-clip .v061-zoom-row{display:flex;align-items:center;gap:7px;background:var(--carbon-panel);border-radius:5px;padding:4px 8px}
 .studio-clip .v061-zoom-row button{min-height:26px;padding:2px 5px;font-size:10px}
-.studio-clip .v061-zoom-track{position:relative;background:#273c33;border-top:1px solid #43604b;height:20px;margin-top:3px}
-.studio-clip .v061-zoom-track:before{content:'CAM';position:absolute;left:5px;top:2px;font:700 10px system-ui;color:#a6c58e}
-.studio-clip .v061-zoom-marker{position:absolute;top:3px;bottom:3px;width:7px;background:#b7f66f;border-radius:3px}
-.studio-clip .v061-voice-track{position:relative;background:#213b40;border-top:1px solid #486b71;height:25px}
-.studio-clip .v061-voice-track:before{content:'A2';position:absolute;left:5px;top:5px;font:700 10px system-ui;color:#a5d3c7}
-.studio-clip .v061-voice-chip{position:absolute;top:3px;bottom:3px;background:#63b4a8;color:#102724;min-width:2px;padding:2px 6px;border-radius:4px;white-space:nowrap;font:700 10px system-ui;overflow:hidden}
+.studio-clip .v061-zoom-track{position:relative;background:var(--carbon-elevated);border-top:1px solid var(--carbon-line);height:20px;margin-top:3px}
+.studio-clip .v061-zoom-track:before{content:'CAM';position:absolute;left:5px;top:2px;font:700 10px system-ui;color:var(--carbon-text)}
+.studio-clip .v061-zoom-marker{position:absolute;top:3px;bottom:3px;width:7px;background:var(--carbon-accent);border-radius:3px}
+.studio-clip .v061-voice-track{position:relative;background:var(--carbon-elevated);border-top:1px solid var(--carbon-line-strong);height:25px}
+.studio-clip .v061-voice-track:before{content:'A2';position:absolute;left:5px;top:5px;font:700 10px system-ui;color:var(--carbon-text)}
+.studio-clip .v061-voice-chip{position:absolute;top:3px;bottom:3px;background:var(--carbon-active);color:var(--carbon-text);min-width:2px;padding:2px 6px;border-radius:4px;white-space:nowrap;font:700 10px system-ui;overflow:hidden}
 @media(max-width:750px){.studio-clip .v061-creative-row{align-items:stretch}.studio-clip .v061-creative-row label{flex:1 1 42%}.studio-clip .clip-preview-frame{width:100%}}

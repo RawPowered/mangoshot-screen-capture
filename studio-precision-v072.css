@@ -2,8 +2,8 @@
  * Loaded last by Image Studio and Clip Studio only. No recorder/capture changes.
  * Global application stacking is separate from canvas/timeline content stacking. */
 body:is(.studio-image,.studio-clip){
- --mango-surface:#17221e;--mango-panel:#202b25;--mango-field:#121c18;
- --mango-line:#43594b;--mango-text:#e2ebe3;--mango-accent:#b5ed8b;
+ --mango-surface:var(--carbon-panel);--mango-panel:var(--carbon-panel);--mango-field:var(--carbon-field);
+ --mango-line:var(--carbon-line);--mango-text:var(--carbon-text);--mango-accent:var(--carbon-accent);
  --mango-control-radius:3px;--mango-control-height:29px;
  --mango-z-media:0;--mango-z-ink:10;--mango-z-selection:20;--mango-z-handle:30;--mango-z-inline:40;
  --mango-z-workspace:100;--mango-z-inspector:120;--mango-z-resizer:140;--mango-z-chrome:200;
@@ -42,7 +42,7 @@ body:is(.studio-image,.studio-clip) [data-mango-overlay]{
  z-index:var(--mango-z-menu)!important;
  border-radius:var(--mango-control-radius)!important;
  background:var(--mango-panel);color:var(--mango-text);
- box-shadow:0 12px 32px #050b08b8;
+ box-shadow:0 12px 32px #090b0eb8;
 }
 body:is(.studio-image,.studio-clip) [data-mango-overlay="tool"]{z-index:var(--mango-z-tool)!important}
 body:is(.studio-image,.studio-clip) [data-mango-overlay="context"]{z-index:var(--mango-z-context)!important}
@@ -58,7 +58,7 @@ body:is(.studio-image,.studio-clip) dialog[open]{
  z-index:var(--mango-z-modal);max-width:calc(100dvw - 16px);max-height:calc(100dvh - 16px);
  box-sizing:border-box;border-radius:6px
 }
-body:is(.studio-image,.studio-clip) dialog::backdrop{background:#080e0bd6}
+body:is(.studio-image,.studio-clip) dialog::backdrop{background:#090b0ed6}
 body.studio-clip .v061-export-header{position:sticky;top:0;z-index:1}
 body:is(.studio-image,.studio-clip) #studio-command-palette{max-height:min(74dvh,calc(100dvh - 16px))}
 @media(max-height:450px){

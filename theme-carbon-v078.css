@@ -1,0 +1,236 @@
+/* MangoShot Carbon | UI chrome only.
+ * Shared design tokens, composed over existing editor layout contracts.
+ * Never recolor user artwork, color swatches, media previews or canvas pixels.
+ * No position, display, overflow, pointer-events or z-index overrides. */
+:root{
+ color-scheme:dark;
+ --carbon-black:#090b0e;
+ --carbon-canvas:#111315;
+ --carbon-shell:#16191c;
+ --carbon-panel:#1c2126;
+ --carbon-panel-alt:#222830;
+ --carbon-elevated:#2a313a;
+ --carbon-field:#14181c;
+ --carbon-hover:#2a3037;
+ --carbon-active:#323943;
+ --carbon-line-subtle:#2a2f35;
+ --carbon-line:#3a424b;
+ --carbon-line-strong:#4a545f;
+ --carbon-text:#f2f4f5;
+ --carbon-secondary:#c0c7cd;
+ --carbon-muted:#9aa4ae;
+ --carbon-disabled:#68717a;
+ --carbon-accent:#b7ff3c;
+ --carbon-accent-wash:#b7ff3c14;
+ --carbon-accent-edge:#b7ff3c99;
+ --carbon-video:#39434e;
+ --carbon-audio:#384955;
+ --carbon-graphic:#4a5360;
+ --carbon-camera:#5b5345;
+ --carbon-cursor:#444d58;
+ --carbon-success:#90ba99;
+ --carbon-warning:#f0be79;
+ --carbon-danger:#ef8586;
+ --carbon-info:#a9c6df;
+ --carbon-radius:3px;
+ --carbon-shadow:0 12px 30px #0008;
+ --carbon-dialog-shadow:0 24px 75px #000b;
+ --bg:var(--carbon-canvas);--surface:var(--carbon-panel);--surface2:var(--carbon-panel-alt);
+ --stroke:var(--carbon-line);--fg:var(--carbon-text);--muted:var(--carbon-muted);--accent:var(--carbon-accent);
+}
+body.studio,body.popup,body.v069-resources,body.quick-capture{
+ --studio-bg:var(--carbon-canvas);--studio-panel:var(--carbon-panel);--studio-panel2:var(--carbon-panel-alt);
+ --studio-line:var(--carbon-line);--studio-muted:var(--carbon-muted);--studio-text:var(--carbon-text);
+ --studio-accent:var(--carbon-accent);--studio-warn:var(--carbon-warning);--studio-red:var(--carbon-danger);
+ --mango-canvas:var(--carbon-canvas);--mango-surface:var(--carbon-panel);--mango-surface-raised:var(--carbon-elevated);
+ --mango-panel:var(--carbon-panel);--mango-field:var(--carbon-field);
+ --mango-line:var(--carbon-line);--mango-text:var(--carbon-text);--mango-silver:var(--carbon-secondary);
+ --mango-silver-dim:var(--carbon-muted);--mango-lime:var(--carbon-accent);--mango-lime-strong:var(--carbon-accent);
+ --mango-accent:var(--carbon-accent);--mango-focus:var(--carbon-accent);
+ --mango-control-radius:var(--carbon-radius);
+ color:var(--carbon-text);background:var(--carbon-canvas);
+ accent-color:var(--carbon-accent);
+ scrollbar-color:var(--carbon-line-strong) var(--carbon-shell);
+}
+/* Precision shell: charcoal frame, a fine neutral metal highlight, no green wash. */
+body.studio .studio-appbar{
+ background:linear-gradient(180deg,#24292e 0%,var(--carbon-shell) 100%);
+ border-bottom-color:var(--carbon-line);
+ box-shadow:inset 0 1px 0 #ffffff0b;
+}
+body.studio .studio-mark{background:var(--carbon-shell);border-color:var(--carbon-line);box-shadow:none}
+body.studio .studio-identity strong{color:var(--carbon-text);font-weight:670}
+body.studio .studio-identity small,body.studio .studio-local{color:var(--carbon-muted)}
+body.studio .studio-tab{color:var(--carbon-muted)}
+body.studio .studio-tab:hover{background:var(--carbon-hover);color:var(--carbon-text);border-bottom-color:var(--carbon-line-strong)}
+body.studio .studio-tab.is-active{background:var(--carbon-panel-alt);color:var(--carbon-text);border-bottom-color:var(--carbon-accent)}
+body.studio .local-dot{background:var(--carbon-secondary);box-shadow:none}
+body.studio .studio-transport,body.studio .v070-options-bar{
+ background:var(--carbon-panel);border-color:var(--carbon-line);
+}
+body.studio .v06-menu-bar{background:var(--carbon-shell);border-bottom-color:var(--carbon-line)}
+body.studio .v06-menu-bar .v06-menu>summary{color:var(--carbon-secondary);font-weight:600}
+body.studio .v06-menu-bar .v06-menu>summary:hover{background:var(--carbon-hover);color:var(--carbon-text)}
+body.studio .v06-menu-bar .v06-menu[open]>summary{
+ background:var(--carbon-active);border-color:var(--carbon-line-strong);color:var(--carbon-text);
+ box-shadow:inset 0 -2px 0 var(--carbon-accent);
+}
+body.studio .v06-menu-status,body.studio .v070-eyebrow,body.studio .v070-settings-section{color:var(--carbon-muted)}
+/* Docked surfaces. Keep the original viewport, sizing, and drag contracts. */
+body.studio :is(.studio-toolrail,.image-toolrail,.v06-rail,.studio-monitor-panel,.studio-panel,.studio-inspector,.image-inspector){
+ background-color:var(--carbon-panel);border-color:var(--carbon-line);border-radius:var(--carbon-radius);
+}
+body.studio-clip.v065-viewport :is(.v06-rail,.clip-properties,.clip-timeline-panel,.clip-program,.v062-media-dock){
+ background-color:var(--carbon-panel);border-color:var(--carbon-line);border-radius:var(--carbon-radius);
+}
+body.studio .panel-heading,body.studio-clip.v065-viewport .clip-properties>.panel-heading{
+ background:var(--carbon-panel-alt);border-bottom-color:var(--carbon-line);color:var(--carbon-secondary);
+ font-weight:680;letter-spacing:.065em;
+}
+body.studio :is(.inspector-section,.v06-section){border-bottom-color:var(--carbon-line-subtle)}
+body.studio :is(.inspector-section h3,.image-pane-title,.v070-tool-name){color:var(--carbon-text);font-weight:650}
+body.studio :is(.panel-muted,.inspector-hint,.v06-small,.v06-meta,.v06-hint,.v070-settings-hint,.bottom-note){color:var(--carbon-muted)}
+body.studio :is(.monitor-stage,.clip-program .clip-preview,.video-placeholder){background:var(--carbon-black)}
+body.studio :is(.monitor-controls,.clip-monitor-transport,.timeline-tools,.timeline-footer,.studio-bottom){
+ background:var(--carbon-shell);border-color:var(--carbon-line);
+}
+body.studio .monitor-explainer{background:var(--carbon-panel);color:var(--carbon-muted);border-color:var(--carbon-line-subtle)}
+/* Controls: restrained radii, no bright primary fills, and no decoration on disabled actions. */
+body.studio button,body.popup button,body.quick-capture button{border-radius:var(--carbon-radius)}
+body.studio button:not(:disabled),body.popup button:not(:disabled){transition:background-color 110ms,border-color 110ms,color 110ms}
+body.studio button:not(.primary):not(:disabled):hover{background-color:var(--carbon-hover)}
+body.studio button:disabled,body.studio button[aria-disabled=true]{opacity:.52;box-shadow:none!important}
+body.studio button.primary,body.popup button.primary,body.quick-capture .qc-actions button.primary{
+ background:var(--carbon-elevated);color:var(--carbon-text);border:1px solid var(--carbon-line-strong);text-shadow:none;
+}
+body.studio button.primary:not(:disabled),body.popup button.primary:not(:disabled),body.quick-capture .qc-actions button.primary:not(:disabled){
+ box-shadow:inset 2px 0 0 var(--carbon-accent);
+}
+body.studio button.primary:hover:not(:disabled),body.popup button.primary:hover:not(:disabled){
+ background:var(--carbon-active);border-color:var(--carbon-accent-edge);color:var(--carbon-text);
+}
+body.studio :is(button.action-record,button.action-record:hover){
+ background:var(--carbon-elevated);border-color:var(--carbon-line-strong);color:var(--carbon-text);
+ box-shadow:inset 2px 0 0 var(--carbon-danger);
+}
+body.studio :is(input[type=text],input[type=number],input[type=search],input[type=url],input[type=password],input:not([type]),select,textarea){
+ background-color:var(--carbon-field);border-color:var(--carbon-line);color:var(--carbon-text);
+ border-radius:var(--carbon-radius);caret-color:var(--carbon-accent);
+}
+body.studio :is(input[type=number],.timecode,.control-readout,.v070-readout,.transport-clock){font-variant-numeric:tabular-nums}
+body.studio :is(input,textarea)::placeholder{color:var(--carbon-muted)}
+body.studio :is(input[type=range],input[type=checkbox],input[type=radio],progress){accent-color:var(--carbon-accent)}
+body.studio :is(button,input,select,textarea,summary,a,[tabindex]):focus-visible,
+body.popup :is(button,input,a):focus-visible,body.v069-resources :is(button,input,a):focus-visible{
+ outline:2px solid var(--carbon-accent);outline-offset:-2px;
+}
+body.studio :is(.v06-menu-pop,.v070-settings-menu,.v071-tool-flyout,.image-context-menu) :is(button,summary):focus-visible{outline:2px solid var(--carbon-accent);outline-offset:-2px}
+body.studio :is(.studio-state,.workspace-status,.v0615-active-tool,.image-active-tool){
+ background:var(--carbon-panel-alt);border-color:var(--carbon-line);color:var(--carbon-secondary);
+}
+body.studio .studio-state[data-state=recording]{background:#382326;border-color:#a3535c;color:#ffc3c5}
+body.studio .studio-state[data-state=complete]{background:var(--carbon-panel-alt);border-color:#63826c;color:var(--carbon-success)}
+body.studio .studio-state:is([data-state=finalizing],[data-state=stopped]){color:var(--carbon-warning);border-color:#846a49}
+body.studio :is(.v0615-active-tool,.image-active-tool) strong{color:var(--carbon-accent)}
+body.studio .v0615-active-dot{background:var(--carbon-accent);box-shadow:none}
+body.studio kbd{background:var(--carbon-field);color:var(--carbon-secondary);border-color:var(--carbon-line);border-radius:2px}
+/* Tools and tabs: one unmistakable lime indicator, neutral body. */
+body.studio :is(.studio-toolrail,.image-toolrail,.v06-rail) button:is([aria-pressed=true],.is-active),
+body.studio-clip :is(#tool-select,#tool-razor,#range-tool)[aria-pressed=true]{
+ background:var(--carbon-active)!important;border-color:var(--carbon-line-strong)!important;
+ color:var(--carbon-accent)!important;box-shadow:inset 2px 0 0 var(--carbon-accent)!important;
+}
+body.studio-clip .v06-rail [data-v06-tool][aria-pressed=true] svg{stroke:currentColor!important}
+body.studio .v06-rail button small,body.studio .studio-toolrail button small,body.studio .v065-keyhint{color:var(--carbon-muted)}
+body.studio-image .v071-tool-slot[data-active=true]{
+ background:var(--carbon-active);border-color:var(--carbon-line-strong);box-shadow:inset 2px 0 0 var(--carbon-accent);
+}
+body.studio-image .v071-tool-slot[data-active=true] :is(.v071-tool-main,.v071-tool-more){
+ background:transparent!important;color:var(--carbon-accent)!important;box-shadow:none!important;border-color:transparent!important;
+}
+body.studio :is(.workspace-switch,.image-inspector-tabs,.v070-fields,.v070-settings-menu,.cd-tabs-v074,.au-tabs-v075) button:is([aria-pressed=true],[aria-selected=true]),
+body.studio-clip.v062-workspace :is(.v062-property-tabs,.v066-preset-tabs) button:is([aria-pressed=true],[aria-selected=true]),
+body.studio-clip.v062-workspace .v068-subtab[aria-selected=true]{
+ background:var(--carbon-active);border-color:var(--carbon-line-strong);color:var(--carbon-text);
+ box-shadow:inset 0 -2px 0 var(--carbon-accent);border-radius:2px;
+}
+body.studio-image .image-layer-row.is-selected,body.studio .v06-asset.is-selected{
+ background-color:var(--carbon-active);outline:1px solid var(--carbon-accent);outline-offset:-1px;
+}
+body.studio-image .image-layer-row button:not(:disabled){border-radius:2px}
+body.studio .v070-proxy{background-color:var(--carbon-field);border-color:var(--carbon-line);color:var(--carbon-text)}
+body.studio .v070-readout{color:var(--carbon-secondary)}
+/* Timeline: steel track colors preserve semantic separation without green blocks. */
+body.studio-clip .timeline-scroll,body.studio-clip .timeline-inner{background-color:var(--carbon-field)}
+body.studio-clip.v062-workspace #timeline{
+ background-color:var(--carbon-video);border-color:var(--carbon-line-strong);
+}
+body.studio-clip.v062-workspace #timeline .clip-segment{
+ background:#7b8da012;border-right-color:var(--carbon-line-strong);color:var(--carbon-text)
+}
+body.studio-clip.v062-workspace #timeline .clip-segment:hover{background:#97a9bc24}
+body.studio-clip.v062-workspace #timeline .clip-segment.is-selected{
+ background:var(--carbon-accent-wash);outline:2px solid var(--carbon-accent);outline-offset:-2px;
+}
+body.studio-clip :is(.timeline-playhead,.timeline-playhead:before,.v064-clip-playhead){
+ background:var(--carbon-accent);box-shadow:none
+}
+body.studio-clip .timeline-ruler .ruler-tick{color:var(--carbon-muted)}
+body.studio-clip :is(.trim-grip,.graphic-clip-handle){background:#a9b5c2aa}
+body.studio-clip :is(.clip-segment.is-selected,.graphic-timeline-clip.is-selected) :is(.trim-grip,.graphic-clip-handle){background:var(--carbon-accent)}
+body.studio-clip .graphic-track{background:var(--carbon-panel-alt);border-color:var(--carbon-line)}
+body.studio-clip .graphic-timeline-clip{background-color:var(--carbon-graphic);border-color:var(--carbon-line-strong);color:var(--carbon-text)}
+body.studio-clip .graphic-timeline-clip.is-selected{outline:2px solid var(--carbon-accent);outline-offset:-2px}
+body.studio-clip :is(.waveform-strip,.v061-voice-track){background-color:var(--carbon-audio);border-color:var(--carbon-line)}
+body.studio-clip .v061-zoom-track{background:var(--carbon-panel-alt);border-top-color:var(--carbon-line)}
+body.studio-clip .v061-zoom-marker{background:var(--carbon-accent);border-radius:1px}
+body.studio-clip .cd-track-v074{background:var(--carbon-panel-alt);border-color:var(--carbon-line)}
+body.studio-clip .cd-track-v074 button{background:var(--carbon-cursor);color:var(--carbon-text);border-color:#65717f}
+body.studio-clip .cd-track-v074 button[aria-pressed=true]{outline:2px solid var(--carbon-accent);outline-offset:-2px}
+body.studio-clip .cd-track-v074 button[data-disabled=true]{background:var(--carbon-shell);color:var(--carbon-muted);border-style:dashed}
+body.studio-clip .v064-clip-selection{border-color:var(--carbon-accent);background:var(--carbon-accent-wash)}
+body.studio-clip.v062-workspace .v063-hud-active{
+ border-color:var(--carbon-accent);background:var(--carbon-accent-wash);box-shadow:0 0 0 1px var(--carbon-black);
+}
+body.studio-image :is(.image-layer-selection,.image-text-selection,.image-vector-selection){border-color:var(--carbon-accent)}
+/* Floating chrome: the existing native top layer and semantic z-index map stay intact. */
+body.studio :is(.v06-menu-bar .v06-menu-pop,.v070-settings-menu,.v071-tool-flyout,.image-context-menu,.v066-layout-options){
+ background:var(--carbon-elevated);border-color:var(--carbon-line-strong);border-radius:var(--carbon-radius);box-shadow:var(--carbon-shadow);
+}
+body.studio .v06-menu-bar .v06-menu-pop button{color:var(--carbon-text);background:transparent;border-color:transparent;font-weight:570}
+body.studio .v06-menu-bar .v06-menu-pop button:hover:not(:disabled){
+ background:var(--carbon-active);color:var(--carbon-text);border-color:var(--carbon-line-strong);
+}
+body.studio :is(.v06-menu-pop .v06-menu-separator,.v070-divider,.toolrail-divider,.v06-rail-divider){background:var(--carbon-line)}
+body.studio dialog{
+ background:var(--carbon-panel);border-color:var(--carbon-line-strong);color:var(--carbon-text);
+ border-radius:var(--carbon-radius);box-shadow:var(--carbon-dialog-shadow);
+}
+body.studio dialog::backdrop{background:#080a0dd9}
+body.studio dialog.automation-v075[open]{background:var(--carbon-panel);color:var(--carbon-text);border-color:var(--carbon-line-strong)}
+body.studio :is(.au-header-v075,.au-footer-v075,.v0617-dialog-header,.v062-modal-head){
+ background:var(--carbon-panel-alt);border-color:var(--carbon-line);
+}
+body.studio .au-catalog-v075{background:var(--carbon-shell);border-color:var(--carbon-line)}
+body.studio .automation-v075 pre{background:var(--carbon-field);border-color:var(--carbon-line);color:var(--carbon-secondary)}
+body.studio .automation-v075 button.primary:not(:disabled){background:var(--carbon-elevated);color:var(--carbon-text);box-shadow:inset 2px 0 0 var(--carbon-accent)}
+body.studio .sq-block-v076{background:var(--carbon-video)}
+body.studio .sq-block-v076[data-kind=graphics]{background:var(--carbon-graphic)}
+body.studio .sq-block-v076[data-kind=camera]{background:var(--carbon-camera)}
+body.studio .sq-block-v076[data-kind=cursor]{background:var(--carbon-cursor)}
+body.studio #br-state-v077{color:var(--carbon-secondary)}
+/* Companion extension pages use the same color contract; no change to capture output. */
+body.popup header{background:linear-gradient(180deg,var(--carbon-panel-alt),var(--carbon-shell));border-color:var(--carbon-line)}
+body.popup main{background:var(--carbon-canvas)}
+body.popup :is(header small,.v0614-label,.v0614-label span){color:var(--carbon-muted)}
+body.v069-resources .v069-directory-categories button[aria-pressed=true]{
+ background:var(--carbon-active);color:var(--carbon-text);border-color:var(--carbon-line-strong);box-shadow:inset 0 -2px 0 var(--carbon-accent)
+}
+body.v069-resources :is(.v069-resource-card,.v069-resources-hero),body.quick-capture .qc-preview-shell{border-radius:4px}
+body.studio ::-webkit-scrollbar,body.popup ::-webkit-scrollbar{width:9px;height:9px}
+body.studio ::-webkit-scrollbar-track,body.popup ::-webkit-scrollbar-track{background:var(--carbon-shell)}
+body.studio ::-webkit-scrollbar-thumb,body.popup ::-webkit-scrollbar-thumb{background:var(--carbon-line-strong);border:2px solid var(--carbon-shell);border-radius:3px}
+body.studio ::-webkit-scrollbar-thumb:hover{background:#66717e}
+@media(prefers-reduced-motion:reduce){
+ body.studio button,body.studio .studio-tab,body.popup button{transition:none}
+}
