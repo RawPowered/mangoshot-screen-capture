@@ -1,0 +1,30 @@
+/* Carbon recorder density. Existing geometry, canvas stack and native dialogs remain authoritative. */
+body.studio-recorder .cursor-studio-v073{padding:7px 9px;margin:5px 0;border-radius:3px}
+body.studio-recorder .cursor-studio-v073>summary{padding:2px 0 6px;font-size:12px;line-height:1.5}
+.cursor-state-v0710{float:right;font:600 10px/1.7 system-ui;color:var(--carbon-muted);letter-spacing:.06em}
+.cursor-state-v0710[data-active=true]{color:var(--carbon-accent)}
+body.studio-recorder .cursor-studio-v073 .cursor-line-v0710{display:grid;grid-template-columns:48px minmax(0,1fr);align-items:center;gap:6px}
+body.studio-recorder .cursor-studio-v073 .cursor-grid-v073{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px 7px;margin:6px 0}
+body.studio-recorder .cursor-studio-v073 label{font-size:11px;text-align:left;align-items:stretch;gap:3px;line-height:1.35}
+body.studio-recorder .cursor-studio-v073 label:has(input[type=checkbox]){align-items:center;justify-content:flex-start;gap:5px;min-height:24px;margin:1px 0;overflow-wrap:anywhere}
+body.studio-recorder .cursor-studio-v073 label input[type=checkbox]{width:13px;height:13px;margin:0;flex:0 0 auto}
+body.studio-recorder .cursor-studio-v073 select,body.studio-recorder .cursor-studio-v073 input:not([type=checkbox]){min-height:27px;padding:2px 5px;font-size:11px}
+body.studio-recorder .cursor-studio-v073 input[type=range]{padding:0;min-height:20px;margin:0}
+body.studio-recorder .cursor-studio-v073 kbd{font-size:10px;line-height:1.2;padding:1px 4px}
+.cursor-fold-v0710{border-top:1px solid var(--carbon-line-subtle);margin-top:5px;padding:5px 0 0}
+.cursor-fold-v0710>summary{cursor:pointer;color:var(--carbon-secondary);font-size:11px;font-weight:600;min-height:22px}
+body.studio-recorder .cursor-studio-v073 p{font-size:11px;color:var(--carbon-muted);line-height:1.35;margin:4px 0}
+.cursor-value-v0710{font-size:10px;color:var(--carbon-secondary);font-variant-numeric:tabular-nums}
+body.studio-recorder .monitor-controls #mode,body.studio-recorder .monitor-controls #spotlight-quick-v0710{min-height:28px;padding:3px 7px;font-size:11px;white-space:nowrap}
+body.studio-recorder :is(#mode,#spotlight-quick-v0710)[aria-pressed=true]{background:var(--carbon-active);color:var(--carbon-text);border-color:var(--carbon-line-strong);box-shadow:inset 2px 0 var(--carbon-accent)}
+body.studio-recorder #switch-source-v0710{white-space:nowrap}
+body.studio-recorder #source-dialog-v0710{width:min(510px,calc(100vw - 24px));max-width:calc(100vw - 24px);max-height:calc(100vh - 24px);padding:0;overflow:auto}
+#source-dialog-v0710 header{padding:12px 14px;background:var(--carbon-panel-alt);border-bottom:1px solid var(--carbon-line)}
+#source-dialog-v0710 header small{display:block;color:var(--carbon-muted);font-size:11px;letter-spacing:0;margin-top:3px}
+#source-dialog-v0710 section{padding:14px;font-size:12px;line-height:1.5}
+#source-dialog-v0710 footer{display:flex;justify-content:flex-end;padding:10px 14px;border-top:1px solid var(--carbon-line);background:var(--carbon-panel-alt)}
+.source-current-v0710{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:10px;background:var(--carbon-field);border:1px solid var(--carbon-line);font-variant-numeric:tabular-nums}
+.source-current-v0710 span{color:var(--carbon-muted)}
+#source-switch-status-v0710{padding:8px;border-left:2px solid var(--carbon-line-strong);background:var(--carbon-field);overflow-wrap:anywhere}
+@media(max-width:1100px){body.studio-recorder .studio-inspector{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}body.studio-recorder .cursor-studio-v073{margin:4px;grid-row:span 2}}
+@media(max-width:680px){body.studio-recorder .studio-inspector{display:flex;flex-direction:column}body.studio-recorder .cursor-studio-v073{margin:5px 0}body.studio-recorder .monitor-controls{flex-wrap:wrap;gap:5px}}

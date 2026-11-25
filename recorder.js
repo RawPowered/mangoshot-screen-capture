@@ -5,6 +5,7 @@ const get=id=>document.getElementById(id);
 const preview=get('preview'),ink=get('ink'),pen=ink.getContext('2d');
 const status=get('status'),start=get('start'),stop=get('stop'),pause=get('pause');
 const light=get('light'),elapsed=get('elapsed'),wrap=get('screen-wrap'),composite=get('live-composite');
+const control=globalThis.MangoRecorderControlV0710;
 const source=Number(new URLSearchParams(location.search).get('source'));
 const mimeCandidates=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4',
  'video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
@@ -12,7 +13,8 @@ let screen=null,mic=null,recorder=null,audio=null,controller=null,captureSource=
 let animation=0,timer=0,tracks=[],chunks=[],lastBlob=null,lastSessionId=null;
 let recording=false,stopping=false,finalized=false,partialShown=false,stopTimeout=0,recordingMime='',recordingToken=0;
 let zoomState=MangoCamera.camera(),zoomRegion=false,gesture=null;
-let ctrlHeld=false,altHeld=false,scrollPermission=false,forwardingActive=false,linkedAvailable=false;
+let ctrlHeld=false,altHeld=false,scrollPermission=false,forwardingActive=false,linkedAvailable=false,interaction=false,forwardBusy=false;
+let sourceVideo=preview,audioDest=null,screenAudioNodes=[],sharedAudio=false,pendingSwitch=null,sourceChanges=0;
 let scrollBusy=false,queuedScroll=0,warnings=[],startedAt=0,pausedAt=0,pausedTotal=0;
 let strokes=[],activeStroke=null,history=[],renderPending=false;
 // Every capture owns its own encoder/chunks/storage; late onstop cannot corrupt the next session.
@@ -32,12 +34,13 @@ function explainCaptureSurface(kind){
  const types={browser:'BROWSER TAB',window:'APPLICATION WINDOW',monitor:'ENTIRE SCREEN'};
  tag.textContent='SOURCE · '+(types[kind]||'DISPLAY');
  tag.dataset.kind=kind||'unknown';
- if(kind==='browser')info.textContent='Captured-tab scrolling can be enabled in Chromium. Hold Ctrl+Alt for a consented linked-tab fallback. Clicks and typing happen in the actual tab.';
- else if(kind==='monitor')info.textContent='Entire-screen recording: no separate tab-interaction permission prompt is available. The preview cannot remote-click or type. Use the actual source application; for linked website scrolling, explicitly enable the consent checkbox and hold Ctrl+Alt+wheel.';
+ if(kind==='browser')info.textContent='Captured-tab scrolling can be enabled in Chromium. Toggle Interaction for a consented linked-tab fallback. Clicks and typing happen in the actual tab.';
+ else if(kind==='monitor')info.textContent='Entire-screen recording: no separate tab-interaction permission prompt is available. The preview cannot remote-click or type. Use the actual source application; for linked website scrolling, explicitly enable the consent checkbox and enable Interaction, then scroll.';
  else if(kind==='window')info.textContent='Window recording: there is no tab-interaction permission prompt for application windows. Use that window directly. The preview supports framing and annotation only.';
  else info.textContent='Recording source selected. Preview interaction depends on the selected browser surface.';
 }
 
+function cameraPoint(p){const f=control.fitFrame(sourceVideo.videoWidth||composite.width,sourceVideo.videoHeight||composite.height,composite.width,composite.height);return {x:Math.max(0,Math.min(1,(p.x-f.x)/f.w)),y:Math.max(0,Math.min(1,(p.y-f.y)/f.h))};}
 function normalized(event){const rect=ink.getBoundingClientRect();
  return {x:Math.max(0,Math.min(1,(event.clientX-rect.left)/Math.max(1,rect.width))),
    y:Math.max(0,Math.min(1,(event.clientY-rect.top)/Math.max(1,rect.height)))};
@@ -46,12 +49,24 @@ function zoom(value){if(active())globalThis.MangoRecorderCursorV073?.manualCamer
 function resetZoom(){zoom(MangoCamera.camera());}
 function zoomBy(factor){if(active())zoom(MangoCamera.anchor(zoomState,zoomState.zoom*factor,{x:.5,y:.5}));}
 function updateMode(){
- const held=ctrlHeld&&altHeld&&active();
- get('mode').textContent=held?'Interaction: HELD':'Interaction: OFF';
- get('mode').className=held?'control-readout interaction-held':'control-readout';
- ink.style.pointerEvents=held?'none':'auto';
+ const on=interaction&&active();
+ get('mode').textContent=on?'Interaction: ON':'Interaction: OFF';
+ get('mode').className=on?'control-readout interaction-held':'control-readout';
+ get('mode').setAttribute('aria-pressed',String(on));get('mode').disabled=!active()||forwardBusy;
+ ink.style.pointerEvents=on?'none':'auto';
  ink.style.cursor=zoomRegion?'crosshair':(ctrlHeld&&!altHeld?'ns-resize':'crosshair');
+ get('enable-scroll').disabled=!on||forwardBusy||!(controller?.forwardWheel&&captureSource==='browser');
 }
+async function toggleInteraction(){
+ if(!active()||forwardBusy)return;
+ if(interaction&&forwardingActive){await nativeWheel(false);if(forwardingActive||!active())return;}
+ if(!active())return;
+ if(activeStroke)commitStroke();
+ gesture=null;get('zoom-selection').hidden=true;hideFeedback();queuedScroll=0;
+ interaction=!interaction;updateMode();
+ label(interaction?'Interaction ON · scroll an explicitly consented linked page, or enable native tab wheel forwarding.':'Interaction OFF · annotate and frame the recording.');
+}
+get('mode').addEventListener('click',toggleInteraction);
 function regionEnabled(value){zoomRegion=!!value;get('zoomRegion').textContent='Zoom region: '+(value?'ON':'OFF');
  get('zoomRegion').setAttribute('aria-pressed',String(value));
  if(!value)get('zoom-selection').hidden=true;
@@ -95,12 +110,12 @@ function paint(event){if(!activeStroke)return;
 }
 function hideFeedback(){get('zoom-feedback').hidden=true;}
 ink.addEventListener('pointerdown',event=>{
- if(!active()||event.button!==0||ctrlHeld&&altHeld)return;
+ if(!active()||event.button!==0||interaction)return;
  event.preventDefault();ink.setPointerCapture(event.pointerId);
  if(zoomRegion){gesture={type:'region',start:normalized(event)};
    showMarquee(gesture.start,gesture.start);return;}
  if(event.ctrlKey||ctrlHeld){gesture={type:'dolly',startY:event.clientY,origin:zoomState,
-   anchor:normalized(event),height:ink.getBoundingClientRect().height};
+   anchor:cameraPoint(normalized(event)),height:ink.getBoundingClientRect().height};
    const feedback=get('zoom-feedback');feedback.hidden=false;feedback.textContent='Drag ↑ Zoom in · ↓ Zoom out';return;}
  if(globalThis.MangoRecorderCursorV073?.focusTool?.())return;
  activeStroke={color:get('color').value,
@@ -118,7 +133,7 @@ ink.addEventListener('pointermove',event=>{
 });
 function finishPointer(event){
  if(gesture?.type==='region'){
-   if(event?.clientX!==undefined)zoom(MangoCamera.box(zoomState,gesture.start,normalized(event)));
+   if(event?.clientX!==undefined)zoom(MangoCamera.box(zoomState,cameraPoint(gesture.start),cameraPoint(normalized(event))));
    // Keep the selected region tool engaged until the user exits it or chooses another tool.
    get('zoom-selection').hidden=true;
  }
@@ -134,16 +149,27 @@ get('zoomIn').addEventListener('click',()=>zoomBy(1.3));
 get('zoomOut').addEventListener('click',()=>zoomBy(1/1.3));
 get('zoomRegion').addEventListener('click',()=>regionEnabled(!zoomRegion));
 function stopRender(){if(animation)cancelAnimationFrame(animation);animation=0;}
-function stopTracks(){stopRender();for(const track of tracks){try{track.stop();}catch{}}
- tracks=[];if(audio){audio.close().catch(()=>{});audio=null;}}
+function disposeVideo(video){if(!video)return;try{video.pause?.();video.srcObject=null;}catch{}}
+function stopStream(stream){for(const track of stream?.getTracks()||[])try{track.stop();}catch{}}
+function disconnectNodes(nodes){for(const node of nodes)try{node.disconnect();}catch{}}
+function cancelSwitch(close=true){
+ const p=pendingSwitch;pendingSwitch=null;if(p){p.cancel?.();disposeVideo(p.video);stopStream(p.stream);disconnectNodes(p.nodes||[]);}
+ get('source-choose-v0710').disabled=false;
+ get('switch-source-v0710').disabled=!active();
+ if(close&&get('source-dialog-v0710').open)get('source-dialog-v0710').close();
+}
+function stopTracks(){cancelSwitch();stopRender();disposeVideo(sourceVideo);for(const track of tracks){try{track.stop();}catch{}}
+ tracks=[];disconnectNodes(screenAudioNodes);screenAudioNodes=[];audioDest=null;
+ if(audio){audio.close().catch(()=>{});audio=null;}
+}
 function stopClock(){if(timer)clearInterval(timer);timer=0;
  const now=pausedAt||Date.now();if(startedAt)elapsed.textContent=clock(Math.max(0,now-startedAt-pausedTotal));
  light.className='record-dot idle';}
 function resetControls(){start.disabled=false;stop.disabled=true;pause.disabled=true;pause.textContent='Pause';
  for(const id of ['zoomIn','zoomOut','zoomRegion'])get(id).disabled=true;
- get('resetZoom').disabled=false;regionEnabled(false);ctrlHeld=false;altHeld=false;updateMode();}
+ get('resetZoom').disabled=false;regionEnabled(false);ctrlHeld=false;altHeld=false;interaction=false;forwardBusy=false;get('switch-source-v0710').disabled=true;updateMode();}
 function cleanup(){globalThis.MangoRecorderCursorV073?.end?.();stopTracks();stopClock();screen=null;mic=null;
- preview.srcObject=null;recorder=null;controller=null;captureSource='';scrollPermission=false;forwardingActive=false;
+ preview.srcObject=null;sourceVideo=preview;wrap.dataset.recording='false';wrap.style.aspectRatio='';recorder=null;controller=null;captureSource='';scrollPermission=false;forwardingActive=false;sharedAudio=false;
  get('video-placeholder').hidden=false;composite.style.display='none';ink.style.opacity='1';
  get('enable-scroll').disabled=true;get('enable-scroll').textContent='Enable captured-tab wheel control';
  recording=false;stopping=false;resetControls();}
@@ -225,9 +251,10 @@ async function tryLinkedTab(){linkedAvailable=false;get('source-focus').disabled
    get('linked-label').textContent='Linked source: '+new URL(tab.url).host+'. This is the page that launched MangoShot and may differ from the tab selected in the browser picker.';
  }catch{get('source-focus').disabled=true;get('linked-label').textContent='Linked-tab access unavailable. Open the real application yourself, or start MangoShot from an ordinary webpage.';}
 }
-async function scrollLinked(dy,where){if(!linkedAvailable||!get('linked-consent').checked||!ctrlHeld||!altHeld)return;
+async function scrollLinked(dy,where){if(!active()||!linkedAvailable||!get('linked-consent').checked||!interaction)return;
+ const current=screen;
  queuedScroll+=dy;if(scrollBusy)return;scrollBusy=true;
- try{while(Math.abs(queuedScroll)>.1){const amount=Math.max(-1600,Math.min(1600,queuedScroll));queuedScroll-=amount;
+ try{while(active()&&screen===current&&interaction&&get('linked-consent').checked&&Math.abs(queuedScroll)>.1){const amount=Math.max(-1600,Math.min(1600,queuedScroll));queuedScroll-=amount;
  const result=await call(api.tabs.sendMessage.bind(api.tabs),source,{type:'MANGO_LINKED_SCROLL',dx:0,dy:amount,x:where.x,y:where.y});
  if(result?.ok===false)throw new Error(result.error||'Linked tab scroll rejected');}}
  catch(error){label('Linked-tab scroll unavailable: '+error.message);queuedScroll=0;}finally{scrollBusy=false;}}
@@ -243,50 +270,53 @@ get('source-focus').addEventListener('click',async()=>{
 });
 get('linked-consent').addEventListener('change',()=>{
  const checked=get('linked-consent').checked;
- label(checked?'Linked-tab scroll enabled for the page that launched MangoShot (not necessarily the screen picker source). Hold Ctrl+Alt+wheel to scroll it.':'Linked-tab scroll consent turned off.');
+ label(checked?'Linked-tab scroll enabled for the page that launched MangoShot (not necessarily the screen picker source). Enable Interaction (Ctrl + backtick) to scroll it.':'Linked-tab scroll consent turned off.');
 });
-get('enable-scroll').addEventListener('click',()=>{
- if(forwardingActive){
-   controller?.forwardWheel(null).then(()=>{forwardingActive=false;scrollPermission=false;
-     get('enable-scroll').textContent='Enable captured-tab wheel control';label('Native tab wheel forwarding OFF. You can use Ctrl+Alt with the linked-tab fallback.');
-   }).catch(error=>label('Could not disable tab wheel control: '+error.message));
-   return;
- }
- if(!controller?.forwardWheel||captureSource!=='browser'){
-   label('Direct scrolling needs a shared browser tab; for full-screen capture use the linked-tab fallback.');return;
- }
- // A button click provides the transient activation required by forwardWheel.
- // Forward events on the whole monitor area, not only the hidden source video.
- // This handles wheel input over a canvas overlay as well as over the video.
- controller.forwardWheel(wrap).then(()=>{forwardingActive=true;scrollPermission=true;
-   get('enable-scroll').textContent='Tab wheel forwarding ON';label('Captured-tab wheel forwarding enabled. It may apply without Ctrl+Alt; turn it off to annotate or use linked-tab fallback.');})
-   .catch(error=>label('Browser rejected scrolling ('+error.name+'). Enable the linked-tab fallback if appropriate.'));
-});
+async function nativeWheel(enable){
+ const c=controller,owner=screen;
+ if(forwardBusy||!active()||!c?.forwardWheel||captureSource!=='browser'||(enable&&!interaction))return;
+ forwardBusy=true;updateMode();
+ try{await c.forwardWheel(enable?wrap:null);if(screen!==owner||controller!==c||!active())return;
+  forwardingActive=enable;scrollPermission=enable;
+  get('enable-scroll').textContent=enable?'Tab wheel forwarding ON':'Enable captured-tab wheel control';
+  label(enable?'Native captured-tab wheel forwarding ON. Turn Interaction off to disable it.':'Native tab wheel forwarding OFF.');
+ }catch(error){if(screen===owner&&controller===c)label('Browser rejected wheel control ('+error.name+'). Existing state retained.');}
+ finally{if(screen===owner&&controller===c){forwardBusy=false;updateMode();}}
+}
+get('enable-scroll').addEventListener('click',()=>nativeWheel(!forwardingActive));
 wrap.addEventListener('wheel',event=>{
  if(!active())return;
- if(ctrlHeld&&altHeld){
+ if(interaction){
    // An explicitly linked tab is preferred: native forwardWheel may preserve
    // Ctrl modifiers, which some pages interpret as page zoom rather than scroll.
    if(linkedAvailable&&get('linked-consent').checked){
      event.preventDefault();scrollLinked(event.deltaY,normalized(event));return;
    }
-   if(!forwardingActive||event.target!==preview){
+   if(!forwardingActive){
      event.preventDefault();
-     label('Hold Ctrl+Alt and enable browser-tab scroll, or authorize the linked-tab fallback.');
+     label('Interaction is ON. Enable captured-tab wheel control or authorize linked-tab scrolling.');
    }
    return;
  }
  if(ctrlHeld&&!altHeld){event.preventDefault();event.stopImmediatePropagation?.();
    const factor=event.deltaY<0?1.14:1/1.14;
-   zoom(MangoCamera.anchor(zoomState,zoomState.zoom*factor,normalized(event)));return;
+   zoom(MangoCamera.anchor(zoomState,zoomState.zoom*factor,cameraPoint(normalized(event))));return;
  }
- // No interaction gesture: leave normal page scrolling alone.
+ // Interaction is off: preserve ordinary page scrolling.
 },{capture:true,passive:false});
 window.addEventListener('keydown',event=>{
- if(get('automation-dialog-v075')?.open)return;
- const ignored=event.target?.matches?.('input,textarea,select,[contenteditable]');
+ const modal=get('automation-dialog-v075')?.open||get('source-dialog-v0710')?.open;
+ const ignored=control.editable(event.target);
  ctrlHeld=!!event.ctrlKey;altHeld=!!event.altKey;updateMode();
- if(ignored)return;
+ if(modal||ignored||event.isComposing)return;
+ if(control.backtick(event)&&!event.altKey&&!event.metaKey){
+  if(event.ctrlKey&&!event.shiftKey){event.preventDefault();if(!event.repeat)void toggleInteraction();return;}
+  if(event.shiftKey&&!event.ctrlKey){event.preventDefault();if(!event.repeat)openSourceDialog();return;}
+ }
+ const key=control.key(event);
+ if(key&&!event.ctrlKey&&!event.altKey&&!event.metaKey&&!event.shiftKey){
+  event.preventDefault();globalThis.MangoRecorderCursorV073?.spotlightDown?.(key,!!event.repeat);return;
+ }
  if(event.key==='Escape'&&gesture){gesture=null;get('zoom-selection').hidden=true;hideFeedback();label('Selection cancelled.');return;}
  if(event.key==='Escape'&&zoomRegion){regionEnabled(false);return;}
  if(event.ctrlKey&&!event.altKey&&event.key.toLowerCase()==='z'){
@@ -299,8 +329,89 @@ window.addEventListener('keydown',event=>{
    event.preventDefault();resetZoom();
  }
 },true);
-window.addEventListener('keyup',event=>{ctrlHeld=!!event.ctrlKey;altHeld=!!event.altKey;updateMode();});
-window.addEventListener('blur',()=>{ctrlHeld=false;altHeld=false;updateMode();});
+window.addEventListener('keyup',event=>{ctrlHeld=!!event.ctrlKey;altHeld=!!event.altKey;updateMode();const key=control.key(event);if(key&&globalThis.MangoRecorderCursorV073?.spotlightUp?.(key))event.preventDefault();});
+function releaseTransient(){ctrlHeld=false;altHeld=false;globalThis.MangoRecorderCursorV073?.spotlightCancel?.();updateMode();}
+window.addEventListener('blur',releaseTransient);
+document.addEventListener?.('visibilitychange',()=>{if(document.hidden)releaseTransient();});
+get('automation-open-v075').addEventListener('click',releaseTransient);
+
+function watchSource(stream,session){
+ stream.getVideoTracks()[0].addEventListener('ended',()=>{if(screen===stream&&activeSession===session)stopCapture('Screen sharing ended');},{once:true});
+}
+function sourceName(kind){return ({monitor:'Entire screen',browser:'Browser tab',window:'Application window'})[kind]||'Display';}
+function openSourceDialog(){
+ if(!active()||pendingSwitch||forwardBusy)return;
+ const dialog=get('source-dialog-v0710');if(dialog.open)return;
+ releaseTransient();get('source-current-v0710').textContent=sourceName(captureSource);
+ get('source-resolution-v0710').textContent=composite.width+' × '+composite.height;
+ get('source-switch-status-v0710').textContent='Current capture continues until a replacement is ready.';
+ get('source-choose-v0710').textContent=captureSource==='monitor'?'Choose another monitor…':'Choose capture source…';
+ dialog.showModal();
+}
+get('switch-source-v0710').addEventListener('click',openSourceDialog);
+get('source-cancel-v0710').addEventListener('click',()=>cancelSwitch());
+get('source-dialog-v0710').addEventListener('cancel',e=>{e.preventDefault();cancelSwitch();});
+get('source-dialog-v0710').addEventListener('close',()=>{if(pendingSwitch)cancelSwitch(false);});
+function waitFrame(video,request){
+ return new Promise((resolve,reject)=>{
+  let done=false;
+  function finish(error){if(done)return;done=true;clearTimeout(timer);request.cancel=null;error?reject(error):resolve();}
+  const timer=setTimeout(()=>finish(Error('Replacement source did not produce a video frame')),12000);
+  request.cancel=()=>finish(Error('Source switch canceled'));
+  Promise.resolve(video.play()).then(()=>{
+   if(video.readyState<2||!video.videoWidth||!video.videoHeight)throw Error('Replacement source has no decoded frame');
+   finish();
+  }).catch(finish);
+ });
+}
+async function switchSource(){
+ if(!active()||pendingSwitch||forwardBusy||!get('source-dialog-v0710').open)return;
+ const old=screen,session=activeSession,kind=captureSource,request={stream:null,video:null,nodes:[],cancel:null};
+ pendingSwitch=request;get('source-choose-v0710').disabled=true;get('switch-source-v0710').disabled=true;
+ const message=t=>{get('source-switch-status-v0710').textContent=t;};
+ const current=()=>pendingSwitch===request&&screen===old&&activeSession===session&&active();
+ let nextController=null;
+ try{
+  const options={video:{frameRate:30,displaySurface:kind||'monitor'},audio:sharedAudio};
+  if(typeof CaptureController==='function')try{nextController=new CaptureController();options.controller=nextController;}catch{}
+  message('Choose a new source in the browser picker. The old source is still recording.');
+  // No await before the explicitly clicked, browser-controlled picker.
+  const candidate=await navigator.mediaDevices.getDisplayMedia(options);
+  if(!current()){stopStream(candidate);return;}
+  request.stream=candidate;
+  const track=candidate.getVideoTracks()[0],settings=track?.getSettings()||{};
+  if(!track||track.readyState==='ended')throw Error('No live replacement video track');
+  if(kind==='monitor'&&settings.displaySurface&&settings.displaySurface!=='monitor')throw Error('Choose a monitor when switching an entire-screen recording');
+  const video=document.createElement('video');request.video=video;video.muted=true;video.playsInline=true;video.srcObject=candidate;
+  message('Preparing replacement frames and audio…');await waitFrame(video,request);
+  if(!current())return;
+  if(track.readyState==='ended'||video.videoWidth*video.videoHeight>16000000)throw Error('Replacement source ended or exceeds safe dimensions');
+  // Connect only to the existing audio destination. The encoder track set never changes.
+  if(audioDest&&sharedAudio)for(const a of candidate.getAudioTracks()){
+   const node=audio.createMediaStreamSource(new MediaStream([a]));request.nodes.push(node);node.connect(audioDest);
+  }
+  if(!current())return;
+  const formerVideo=sourceVideo,formerTracks=old.getTracks(),formerNodes=screenAudioNodes;
+  // Atomic synchronous commit: render loop reads the new decoder, old ended events
+  // cannot stop the new capture, and the original encoder/recovery session stays live.
+  screen=candidate;sourceVideo=video;screenAudioNodes=request.nodes;controller=nextController;captureSource=settings.displaySurface||kind;
+  tracks=tracks.filter(t=>!formerTracks.includes(t));tracks.push(...candidate.getTracks());
+  pendingSwitch=null;sourceChanges++;watchSource(candidate,session);
+  disconnectNodes(formerNodes);disposeVideo(formerVideo);stopStream(old);
+  interaction=false;forwardingActive=false;scrollPermission=false;forwardBusy=false;queuedScroll=0;
+  get('linked-consent').checked=false;get('enable-scroll').textContent='Enable captured-tab wheel control';
+  resetZoom();regionEnabled(false);globalThis.MangoRecorderCursorV073?.sourceChanged?.();explainCaptureSurface(captureSource);updateMode();
+  get('switch-source-v0710').disabled=false;get('source-choose-v0710').disabled=false;get('source-dialog-v0710').close();
+  label('Switched to '+sourceName(captureSource)+' · same recording, '+composite.width+'×'+composite.height+(sharedAudio&&(!audioDest||!candidate.getAudioTracks().length)?' · no replacement shared audio; microphone unchanged':''));
+  if(nextController?.setFocusBehavior)try{nextController.setFocusBehavior('focus-capturing-application');}catch{}
+ }catch(error){
+  if(pendingSwitch===request){
+   cancelSwitch(false);message(error.name==='NotAllowedError'?'Picker canceled or permission denied. Existing recording unchanged.':'Source switch failed: '+error.message+'. Existing recording unchanged.');
+  }
+ }
+}
+get('source-choose-v0710').addEventListener('click',switchSource);
+globalThis.MangoRecorderSessionV0710=Object.freeze({inspect:()=>({active:active(),state:recorder?.state||'inactive',sessionId:activeSession?.id||null,sourceChanges,source:captureSource,outputWidth:composite.width,outputHeight:composite.height,interaction,switching:!!pendingSwitch,sharedAudioNodes:screenAudioNodes.length,audioOutput:!!audioDest})});
 async function checkRecovery(){
  try{
   const sessions=typeof MangoRecovery.list==='function'?await MangoRecovery.list():[await MangoRecovery.latest()].filter(Boolean);
@@ -338,13 +449,13 @@ start.addEventListener('click',async()=>{
  if(start.disabled)return;start.disabled=true;lastBlob=null;lastSessionId=null;lastCursorTrace=null;
  recording=false;stopping=false;finalized=false;partialShown=false;recordingToken++;const token=recordingToken;
  // Never overwrite a previous encoder's chunks or callbacks.
- activeSession=null;recordState('ready');
+ activeSession=null;sourceChanges=0;interaction=false;sharedAudio=get('audio').checked;recordState('ready');
  get('result').hidden=true;
  elapsed.textContent='00:00';warnings=[];resetZoom();history=[];strokes=[];activeStroke=null;redrawInk();get('undo').disabled=true;
  try{
   if(!navigator.mediaDevices?.getDisplayMedia||typeof MediaRecorder==='undefined')throw new Error('Screen capture APIs are unavailable.');
   label('Choose the browser tab, window or display to record…');
-  const options={video:{frameRate:30,displaySurface:'browser'},audio:get('audio').checked};
+  const options={video:{frameRate:30,displaySurface:'browser'},audio:sharedAudio};
   if(typeof CaptureController==='function'){
    try{controller=new CaptureController();options.controller=controller;}catch{controller=null;}
   }
@@ -358,30 +469,33 @@ start.addEventListener('click',async()=>{
      mic=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
      tracks.push(...mic.getTracks());
    }catch(error){warnings.push('Microphone unavailable ('+error.name+'). Video continues.');}}
-  preview.srcObject=screen;await preview.play();get('video-placeholder').hidden=true;
+  sourceVideo=preview;preview.srcObject=screen;await preview.play();get('video-placeholder').hidden=true;
   const settings=screen.getVideoTracks()[0].getSettings();const w=settings.width||preview.videoWidth||1280;
   const h=settings.height||preview.videoHeight||720;
   if(w*h>16000000)throw new Error('Screen exceeds safe recording dimensions; choose a smaller window.');
-  ink.width=w;ink.height=h;composite.width=w;composite.height=h;
+  ink.width=w;ink.height=h;composite.width=w;composite.height=h;wrap.style.aspectRatio=w+' / '+h;wrap.dataset.recording='true';
   composite.style.display='block';ink.style.opacity='0';
   const ctx=composite.getContext('2d',{alpha:false});
   const render=()=>{if(!screen||stopping)return;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);
     const cursor=globalThis.MangoRecorderCursorV073;
     if(cursor&&recording){
       const seconds=recorder?.state==='recording'?Math.max(0,(Date.now()-startedAt-pausedTotal)/1000):null;
-      const effective=cursor.frame(ctx,preview,zoomState,w,h,seconds);
+      const effective=cursor.frame(ctx,sourceVideo,zoomState,w,h,seconds);
       get('zoomReadout').textContent=Math.round(effective.zoom*100)+'%';
-    }else if(preview.readyState>=2){const crop=MangoCamera.crop(zoomState,w,h);
-      ctx.drawImage(preview,crop.sx,crop.sy,crop.sw,crop.sh,0,0,w,h);}
+    }else control.drawSource(ctx,sourceVideo,zoomState,w,h);
     ctx.drawImage(ink,0,0);animation=requestAnimationFrame(render);};render();
   if(typeof composite.captureStream!=='function')throw new Error('Canvas recording unsupported.');
   const output=composite.captureStream(30);tracks.push(...output.getVideoTracks());
   const inputs=[...screen.getAudioTracks(),...(mic?.getAudioTracks()||[])];
-  if(inputs.length){try{audio=new AudioContext();const dest=audio.createMediaStreamDestination();
-    for(const track of inputs)audio.createMediaStreamSource(new MediaStream([track])).connect(dest);
-    for(const track of dest.stream.getAudioTracks())output.addTrack(track);
-    tracks.push(...dest.stream.getTracks());await audio.resume();
-   }catch(error){warnings.push('Audio mixing unavailable ('+error.name+').');audio?.close().catch(()=>{});audio=null;}}
+  // Reserve a stable destination when shared audio is requested, even if this
+  // particular monitor does not provide it. Later swaps can feed the same track.
+  if(inputs.length||sharedAudio){try{audio=new AudioContext();audioDest=audio.createMediaStreamDestination();
+    for(const track of screen.getAudioTracks()){const node=audio.createMediaStreamSource(new MediaStream([track]));screenAudioNodes.push(node);node.connect(audioDest);}
+    for(const track of mic?.getAudioTracks()||[])audio.createMediaStreamSource(new MediaStream([track])).connect(audioDest);
+    await audio.resume();
+    for(const track of audioDest.stream.getAudioTracks())output.addTrack(track);
+    tracks.push(...audioDest.stream.getTracks());
+   }catch(error){warnings.push('Audio mixing unavailable ('+error.name+').');disconnectNodes(screenAudioNodes);screenAudioNodes=[];stopStream(audioDest?.stream);audioDest=null;audio?.close().catch(()=>{});audio=null;}}
   recorder=supportedRecorder(output);recordingMime=recorder.mimeType||'video/webm';
   const session=createSession(token,recordingMime,recorder);activeSession=session;
   try{session.storage=await MangoRecovery.begin(recordingMime);}
@@ -396,15 +510,15 @@ start.addEventListener('click',async()=>{
     // It must not reset the controls or replace the preview of the newer session.
     finishSession(session,false);
   };
-  screen.getVideoTracks()[0].addEventListener('ended',()=>{if(activeSession===session)stopCapture('Screen sharing ended');},{once:true});
+  watchSource(screen,session);
   recorder.start(1000);recording=true;recordState('recording');
   stop.disabled=false;pause.disabled=false;
   for(const id of ['resetZoom','zoomIn','zoomOut','zoomRegion'])get(id).disabled=false;
-  get('enable-scroll').disabled=!(controller?.forwardWheel&&captureSource==='browser');
-  get('enable-scroll').title=captureSource==='browser'?'Enable scroll forwarding for the tab you selected in the browser capture picker. Browser permission may be requested.':'Native captured-tab scrolling is unavailable for a shared '+(captureSource||'display')+'. Enable linked-tab fallback or interact in the actual source.';
+  get('switch-source-v0710').disabled=false;updateMode();
+  get('enable-scroll').title='Enable Interaction first. Native forwarding is available only for a captured browser tab.';
   startedAt=Date.now();pausedAt=0;pausedTotal=0;globalThis.MangoRecorderCursorV073?.begin?.();light.className='record-dot active';
   timer=setInterval(()=>{const now=pausedAt||Date.now();elapsed.textContent=clock(now-startedAt-pausedTotal);},200);
-  label('Recording '+w+'×'+h+' · '+(captureSource||'display')+' · '+(audio?'audio':'NO AUDIO TRACK — waveform unavailable')+
+  label('Recording '+w+'×'+h+' · '+(captureSource||'display')+' · '+(audio?(inputs.length?'audio':'audio track reserved · no granted source audio yet'):'NO AUDIO TRACK — waveform unavailable')+
     (warnings.length?' · '+warnings.join(' '):''));
   if(controller?.setFocusBehavior)try{controller.setFocusBehavior('focus-capturing-application');}catch{}
  }catch(error){cleanup();recordState('error');label('Could not record: '+(error.name==='NotAllowedError'?'Permission denied or picker closed.':error.message));}
@@ -433,5 +547,5 @@ window.addEventListener('pagehide',()=>{globalThis.MangoRecorderCursorV073?.end?
 if(!navigator.mediaDevices?.getDisplayMedia||typeof MediaRecorder==='undefined'){
  label('Screen capture APIs unavailable here.');start.disabled=true;
 }
-globalThis.MangoRecorderCursorHostV073=Object.freeze({active:()=>active()&&recorder?.state==='recording',camera:()=>({...zoomState}),surface:()=>captureSource,linked:()=>linkedAvailable,source:()=>source,automationCapture:()=>({ready:!stopping&&(!start.disabled||recording)&&(!recording||recorder?.state==='recording'||recorder?.state==='paused'),reason:'Capture is starting or finalizing.',identity:recordingToken,phase:recorder?.state||get('record-state').dataset.state||'ready'})});
+globalThis.MangoRecorderCursorHostV073=Object.freeze({active:()=>active()&&recorder?.state==='recording',camera:()=>({...zoomState}),frame:()=>control.fitFrame(sourceVideo.videoWidth||composite.width,sourceVideo.videoHeight||composite.height,composite.width,composite.height),surface:()=>captureSource,linked:()=>linkedAvailable,source:()=>source,automationCapture:()=>({ready:!stopping&&(!start.disabled||recording)&&(!recording||recorder?.state==='recording'||recorder?.state==='paused'),reason:'Capture is starting or finalizing.',identity:recordingToken,phase:recorder?.state||get('record-state').dataset.state||'ready'})});
 void checkRecovery();
