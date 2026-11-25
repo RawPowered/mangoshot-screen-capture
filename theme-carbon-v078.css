@@ -172,7 +172,7 @@ body.studio-clip.v062-workspace #timeline .clip-segment:hover{background:#97a9bc
 body.studio-clip.v062-workspace #timeline .clip-segment.is-selected{
  background:var(--carbon-accent-wash);outline:2px solid var(--carbon-accent);outline-offset:-2px;
 }
-body.studio-clip :is(.timeline-playhead,.timeline-playhead:before,.v064-clip-playhead){
+body.studio-clip :is(.timeline-playhead,.v064-clip-playhead),body.studio-clip .timeline-playhead::before{
  background:var(--carbon-accent);box-shadow:none
 }
 body.studio-clip .timeline-ruler .ruler-tick{color:var(--carbon-muted)}
