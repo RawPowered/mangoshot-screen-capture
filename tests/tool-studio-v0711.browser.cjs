@@ -17,6 +17,10 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   const before=sel.layers.map(l=>l.bounds.y);
   await p.locator('[data-ts-batch=top]').click();let aligned=await state();assert.ok(aligned.layers.every(l=>Math.abs(l.bounds.y-aligned.layers[0].bounds.y)<.001));
   await p.evaluate(()=>MangoImageActions.run('undo'));assert.deepEqual((await state()).layers.map(l=>l.bounds.y),before);
+  await p.locator('#ts-select-filtered-v0711').click();await p.locator('#ts-snap-v0711').uncheck();
+  const dragBefore=(await state()).layers.map(l=>l.bounds.x);await drag([.12,.2],[.17,.2]);
+  let moved=await state();assert.ok(moved.layers.every((l,i)=>Math.abs(l.bounds.x-dragBefore[i]-50)<4),'All selected layers must move by the same delta');
+  await p.evaluate(()=>MangoImageActions.run('undo'));assert.deepEqual((await state()).layers.map(l=>l.bounds.x),dragBefore);
   await p.locator('[data-image-tab=layers]').click();await p.locator('#ts-select-filtered-v0711').click();assert.equal((await state()).selection.length,3);
   await p.evaluate(()=>MangoImageActions.run('nudgeRightFast'));assert.equal(Math.round((await state()).layers[0].bounds.x-sel.layers[0].bounds.x),10);
   await p.evaluate(()=>MangoImageActions.run('undo'));
@@ -30,7 +34,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   await p.locator('[data-ts-batch=lock]').click();assert.equal(await p.locator('[data-ts-batch=top]').isDisabled(),false);
   async function library(){await p.locator('.v06-menu > summary').filter({hasText:'View'}).click();await p.locator('#ts-open-v0711').click();await p.locator('#tool-library-v0711').waitFor({state:'visible'});}
   await library();await p.locator('#ts-search-v0711').fill('marquee');assert.equal(await p.locator('.ts-entry-v0711').count(),1);await p.locator('.ts-entry-v0711 button').nth(1).click();await p.locator('#ts-favorites-v0711').check();assert.equal(await p.locator('.ts-entry-v0711').count(),1);await p.screenshot({path:path.join(out,'02-tool-library.png')});await p.locator('.ts-entry-v0711 button').first().click();assert.equal((await state()).tool,'marquee');
-  await p.reload();await p.waitForFunction(()=>MangoImageActions.state().ready);assert.equal(await p.evaluate(()=>MangoToolLibraryV0711.state().preferences.last.select),'marquee');assert.ok(await p.evaluate(()=>MangoToolLibraryV0711.state().preferences.favorites.includes('marquee')));
+  await p.goto(base+'editor.html');await p.waitForFunction(()=>!!window.MangoToolLibraryV0711);assert.equal(await p.evaluate(()=>MangoToolLibraryV0711.state().preferences.last.select),'marquee');assert.ok(await p.evaluate(()=>MangoToolLibraryV0711.state().preferences.favorites.includes('marquee')));
   await p.goto(base+'clip-studio.html');await p.locator('#file').setInputFiles(process.argv[2]);await p.waitForFunction(()=>MangoClipView.automationCapture().ready);await library();await p.locator('#ts-search-v0711').fill('razor');assert.equal(await p.locator('.ts-entry-v0711').count(),1);await p.screenshot({path:path.join(out,'03-video-tool-library.png')});await p.locator('.ts-entry-v0711 button').first().click();assert.equal(await p.locator('[data-v06-tool=tool-razor]').getAttribute('aria-pressed'),'true');
   await p.setViewportSize({width:1024,height:600});await library();const bounds=await p.locator('#tool-library-v0711').boundingBox();assert.ok(bounds.x>=0&&bounds.y>=0&&bounds.x+bounds.width<=1025&&bounds.y+bounds.height<=601);
   console.log('Actual Image Studio marquee, batch align and undo, nudge, duplicate, filtering, locked-layer guard, persistent tools/favorites and Clip Studio tool dispatch passed');

@@ -33,3 +33,8 @@ body.studio-image .image-layer-row[data-batch=true]{background:var(--carbon-acti
 .ts-tool-group-label-v0711{font-size:8px;letter-spacing:.06em;color:var(--carbon-muted);text-align:center;border-top:1px solid var(--carbon-line);padding:4px 0 1px}
 body.studio-image .v071-tool-flyout .ts-variant-key-v0711{margin-left:auto;color:var(--carbon-muted);font-size:10px;letter-spacing:0}
 body.studio-image .v071-tool-slot[data-group=select] .v071-tool-main{touch-action:manipulation}
+
+body.studio-image .image-layer-row{grid-template-columns:20px 23px minmax(0,1fr) 23px 23px 23px;align-items:center;gap:3px}
+body.studio-image .image-layer-row>button{min-width:0;padding:3px!important;min-height:25px!important}
+body.studio-image .image-layer-row>button:not(.image-object-select){display:flex;align-items:center;justify-content:center}
+body.studio-image .ts-layer-actions-v0711 label{display:flex;align-items:center;gap:4px;font-size:11px}

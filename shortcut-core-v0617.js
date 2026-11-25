@@ -18,7 +18,7 @@
   ['commandPalette','Help','Command search','Ctrl+Alt+K'],['showShortcuts','Help','Keyboard shortcut settings','Shift+/']
  ];
  const image=[
-  ['select','Tools','Select / Move','V'],['pen','Tools','Pen','P'],['highlighter','Tools','Highlighter','H'],
+  ['select','Tools','Select / Move','V'],['marquee','Tools','Marquee selection',''],['pen','Tools','Pen','P'],['highlighter','Tools','Highlighter','H'],
   ['brushErase','Tools','Brush Erase','E'],['strokeErase','Tools','Whole Stroke Erase','Shift+E'],
   ['arrow','Shapes','Arrow','A'],['rectangle','Shapes','Rectangle','R'],['ellipse','Shapes','Ellipse','O'],
   ['line','Shapes','Line','L'],['star','Shapes','Star','Shift+S'],['text','Tools','Text','T'],
