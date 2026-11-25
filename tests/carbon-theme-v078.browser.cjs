@@ -44,6 +44,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   await neutral('.studio-appbar');await neutral('.clip-properties');await neutral('.v06-rail');await neutral('.timeline-inner');
   const tool=p.locator('.v06-rail [data-v06-tool="tool-select"]');assert.equal(await tool.getAttribute('aria-pressed'),'true');
   assert.equal(await tool.evaluate(e=>getComputedStyle(e).color),accent);await neutral('.v06-rail [data-v06-tool="tool-select"]');
+  assert.equal(await tool.locator('svg').first().evaluate(e=>getComputedStyle(e).stroke),accent);
   assert.equal(await p.locator('.timeline-playhead').first().evaluate(e=>getComputedStyle(e).backgroundColor),accent);
   await p.evaluate(()=>MangoClipView.addLayer('text','title'));
   await noScroll();await screenshot('04-clip-studio');

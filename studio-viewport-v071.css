@@ -133,7 +133,7 @@ body.studio-image .v071-tool-flyout button{
 body.studio-image .v071-tool-flyout button svg{flex:0 0 18px;width:18px;height:18px}
 body.studio-image .v071-tool-flyout button small{font:650 11px/1.2 system-ui!important;letter-spacing:0}
 body.studio-image .v071-tool-flyout button[aria-pressed=true],
-body.studio-image .v071-tool-flyout button:hover{background:var(--carbon-hover)!important;border-color:var(--carbon-accent)!important}
+body.studio-image .v071-tool-flyout button:hover{background:var(--carbon-hover)!important;border-color:var(--carbon-line-strong)!important}
 body.studio-image .v071-tool-slot[data-active=true] .v071-tool-more{color:var(--carbon-accent)}
 body.studio-image.v070-no-tools .image-layout{
  grid-template-columns:0 minmax(0,1fr) var(--v070-side,310px)!important;

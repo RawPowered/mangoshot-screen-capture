@@ -8,22 +8,22 @@
 .studio-clip .v0615-active-tool strong{font:850 11px/1 system-ui;letter-spacing:.06em}
 .studio-clip .v0615-active-tool small{font:650 10px/1.1 system-ui;letter-spacing:0;color:var(--carbon-text)}
 .studio-clip .v0615-active-dot{width:8px;height:8px;flex:0 0 8px;border-radius:50%;
- background:var(--carbon-accent);box-shadow:0 0 8px var(--carbon-accent)}
-.studio-clip .v0615-active-tool[data-tool=razor]{border-color:#dfb46b;background:#45362a}
-.studio-clip .v0615-active-tool[data-tool=razor] .v0615-active-dot{background:#ffc67a;box-shadow:0 0 8px #ffbb65}
-.studio-clip .v0615-active-tool[data-tool=range]{border-color:var(--carbon-line-strong);background:#233e48}
-.studio-clip .v0615-active-tool[data-tool=range] .v0615-active-dot{background:var(--carbon-accent);box-shadow:0 0 8px var(--carbon-accent)}
+ background:var(--carbon-accent);box-shadow:none}
+.studio-clip .v0615-active-tool[data-tool=razor]{border-color:var(--carbon-line-strong);background:var(--carbon-panel-alt)}
+.studio-clip .v0615-active-tool[data-tool=razor] .v0615-active-dot{background:var(--carbon-accent);box-shadow:none}
+.studio-clip .v0615-active-tool[data-tool=range]{border-color:var(--carbon-line-strong);background:var(--carbon-panel-alt)}
+.studio-clip .v0615-active-tool[data-tool=range] .v0615-active-dot{background:var(--carbon-accent);box-shadow:none}
 .studio-clip .v06-rail [data-v06-tool][aria-pressed=true],
 .studio-clip #tool-select[aria-pressed=true],
 .studio-clip #tool-razor[aria-pressed=true],
 .studio-clip #range-tool[aria-pressed=true]{
- background:linear-gradient(150deg,var(--carbon-active),var(--carbon-active))!important;
- color:var(--carbon-text)!important;border-color:var(--carbon-accent)!important;
- box-shadow:inset 0 0 0 1px var(--carbon-accent),0 0 0 2px #b7ff3c66!important;
+ background:var(--carbon-active)!important;
+ color:var(--carbon-accent)!important;border-color:var(--carbon-line-strong)!important;
+ box-shadow:inset 2px 0 0 var(--carbon-accent)!important;
 }
 .studio-clip .v06-rail [data-v06-tool][aria-pressed=false]{opacity:.77}
 .studio-clip .v06-rail [data-v06-tool][aria-pressed=false]:hover{opacity:1}
-.studio-clip .v06-rail [data-v06-tool][aria-pressed=true] svg{stroke:var(--carbon-black)!important}
+.studio-clip .v06-rail [data-v06-tool][aria-pressed=true] svg{stroke:currentColor!important}
 .studio-clip #timeline[data-tool=razor]{cursor:crosshair}
 .studio-clip #timeline[data-tool=range]{cursor:ew-resize}
 .studio-clip .v06-rail [data-v06-tool="add-text"],
