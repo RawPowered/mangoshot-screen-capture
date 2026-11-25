@@ -4,7 +4,7 @@
  if(typeof document==='undefined'||!document.body?.classList?.contains('studio-image'))return;
  const rail=document.querySelector('.image-toolrail'),selector=document.getElementById('tool');
  if(!rail||!selector)return;
- const groupDefs=[
+ const groupDefs=root.MangoToolStudioV0711?.groups||[
   {id:'select',label:'Select / Move',items:['select']},
   {id:'draw',label:'Drawing tools',items:['pen','highlighter']},
   {id:'erase',label:'Erasers',items:['erase-brush','erase-stroke']},
@@ -36,7 +36,7 @@
   'mask-erase':['M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18','M16 9l5 5m0-5l-5 5'],
   'mask-restore':['M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18','M16 9h6m-3-3v6']
  };
- const title=id=>({select:'Select / Move',pen:'Pen',highlighter:'Highlighter','erase-brush':'Brush Erase',
+ const title=id=>root.MangoToolStudioV0711?.titles[id]||({select:'Select / Move',pen:'Pen',highlighter:'Highlighter','erase-brush':'Brush Erase',
   'erase-stroke':'Whole Stroke Erase',rectangle:'Rectangle','rounded-rectangle':'Rounded rectangle',
   ellipse:'Ellipse',line:'Line',arrow:'Arrow',triangle:'Triangle',diamond:'Diamond',pentagon:'Pentagon',
   hexagon:'Hexagon',star:'Star','speech-bubble':'Speech bubble',redact:'Redact',text:'Text',
@@ -55,7 +55,9 @@
   return svg;
  }
  const originals=new Map([...rail.querySelectorAll('[data-studio-tool]')].map(b=>[b.dataset.studioTool,b]));
- const saved=new Map(groupDefs.map(g=>[g.id,g.items[0]]));
+ const storageKey='MangoShot.ToolStudio.image.v1';let pref;try{pref=root.MangoToolStudioV0711?.preferences(JSON.parse(localStorage.getItem(storageKey)||'{}'));}catch{};
+ const saved=new Map(groupDefs.map(g=>[g.id,pref?.last[g.id]||g.items[0]]));
+ function remember(){if(!root.MangoToolStudioV0711)return;try{const p=root.MangoToolStudioV0711.preferences(JSON.parse(localStorage.getItem(storageKey)||'{}'));p.last=Object.fromEntries(saved);localStorage.setItem(storageKey,JSON.stringify(p));}catch{}}
  const slots=[];
  let open=null;
  function close(){
@@ -74,7 +76,7 @@
    selector.dispatchEvent(new Event('change',{bubbles:true}));
   }
   for(const g of groupDefs)if(g.items.includes(id))saved.set(g.id,id);
-  close();sync();
+  remember();close();sync();
  }
  function make(tag,cls){
   const e=document.createElement(tag);
@@ -106,7 +108,11 @@
    item.setAttribute('aria-label',title(id));
    flyout.append(item);
   }
-  main.addEventListener('click',()=>activate(saved.get(g.id)||g.items[0]));
+  let heldTimer=0,longPressed=false;
+  const clearHold=()=>{clearTimeout(heldTimer);heldTimer=0;};
+  main.addEventListener('pointerdown',e=>{if(e.button!==0||g.items.length<2)return;longPressed=false;clearHold();heldTimer=setTimeout(()=>{longPressed=true;more.click();},450);});
+  for(const event of ['pointerup','pointercancel','pointerleave','lostpointercapture'])main.addEventListener(event,clearHold);
+  main.addEventListener('click',()=>{if(longPressed){longPressed=false;return;}activate(saved.get(g.id)||g.items[0]);});
   // Stylus barrel click / mouse right click opens variants, like a tool flyout.
   main.addEventListener('contextmenu',event=>{
    event.preventDefault();event.stopPropagation();more.click();
@@ -164,6 +170,7 @@
     item.setAttribute('aria-pressed',String(id===tool));
    }
   }
+  remember();
  }
  selector.addEventListener('change',sync);
  rail.addEventListener('click',()=>root.requestAnimationFrame?.(sync),false);

@@ -11,7 +11,7 @@
  const field=(id,label)=>Object.freeze({id,label,unit:units[id]||''});
  const formatValue=(id,value)=>String(value)+(units[id]||'');
  const image={
-  select:[field('tool','Tool')],
+  select:[field('tool','Tool')],marquee:[field('tool','Selection')],
   pen:[field('tool','Tool'),field('color','Color'),field('size','Width'),field('image-tool-opacity','Opacity')],
   highlighter:[field('tool','Tool'),field('color','Color'),field('size','Width'),field('image-tool-opacity','Opacity')],
   'erase-brush':[field('tool','Tool'),field('size','Diameter'),field('image-eraser-hardness','Hardness'),field('image-tool-opacity','Opacity')],

@@ -1,0 +1,35 @@
+/* Tool and selection UI only; no changes to the media renderer or native overlay hierarchy. */
+body.studio #tool-library-v0711{width:min(700px,calc(100vw - 24px));max-width:calc(100vw - 24px);max-height:calc(100vh - 24px);padding:0;overflow:auto}
+#tool-library-v0711 header{padding:12px 16px;background:var(--carbon-panel-alt)}
+#tool-library-v0711 header small{display:block;color:var(--carbon-muted);letter-spacing:0}
+.ts-toolbar-v0711{display:flex;gap:7px;flex-wrap:wrap;align-items:center;padding:10px 14px;border-bottom:1px solid var(--carbon-line)}
+.ts-toolbar-v0711 input{flex:1;min-width:130px}
+#ts-list-v0711{padding:10px 14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:5px}
+.ts-entry-v0711{display:flex;gap:3px;min-width:0;background:var(--carbon-shell);border:1px solid var(--carbon-line)}
+.ts-entry-v0711 button{display:flex;align-items:center;gap:6px;min-width:0;text-align:left;padding:6px}
+.ts-entry-v0711 button:first-child{flex:1;font-size:12px}
+.ts-entry-v0711 button svg{flex:none}
+.ts-entry-v0711 button[aria-pressed=true]{color:var(--carbon-accent)}
+body.studio-image .ts-layer-filter-v0711{display:grid;grid-template-columns:minmax(0,1fr) 100px;gap:5px;margin:6px 0}
+body.studio-image .ts-layer-filter-v0711 input,body.studio-image .ts-layer-filter-v0711 select{min-width:0;width:100%;min-height:28px;font-size:11px;padding:3px 5px}
+.ts-layer-actions-v0711{display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin:5px 0}
+.ts-layer-actions-v0711 button,.ts-batch-v0711 button{min-height:27px!important;padding:3px 6px!important;font-size:11px}
+.ts-batch-v0711{border:1px solid var(--carbon-line);padding:7px;margin:6px 0;background:var(--carbon-shell)}
+.ts-batch-v0711[hidden]{display:none!important}
+.ts-batch-v0711 strong{font-size:12px}
+.ts-align-v0711{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;margin:6px 0}
+.ts-align-v0711 button{display:flex;justify-content:center;align-items:center}
+.ts-layer-filter-v0711+small{color:var(--carbon-muted)}
+body.studio-image .image-layer-row .image-object-select{display:flex;align-items:center;gap:4px;min-width:0;text-align:left}
+.image-object-select .ts-layer-name-v0711{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.image-layer-row svg{flex:none;width:14px;height:14px}
+body.studio-image .image-layer-row[data-batch=true]{background:var(--carbon-active);outline:1px solid var(--carbon-accent);outline-offset:-1px}
+#ts-selection-overlay-v0711{position:absolute;inset:0;pointer-events:none;z-index:25;overflow:hidden}
+.ts-box-v0711{position:absolute;border:1px dashed var(--carbon-accent);pointer-events:none}
+.ts-box-v0711[data-marquee=true]{background:#b7ff3c18;border:1px solid var(--carbon-accent)}
+.ts-guide-v0711{position:absolute;pointer-events:none;background:var(--carbon-accent);opacity:.85}
+.ts-guide-v0711[data-axis=x]{width:1px;height:100%;top:0}
+.ts-guide-v0711[data-axis=y]{height:1px;width:100%;left:0}
+.ts-tool-group-label-v0711{font-size:8px;letter-spacing:.06em;color:var(--carbon-muted);text-align:center;border-top:1px solid var(--carbon-line);padding:4px 0 1px}
+body.studio-image .v071-tool-flyout .ts-variant-key-v0711{margin-left:auto;color:var(--carbon-muted);font-size:10px;letter-spacing:0}
+body.studio-image .v071-tool-slot[data-group=select] .v071-tool-main{touch-action:manipulation}
