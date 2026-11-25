@@ -287,15 +287,15 @@ get('enable-scroll').addEventListener('click',()=>nativeWheel(!forwardingActive)
 wrap.addEventListener('wheel',event=>{
  if(!active())return;
  if(interaction){
-   // An explicitly linked tab is preferred: native forwardWheel may preserve
+   // Only one forwarding path: never forward the same wheel through both APIs.
+   if(forwardingActive)return;
+   // An explicitly linked tab can be used if native forwarding is off:
    // Ctrl modifiers, which some pages interpret as page zoom rather than scroll.
    if(linkedAvailable&&get('linked-consent').checked){
      event.preventDefault();scrollLinked(event.deltaY,normalized(event));return;
    }
-   if(!forwardingActive){
-     event.preventDefault();
-     label('Interaction is ON. Enable captured-tab wheel control or authorize linked-tab scrolling.');
-   }
+   event.preventDefault();
+   label('Interaction is ON. Enable captured-tab wheel control or authorize linked-tab scrolling.');
    return;
  }
  if(ctrlHeld&&!altHeld){event.preventDefault();event.stopImmediatePropagation?.();
@@ -351,14 +351,14 @@ function openSourceDialog(){
 get('switch-source-v0710').addEventListener('click',openSourceDialog);
 get('source-cancel-v0710').addEventListener('click',()=>cancelSwitch());
 get('source-dialog-v0710').addEventListener('cancel',e=>{e.preventDefault();cancelSwitch();});
-get('source-dialog-v0710').addEventListener('close',()=>{if(pendingSwitch)cancelSwitch(false);});
+get('source-dialog-v0710').addEventListener('close',()=>{if(!get('source-dialog-v0710').open&&pendingSwitch)cancelSwitch(false);});
 function waitFrame(video,request){
  return new Promise((resolve,reject)=>{
   let done=false;
   function finish(error){if(done)return;done=true;clearTimeout(timer);request.cancel=null;error?reject(error):resolve();}
   const timer=setTimeout(()=>finish(Error('Replacement source did not produce a video frame')),12000);
   request.cancel=()=>finish(Error('Source switch canceled'));
-  Promise.resolve(video.play()).then(()=>{
+  Promise.resolve().then(()=>video.play()).then(()=>{
    if(video.readyState<2||!video.videoWidth||!video.videoHeight)throw Error('Replacement source has no decoded frame');
    finish();
   }).catch(finish);

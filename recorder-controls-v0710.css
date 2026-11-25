@@ -28,3 +28,7 @@ body.studio-recorder #source-dialog-v0710{width:min(510px,calc(100vw - 24px));ma
 #source-switch-status-v0710{padding:8px;border-left:2px solid var(--carbon-line-strong);background:var(--carbon-field);overflow-wrap:anywhere}
 @media(max-width:1100px){body.studio-recorder .studio-inspector{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}body.studio-recorder .cursor-studio-v073{margin:4px;grid-row:span 2}}
 @media(max-width:680px){body.studio-recorder .studio-inspector{display:flex;flex-direction:column}body.studio-recorder .cursor-studio-v073{margin:5px 0}body.studio-recorder .monitor-controls{flex-wrap:wrap;gap:5px}}
+
+body.studio-recorder #screen-wrap[data-recording=true] #preview{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+body.studio-recorder .monitor-tools{flex-wrap:wrap;gap:6px;min-width:0}
+body.studio-recorder .capture-context p{font-size:11px;line-height:1.4}

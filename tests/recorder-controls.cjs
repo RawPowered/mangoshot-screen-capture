@@ -33,7 +33,7 @@ class CaptureController{forwardWheel(el){forwardElement=el;scrollForwarded=!!el;
 const ctx={document,window,navigator,CaptureController,MediaRecorder:MockRecorder,URL,URLSearchParams,location:{search:'?source=23'},Blob,MangoRecovery,MangoClips,chrome,
  Date,Math,Number,Promise,requestAnimationFrame:()=>1,cancelAnimationFrame(){},setInterval:()=>1,clearInterval(){},setTimeout:(fn,ms)=>{const t=setTimeout(fn,Math.min(30,ms||0));t.unref();return t;},clearTimeout};
 ctx.globalThis=ctx;
-vm.runInNewContext(read('camera.js'),ctx);vm.runInNewContext(read('recorder.js'),ctx);
+vm.runInNewContext(read('camera.js'),ctx);vm.runInNewContext(read('recorder-control-v0710.js'),ctx);vm.runInNewContext(read('recorder.js'),ctx);
 const pointer=(x,y,options={})=>({button:0,clientX:x,clientY:y,ctrlKey:!!options.ctrl,altKey:!!options.alt,
  pointerType:'pen',pressure:.65,preventDefault(){},getCoalescedEvents(){return [this]}});
 const keyboard=(key,ctrl=false,alt=false)=>({key,code:'Key'+key.toUpperCase(),ctrlKey:ctrl,altKey:alt,target:{matches(){return false;}},preventDefault(){}});
@@ -44,10 +44,12 @@ const keyboard=(key,ctrl=false,alt=false)=>({key,code:'Key'+key.toUpperCase(),ct
  assert.equal(el('source-focus').disabled,false,'Linked source should be actionable');
  assert.equal(el('stop').disabled,false);assert.match(el('status').textContent,/Microphone unavailable/);
  await el('source-focus').listeners.click();assert.equal(sourceActivated,1,'Source tab activation should be user-triggered');
+ assert.equal(el('enable-scroll').disabled,true);
+ windowEvents.keydown(keyboard('`',true));assert.equal(el('mode').textContent,'Interaction: ON');
  assert.equal(el('enable-scroll').disabled,false);
- el('enable-scroll').listeners.click();await Promise.resolve();assert.equal(scrollForwarded,true);
+ await el('enable-scroll').listeners.click();assert.equal(scrollForwarded,true);
  assert.equal(forwardElement,el('screen-wrap'),'Wheel forwarding covers composed monitor, not hidden video only');
- el('enable-scroll').listeners.click();await Promise.resolve();assert.equal(scrollForwarded,false, 'Native forwarding must be togglable off');
+ await el('mode').listeners.click();assert.equal(scrollForwarded,false, 'Leaving interaction must stop native forwarding');assert.equal(el('ink').style.pointerEvents,'auto');
  // Wacom strokes: verify more than 50 undo decisions remain usable without raster snapshots.
  for(let n=0;n<60;n++){
   el('ink').listeners.pointerdown(pointer(100,200));
@@ -76,17 +78,18 @@ const keyboard=(key,ctrl=false,alt=false)=>({key,code:'Key'+key.toUpperCase(),ct
  assert.ok(Number.parseFloat(el('zoom-selection').style.width)>0,'Region border must have visible dimensions');
  el('ink').listeners.pointerup(pointer(440,280));
  assert.equal(el('zoom-selection').hidden,true);
- // Held Ctrl+Alt instead of a sticky interaction toggle.
- windowEvents.keydown(keyboard('Alt',true,true));assert.equal(el('ink').style.pointerEvents,'none');
- assert.match(el('mode').textContent,/HELD/);
+ // Ctrl+Backquote latches interaction through key release, without native forwarding.
+ windowEvents.keydown(keyboard('`',true));assert.equal(el('ink').style.pointerEvents,'none');
+ assert.match(el('mode').textContent,/ON/);
+ windowEvents.keyup(keyboard('`'));assert.equal(el('ink').style.pointerEvents,'none');
  let prevented=false;
  el('screen-wrap').listeners.wheel({target:el('preview'),deltaY:260,clientX:300,clientY:180,
    preventDefault(){prevented=true;}});
  await Promise.resolve();await Promise.resolve();
- assert.equal(prevented,true,'Explicitly linked tab should intercept Ctrl+Alt wheel');
+ assert.equal(prevented,true,'Explicitly linked tab should intercept Interaction wheel');
  assert.ok(sent.some(message=>message.type==='MANGO_LINKED_SCROLL'&&message.dy===260),
-   'Ctrl+Alt wheel forwards scrolling to consented linked tab');
- windowEvents.keyup(keyboard('Alt',false,false));assert.equal(el('ink').style.pointerEvents,'auto');
+   'Interaction wheel forwards scrolling to consented linked tab');
+ windowEvents.keydown(keyboard('`',true));assert.equal(el('ink').style.pointerEvents,'auto');
  // Stop must release capture tracks and timer immediately, BEFORE the encoder finally emits onstop.
  const previousStops=stoppedTracks;
  el('stop').listeners.click();
@@ -104,5 +107,5 @@ const keyboard=(key,ctrl=false,alt=false)=>({key,code:'Key'+key.toUpperCase(),ct
  assert.equal(appendCalls.length,1,'Encoded chunks are incrementally persisted for recovery');
  await el('dismiss-recovery').listeners.click();
  assert.equal(clearCalls,1,'Privacy control must delete all cached local recovery sessions');
- console.log('PASS: 60 Wacom strokes/undo, Ctrl-dolly zoom, visible region marquee, held interaction, immediate stop, video autosave and recovery chunk');
+ console.log('PASS: 60 Wacom strokes/undo, Ctrl-dolly zoom, visible region marquee, latched interaction, immediate stop, video autosave and recovery chunk');
 })().catch(error=>{console.error(error);process.exitCode=1;});

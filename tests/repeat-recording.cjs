@@ -23,7 +23,7 @@ const ctx={document:{getElementById:element,createElement:element,body:{appendCh
  navigator:{mediaDevices:{getDisplayMedia:async()=>stream()}},CaptureController:undefined,MediaRecorder:MockRecorder,MangoRecovery:recovery,MangoClips:{save:async()=>{}},chrome:api,
  URL:{createObjectURL(){return 'blob:sample';},revokeObjectURL(){}},URLSearchParams,location:{search:''},Blob,Date,Math,Promise,
  requestAnimationFrame(){return 1;},cancelAnimationFrame(){},setInterval(){return 1;},clearInterval(){},setTimeout:(fn,ms)=>{const t=setTimeout(fn,Math.min(ms||0,35));t.unref?.();return t;},clearTimeout};
-ctx.globalThis=ctx;vm.runInNewContext(read('camera.js'),ctx);vm.runInNewContext(read('recorder.js'),ctx);
+ctx.globalThis=ctx;vm.runInNewContext(read('camera.js'),ctx);vm.runInNewContext(read('recorder-control-v0710.js'),ctx);vm.runInNewContext(read('recorder.js'),ctx);
 (async()=>{
  await element('start').listeners.click();assert.equal(recorders.length,1);
  const first=recorders[0];first.ondataavailable({data:new Blob(['early-first-fragment'],{type:first.mimeType})});element('stop').listeners.click();assert.ok(stops>0);

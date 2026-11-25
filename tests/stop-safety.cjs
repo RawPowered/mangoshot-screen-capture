@@ -15,7 +15,7 @@ const context={document:{getElementById:ele,createElement:ele,body:{appendChild(
  chrome,Blob,URL:{createObjectURL(){return 'blob:x';},revokeObjectURL(){}},URLSearchParams,location:{search:''},Date,
  requestAnimationFrame(){return 1;},cancelAnimationFrame(){},setInterval(){return 1;},clearInterval(){},
  setTimeout:(fn,ms)=>{const timer=setTimeout(fn,Math.min(ms||0,35));timer.unref?.();return timer;},clearTimeout};
-context.globalThis=context;vm.runInNewContext(read('camera.js'),context);vm.runInNewContext(read('recorder.js'),context);
+context.globalThis=context;vm.runInNewContext(read('camera.js'),context);vm.runInNewContext(read('recorder-control-v0710.js'),context);vm.runInNewContext(read('recorder.js'),context);
 (async()=>{
  await ele('start').listeners.click();
  recorder.ondataavailable({data:new Blob(['fragment'],{type:'video/webm'})});

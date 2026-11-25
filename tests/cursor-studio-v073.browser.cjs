@@ -9,7 +9,7 @@ const {chromium}=require('playwright');
   await p.waitForFunction(()=>!!window.MangoRecorderCursorV073);
   await p.locator('#cursor-preset-v073').selectOption('tutorial');
   assert.equal(await p.evaluate(()=>MangoRecorderCursorV073.state().settings.zoomMode),'click');
-  await p.locator('#cursor-link-v073').click();
+  await p.locator('#cursor-tracking-v0710 > summary').click();await p.locator('#cursor-link-v073').click();
   assert.match(await p.locator('#cursor-status-v073').textContent(),/Start a browser-tab/);
   await p.locator('#cursor-studio-v073 .cursor-script-v073>summary').click();
   await p.locator('#cursor-recipe-v073').fill(JSON.stringify({schema:'mangoshot.cursor.recipe.v1',action:'recorder.cursor.configure',preset:'follow',settings:{scale:2.2}}));
