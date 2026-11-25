@@ -859,7 +859,7 @@ function filteredLayers(){
 }
 function setBatch(ids,anchor=null){
  ensureLayerIds();const selected=strokes.filter(l=>ids.includes(l.id));clearBatch();
- if(selected.length===1){selectLayerAt(strokes.indexOf(selected[0]));batchAnchor=anchor||selected[0].id;return;}
+ if(selected.length===1){tool.value='select';syncTool();selectLayerAt(strokes.indexOf(selected[0]));batchAnchor=anchor||selected[0].id;return;}
  selectedText=-1;selectedImage=-1;selectedObject=-1;
  batchIds=new Set(selected.map(l=>l.id));batchAnchor=anchor||selected.at(-1)?.id||null;
  tool.value='select';syncTool();switchInspectorTab('layers');redraw();renderStrokeList();
@@ -1167,7 +1167,7 @@ function syncTool(){
   const selected=button.dataset.studioTool===tool.value;
   button.classList.toggle('is-active',selected);button.setAttribute('aria-pressed',String(selected));
  }
- if(tool.value!=='select')selectedObject=-1;
+ if(tool.value!=='select'&&tool.value!=='marquee'){selectedObject=-1;clearBatch();}
  ink.style.cursor=tool.value==='text'?'text':tool.value==='select'?'default':'crosshair';
  updateEditorControls();syncVectorControls();syncEraserControls();
  if(tool.value==='text')switchInspectorTab('type');
@@ -1190,7 +1190,7 @@ function chooseImageTool(name){
  }
  if(name==='erase-brush'||name==='erase-stroke')lastEraserMode=name;
  if(name!=='select'&&name!=='marquee')clearBatch();
- if(name!=='select'&&name!=='text'){selectedText=-1;selectedImage=-1;selectedObject=-1;}
+ if(name!=='select'&&name!=='text'&&name!=='marquee'){selectedText=-1;selectedImage=-1;selectedObject=-1;}
  syncTool();syncSelectedText();redraw();
 }
 tool.addEventListener('change',()=>chooseImageTool(tool.value));
@@ -1446,7 +1446,8 @@ ink.addEventListener('pointerdown',event=>{
  if(type==='select'){
   const index=topLayerAt(p.x,p.y);
   if(ts&&index>=0&&(event.ctrlKey||event.metaKey||event.shiftKey)){event.preventDefault();toggleBatchLayer(index,event);return;}
-  if(ts&&index>=0&&batchIds.has(strokes[index].id)&&batchAllowed()&&!event.altKey){
+  if(ts&&index>=0&&batchIds.has(strokes[index].id)&&!event.altKey){
+   if(!batchAllowed()){label('Unlock and show all selected layers before moving the selection.');return;}
    event.preventDefault();ink.setPointerCapture?.(event.pointerId);
    const layers=batchLayers();batchDrag={pointerId:event.pointerId,start:p,originals:new Map(layers.map(l=>[l.id,cloneStrokes([l])[0]])),bounds:ts.bounds(layers.map(tsBounds)),moved:false};return;
   }
@@ -1484,7 +1485,7 @@ ink.addEventListener('pointermove',event=>{
  if(marqueeDrag){if(marqueeDrag.pointerId!==event.pointerId)return;marqueeDrag.end=p;paintBatchOverlay();event.preventDefault();return;}
  if(batchDrag){
   const d=batchDrag;if(d.pointerId!==event.pointerId)return;let dx=p.x-d.start.x,dy=p.y-d.start.y;
-  if(!d.moved&&Math.hypot(dx,dy)<3)return;if(!d.moved){snapshot();d.moved=true;}
+  if(!d.moved&&Math.hypot(dx,dy)<3)return;if(!d.moved){d.oldHistory=history.slice();d.oldRedo=redoHistory.slice();snapshot();d.moved=true;}
   if(document.getElementById('ts-snap-v0711')?.checked&&!event.altKey){
    snapGuides=ts.snap(d.bounds,dx,dy,strokes.filter(l=>!batchIds.has(l.id)&&l.visible!==false).map(tsBounds),ink.width,ink.height,6*ink.width/Math.max(1,ink.getBoundingClientRect().width));dx=snapGuides.dx;dy=snapGuides.dy;
   }else snapGuides=null;
@@ -1503,6 +1504,7 @@ ink.addEventListener('pointermove',event=>{
     if(!newLayer){layerDrag=null;return;}
     d.index=d.sourceIndex+1;
     strokes.splice(d.index,0,newLayer);
+    d.original=cloneStrokes([newLayer])[0];
     selectLayerAt(d.index);
    }
   }
@@ -1574,7 +1576,7 @@ function finishStroke(event){
    setBatch([...new Set([...prior,...strokes.filter(l=>l.visible!==false&&!['eraser','erase-brush','erase-stroke'].includes(l.type)&&ts.intersects(r,tsBounds(l))).map(l=>l.id)])]);}
   paintBatchOverlay();return;
  }
- if(batchDrag){const d=batchDrag;if(d.pointerId!==event?.pointerId)return;batchDrag=null;snapGuides=null;if(d.moved){if(event.type==='pointercancel'){strokes=strokes.map(l=>d.originals.get(l.id)||l);history.pop();}redraw();setReady(ready);}else paintBatchOverlay();return;}
+ if(batchDrag){const d=batchDrag;if(d.pointerId!==event?.pointerId)return;batchDrag=null;snapGuides=null;if(d.moved){if(event.type==='pointercancel'){strokes=strokes.map(l=>d.originals.get(l.id)||l);history=d.oldHistory;redoHistory=d.oldRedo;}redraw();setReady(ready);}else paintBatchOverlay();return;}
  if(layerDrag){
   const d=layerDrag;
   if(d.pointerId!=null&&event?.pointerId!=null&&d.pointerId!==event.pointerId)return;

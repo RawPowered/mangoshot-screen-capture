@@ -1,0 +1,13 @@
+const assert=require('node:assert/strict'),C=require('../tool-studio-core-v0711.js');
+const a={id:'a',bounds:{x:10,y:20,width:40,height:40}},b={id:'b',bounds:{x:100,y:80,width:20,height:20}},c={id:'c',bounds:{x:180,y:10,width:60,height:30}};
+assert.deepEqual(C.bounds([a.bounds,b.bounds,c.bounds]),{x:10,y:10,width:230,height:90});
+assert.deepEqual(C.align([a,b,c],'left'),[{id:'a',dx:0,dy:0},{id:'b',dx:-90,dy:0},{id:'c',dx:-170,dy:0}]);
+assert.deepEqual(C.align([a,b,c],'distribute-x'),[{id:'a',dx:0,dy:0},{id:'b',dx:5,dy:0},{id:'c',dx:0,dy:0}]);
+assert.deepEqual(C.align([a,b],'distribute-x'),[]);
+assert.deepEqual(C.rect({x:40,y:60},{x:20,y:10}),{x:20,y:10,width:20,height:50});
+assert.equal(C.intersects(a.bounds,{x:50,y:20,width:4,height:5}),true);
+assert.equal(C.intersects(a.bounds,{x:51,y:20,width:4,height:5}),false);
+assert.deepEqual(C.snap(a.bounds,-8,-17,[],400,300,6),{dx:-10,dy:-20,x:0,y:0});
+const p=C.preferences({last:{select:'marquee',draw:'wrong'},favorites:['pen','pen','unknown','marquee']});assert.equal(p.last.select,'marquee');assert.equal(p.last.draw,'pen');assert.deepEqual(p.favorites,['pen','marquee']);
+assert.deepEqual(C.preferences({favorites:['pen','tool-razor']},'clip').favorites,['tool-razor']);
+console.log('Tool Studio preferences, alignment, spacing, marquee intersection and snap geometry passed');
