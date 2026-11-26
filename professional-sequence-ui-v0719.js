@@ -38,7 +38,7 @@
   by('seq-export-webm').disabled=active||!mime('webm');by('seq-export-mp4').disabled=active||!mime('mp4');
   by('seq-inspect').disabled=active||!c;by('seq-delete').disabled=active||!c||c.locked||model.tracks[c.track].locked||P.attached(model,c);by('seq-lock').disabled=active||!c||model.tracks[c.track].locked;
   by('seq-dissolve').disabled=active||c?.track!=='V1'||!!model.transitions.find(t=>t.to===c?.id);by('seq-remove-dissolve').disabled=active||!model.transitions.some(t=>t.to===c?.id);
-  for(const b of d.querySelectorAll('#seq-track-controls button,#seq-assets button'))b.disabled=active;
+  for(const b of d.querySelectorAll('#seq-track-controls button,#seq-track-controls input,#seq-assets button'))b.disabled=active;
   for(const n of d.querySelectorAll('.seq-file'))n.setAttribute('aria-disabled',String(active));
  }
  function renderAssets(){const host=by('seq-assets');host.replaceChildren();if(!model.assets.length){host.append(e('p','seq-subtle','No media yet. A blank sequence can play or export without any source files.'));return;}
@@ -48,7 +48,8 @@
  }
  function renderSelection(){const host=by('seq-selection'),c=clip();host.replaceChildren();if(!c){host.append(e('p','seq-subtle','Select a clip on the timeline. Advanced controls open in a dedicated inspector.'));return;}host.append(e('strong','',c.track+' · '+name(c)),e('p','',fmt(c.start)+' → '+fmt(c.end)+' · '+fmt(c.end-c.start)),e('p','',(c.locked||model.tracks[c.track].locked?'LOCKED · ':'')+(P.attached(model,c)?'DISSOLVE ATTACHED · ':'')+'Source '+fmt(c.sourceIn)+' → '+fmt(c.sourceOut)));}
  function renderTracks(){const host=by('seq-track-controls');host.replaceChildren();for(const t of tracks){const ts=model.tracks[t],r=e('div','seq-track-control');r.append(e('span','',t));
-   for(const [field,on,off] of [['visible','Show','Hide'],['muted','Mute','Sound'],['locked','Lock','Edit']]){const b=button(ts[field]?on:off,guard(()=>{const n=clone(model);n.tracks[t][field]=!ts[field];commit(n,t+' track updated.');}),ts[field]);b.dataset.track=t;b.dataset.field=field;if(P.audio(t)&&field==='visible'||t==='G1'&&field==='muted'){b.disabled=true;b.hidden=true;}r.append(b);}host.append(r);}
+   for(const [field,on,off] of [['visible','Show','Hide'],['muted','Mute','Sound'],['locked','Lock','Edit']]){const b=button(ts[field]?on:off,guard(()=>{const n=clone(model);n.tracks[t][field]=!ts[field];commit(n,t+' track updated.');}),ts[field]);b.dataset.track=t;b.dataset.field=field;if(P.audio(t)&&field==='visible'||t==='G1'&&field==='muted'){b.disabled=true;b.hidden=true;}r.append(b);}host.append(r);
+   const levels=e('div','seq-track-levels');for(const field of (t==='G1'?['opacity']:P.audio(t)?['gain']:['opacity','gain'])){const l=e('label','',field==='gain'?'Gain %':'Opacity %'),n=e('input');n.type='number';n.id='seq-track-'+t+'-'+field;n.min='0';n.max=field==='gain'?'200':'100';n.step='1';n.value=String(Math.round(ts[field]*100));n.addEventListener('change',guard(()=>{const next=clone(model);next.tracks[t][field]=n.valueAsNumber/100;commit(next,t+' '+field+' updated.');}));l.append(n);levels.append(l);}host.append(levels);}
  }
  function laneWidth(){return Math.max(600,Math.min(300000,Math.round(model.settings.duration*zoom)));}
  function position(node,c){node.style.left=100*c.start/model.settings.duration+'%';node.style.width=Math.max(.001,100*(c.end-c.start)/model.settings.duration)+'%';}
@@ -99,7 +100,7 @@
     }catch(err){if(created&&key)registry.remove(key);if(relinked&&saved){registry.remove(saved.id);registry.addPlaceholder(saved);}if(!controller.signal.aborted)errors.push(f.name+': '+err.message);}
    }
   }finally{if(operation===controller){operation=null;setBusy(null);}}
-  if(imported.length){guard(()=>{commit(next,'Imported / relinked '+imported.length+' local media file(s).');render();void paintStill();if(placement&&!controller.signal.aborted){let t=placement.time;for(const id of imported){try{const added=place(id,placement.track,t,false);t=added.end;}catch(err){errors.push(err.message);}}}})();}
+  if(imported.length){guard(()=>{commit(next,'Imported / relinked '+imported.length+' local media file(s).');if(placement&&!controller.signal.aborted){let t=placement.time;for(const id of imported){try{const added=place(id,placement.track,t,false);t=added.end;}catch(err){errors.push(err.message);}}}})();}
   message((controller.signal.aborted?'Import cancelled. ':imported.length+' file(s) ready. ')+(errors.length?errors.join(' · '):''),!!errors.length);render();void paintStill();
  }
  function place(id,track,t,append){checkReady();const a=registry.get(id);if(!a||a.missing||!model.assets.some(x=>x.id===id))throw Error('Import or relink the selected source first.');const next=P.add(model,a,track,t,append),known=new Set(model.clips.map(c=>c.id)),c=next.clips.find(c=>!known.has(c.id));commit(next,append?'Primary source appended.':'Media placed on '+track+'.',c.id);return c;}

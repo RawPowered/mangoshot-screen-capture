@@ -20,6 +20,7 @@ body.popup #clipboard-edit{display:flex;justify-content:space-between;align-item
  color:var(--carbon-text);border-color:var(--carbon-line-strong)}
 body.popup .v0614-clipboard-action small{font:600 10px system-ui;letter-spacing:0;color:var(--carbon-text)}
 body.popup .v0614-footer{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+body.popup .v0614-footer #record{grid-column:1/-1}
 body.popup .v0614-footer button{min-height:35px;padding:7px;text-align:center;
  font-size:11px;background:var(--carbon-panel-alt)}
 body.popup a.resource-entry{min-height:35px;display:flex;align-items:center}

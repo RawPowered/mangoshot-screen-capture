@@ -15,6 +15,8 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   const seek=async t=>{await p.locator('#seq-scrub').evaluate((n,t)=>{n.value=String(t);n.dispatchEvent(new Event('input',{bubbles:true}));},t);await idle();};
   const color=async(t,kind)=>{await seek(t);const [r,g,b]=await pix();assert.ok(kind==='red'?r>150&&g<40&&b<40:kind==='blue'?b>150&&r<40&&g<40:kind==='purple'?r>70&&r<190&&b>70&&b<190&&g<40:r<10&&g<10&&b<10,JSON.stringify({t,kind,r,g,b}));};
   await color(.5,'red');await color(2.5,'purple');await color(4,'blue');await color(6,'black');await p.screenshot({path:path.join(out,'02-multi-source-sequence.png')});
+  // Numeric track mixer controls commit real model values and undo correctly.
+  await p.locator('#seq-track-V1-gain').fill('80');await p.locator('#seq-track-V1-gain').press('Tab');assert.equal((await state()).project.tracks.V1.gain,.8);await p.locator('#seq-undo').click();assert.equal((await state()).project.tracks.V1.gain,1);await idle();
   // Real independent A2 audio, fades, and waveform from decoded source samples.
   await seek(0);await p.locator('[data-asset="'+music.id+'"]').click();await p.locator('#seq-destination').selectOption('A2');await p.locator('#seq-add').click();await p.locator('#seq-inspect').click();await p.locator('#seq-field-gain').fill('0.25');await p.locator('#seq-field-fadeIn').fill('0.5');await p.locator('#seq-field-fadeOut').fill('0.5');await p.locator('#seq-clip-apply').click();await idle();await p.locator('#seq-waveform').click();await p.waitForFunction(()=>MangoSequenceWorkspaceV0719.state().waveforms.length===1&&!MangoSequenceWorkspaceV0719.state().busy);assert.ok(await p.locator('.seq-wave').count());
   // Title on the independent blank tail, using shared graphics.
