@@ -59,7 +59,7 @@
  function loadFx(v){kind.value=v.kind;color.value=v.color;blur.value=v.blur;x.value=v.offsetX;y.value=v.offsetY;blend.value=v.blend;}
  for(const p of C.presets){const b=btn('ls-preset-'+p.id+'-v0712',p.name,()=>{loadFx(p.fx);useFx.checked=true;preview();});b.style.setProperty('--ls-preset-color',p.fx.color);presets.append(b);}
  const previewCanvas=e('canvas',{id:'ls-preview-v0712',width:'480',height:'270','aria-label':'Draft appearance preview'});
- const previewHint=e('small',{class:'ls-muted-v0712'},image?'Draft preview of the current composition, scaled to fit.':'Selected graphics at the scrubbed time of the first selected graphic, over a neutral background.');
+ const previewHint=e('small',{class:'ls-muted-v0712'},image?'Draft preview of the current composition, scaled to fit.':'Current decoded footage frame with camera and grade. Scrub changes graphic animation time, not footage time.');
  const apply=btn('ls-apply-v0712','Apply effects',()=>{try{run('effects',effectArgs());}catch(err){message(err.message,true);}});apply.className='primary';
  fxPanel.append(e('h3',{},'Draft appearance'),previewCanvas,previewHint,line('ls-actions-v0712',opacityLabel,opacity,opacityValue),e('h3',{},'Layer effects'),fxLabel,presets,
   line('ls-fx-grid-v0712',label('Effect',kind),label('Color',color),label('Blur',blur),label('Blend',blend),label('Offset X',x),label('Offset Y',y)));
@@ -71,7 +71,7 @@
  const locate=btn('ls-locate-v0712',image?'Select in editor':'Select primary in editor',()=>{try{if(!chosen.size)throw Error('Select at least one layer.');host.select([...chosen]);dlg.close();}catch(err){message(err.message,true);}});
  const footer=line('ls-footer-v0712',status,locate);
  dlg.append(header,line('ls-tabs-v0712',layerTab,fxTab),line('ls-work-v0712',left,right),footer);doc.body.append(dlg);
- let state=null,chosen=new Set(),collapsed=new Set(),tab='layers',returnFocus=null,previewFrame=0;
+ let state=null,chosen=new Set(),collapsed=new Set(),tab='layers',returnFocus=null,previewFrame=0,stackDraft=[],stackChanged=false;const dialRefresh=[];
  function message(text,error=false){status.textContent=text;status.dataset.error=String(error);}
  function shown(){
   const q=search.value.trim().toLowerCase(),t=type.value,f=filter.value;
@@ -82,7 +82,7 @@
  function updateButtons(){
   const selected=(state?.layers||[]).filter(l=>chosen.has(l.id)),locked=selected.some(l=>l.locked),can=!!state?.ready&&selected.length>0;
   for(const {b,command} of actions)b.disabled=!can||(locked&&!['lock','visibility'].includes(command))||(command==='effects'&&selected.some(l=>!l.eligible));
-  apply.disabled=!can||locked||selected.some(l=>!l.eligible)||!(useOpacity.checked||useFx.checked||(!image&&(useFade.checked||useOutline.checked||useMotion.checked)));
+  apply.disabled=!can||locked||selected.some(l=>!l.eligible)||!(useOpacity.checked||useFx.checked||stackChanged||(!image&&(useFade.checked||useOutline.checked||useMotion.checked)));
   locate.disabled=!can;
   selectedLabel.textContent=chosen.size+' selected / '+(state?.layers.length||0);
  }
@@ -114,7 +114,7 @@
  }
  function effectArgs(){
   const out={};
-  if(useOpacity.checked)out.opacity=Number(opacity.value)/100;
+  if(useOpacity.checked)out.opacity=Number(opacity.value)/100;if(stackChanged)out.effectStack=root.MangoCompositorV0714.checkStack(stackDraft);
   if(useFx.checked)out.fx=C.checkFx({kind:kind.value,color:color.value,blur:blur.valueAsNumber,offsetX:x.valueAsNumber,offsetY:y.valueAsNumber,blend:blend.value});
   if(!image&&useFade.checked)out.fade={in:fadeIn.valueAsNumber,out:fadeOut.valueAsNumber};
   if(!image&&useOutline.checked)out.outline={color:outline.value,width:outlineWidth.valueAsNumber};
@@ -122,7 +122,7 @@
   return out;
  }
  function preview(){
-  opacityValue.textContent=opacity.value+'%';updateButtons();
+  opacityValue.textContent=opacity.value+'%';for(const update of dialRefresh)update();updateButtons();
   if(tab!=='effects'||!dlg.open)return;
   if(previewFrame)root.cancelAnimationFrame(previewFrame);
   previewFrame=root.requestAnimationFrame(()=>{previewFrame=0;
@@ -137,7 +137,7 @@
   opacity.value=Math.round((first?.opacity??1)*100);loadFx(first?.fx||C.appearance(null));fadeIn.value=first?.fadeIn??0;fadeOut.value=first?.fadeOut??0;outline.value=first?.outline||'#000000';outlineWidth.value=first?.outlineWidth??0;
   rotationAngle.value=first?.rotation||0;
   path.value=first?.group.join(' / ')||'';name.value=chosen.size===1?first?.name||'':'';
-  updateButtons();preview();
+  stackDraft=root.MangoCompositorV0714?.copy(first?.effectStack||[])||[];stackChanged=false;renderStack();for(const update of dialRefresh)update();updateButtons();preview();
  }
  function mode(next){tab=next;organize.hidden=next!=='layers';fxPanel.hidden=next!=='effects';layerTab.setAttribute('aria-pressed',String(next==='layers'));fxTab.setAttribute('aria-pressed',String(next==='effects'));preview();}
  function refresh(keep=true){state=host.state();chosen=new Set((keep?[...chosen]:state.selection).filter(id=>state.layers.some(l=>l.id===id)));renderTree();syncEffects();}
@@ -151,8 +151,30 @@
   if(dlg.open){refresh(false);mode(next);search.focus();return;}
   if(doc.querySelector('dialog[open]'))return;
   returnFocus=event?.currentTarget||doc.activeElement;for(const m of doc.querySelectorAll('.v06-menu[open]'))m.open=false;
-  root.MangoToolGroupsV071?.close?.();search.value='';type.value='all';filter.value='all';collapsed.clear();refresh(false);dlg.showModal();mode(next);search.focus();if(!state.ready)message(state.reason,true);else if(next==='layers')message('Select layers to organize or apply effects.');
+  root.MangoToolGroupsV071?.close?.();search.value='';type.value='all';filter.value='all';collapsed.clear();refresh(false);dlg.showModal();mode(next);(next==='effects'?fxTab:search).focus();if(!state.ready)message(state.reason,true);else if(next==='layers')message('Select layers to organize or apply effects.');else if(!chosen.size)message('Select a layer in the editor or the list to begin.',true);
  }
+ const F=root.MangoCompositorV0714,U=root.MangoCalloutMotionUIV0736;
+ const stackBox=e('section',{class:'fx42-stack',id:'fx42-stack-panel',hidden:''}),stackList=e('div',{id:'fx42-stack-list'}),stackPreset=select('fx42-preset',[['','Choose filter preset'],...(F?.presets||[]).map(p=>[p.id,p.name])]),stackKind=select('fx42-kind',(F?.effects||[]).map(k=>[k,F.specs[k].label]));
+ stackBox.append(e('h3',{},'Ordered filter stack'),line('ls-fx-grid-v0712',stackPreset,stackKind),btn('fx42-add','Add filter',()=>{if(!F||stackDraft.length>=F.MAX_STACK)return;const k=stackKind.value;stackDraft.push({kind:k,value:F.specs[k].initial,enabled:true});stackChanged=true;renderStack();preview();}),stackList);
+ const applyRow=apply.parentElement,appearance=e('div',{class:'fx42-appearance'}),previewRow=e('div',{class:'fx42-preview-box'}),toolTabs=e('div',{class:'fx42-tabs'});
+ const appearanceTab=btn('fx42-appearance-tab','Appearance',()=>showFx('appearance')),filtersTab=btn('fx42-filters-tab','Filters',()=>showFx('filters'));toolTabs.append(appearanceTab,filtersTab);
+ // Keep preview, edit categories and Apply as separate regions, rather than one long tree.
+ const firstHeading=fxPanel.firstElementChild;firstHeading?.remove();previewRow.append(previewCanvas,previewHint);for(const n of [...fxPanel.children])if(n!==applyRow)appearance.append(n);
+ fxPanel.insertBefore(toolTabs,applyRow);fxPanel.insertBefore(previewRow,applyRow);fxPanel.insertBefore(appearance,applyRow);fxPanel.insertBefore(stackBox,applyRow);
+ function showFx(mode){appearance.hidden=mode!=='appearance';stackBox.hidden=mode!=='filters';appearanceTab.setAttribute('aria-pressed',String(mode==='appearance'));filtersTab.setAttribute('aria-pressed',String(mode==='filters'));}
+ showFx('appearance');
+ stackPreset.onchange=()=>{const p=F?.presets.find(p=>p.id===stackPreset.value);if(!p)return;stackDraft=F.copy(p.stack);stackChanged=true;stackPreset.value='';renderStack();preview();};
+ function renderStack(){if(!F)return;stackList.replaceChildren();if(!stackDraft.length)stackList.append(e('small',{class:'ls-muted-v0712'},'No filters. Choose a preset or add a filter.'));
+  stackDraft.forEach((a,i)=>{const s=F.specs[a.kind],row=e('div',{class:'fx42-filter'}),enable=field('fx42-enabled-'+i,'checkbox','1'),value=field('fx42-value-'+i,'number',String(a.value),{min:String(s.min),max:String(s.max),step:'any'}),range=field('fx42-range-'+i,'range',String(a.value),{min:String(s.min),max:String(s.max),step:String(s.step),'aria-label':s.label+' slider'});enable.checked=a.enabled;
+   const set=v=>{if(!Number.isFinite(v))return;a.value=Math.max(s.min,Math.min(s.max,Math.round(v*1000)/1000));value.value=range.value=String(a.value);dial?.refresh();stackChanged=true;preview();};
+   const dial=U?.dial(s.label,s.min,s.max,s.step,()=>a.value,set,()=>s.initial,false);enable.onchange=()=>{a.enabled=enable.checked;stackChanged=true;preview();};value.onchange=()=>set(value.valueAsNumber);range.oninput=()=>set(range.valueAsNumber);
+   const move=delta=>{const j=i+delta;if(j<0||j>=stackDraft.length)return;[stackDraft[i],stackDraft[j]]=[stackDraft[j],stackDraft[i]];stackChanged=true;renderStack();preview();};
+   const up=btn('fx42-up-'+i,'↑',()=>move(-1)),down=btn('fx42-down-'+i,'↓',()=>move(1)),del=btn('fx42-remove-'+i,'×',()=>{stackDraft.splice(i,1);stackChanged=true;renderStack();preview();});up.disabled=i===0;down.disabled=i===stackDraft.length-1;up.title='Move filter earlier';down.title='Move filter later';del.title='Remove filter';enable.setAttribute('aria-label','Enable '+s.label);row.append(line('fx42-filter-head',enable,e('strong',{},s.label),up,down,del),line('fx42-values',...(dial?[dial.element]:[]),range,value));stackList.append(row);
+  });
+ }
+ function addDial(input,label,min,max,step,initial,enable){if(!U||!input?.parentElement)return;const dial=U.dial(label,min,max,step,()=>Number(input.value),v=>{input.value=String(Math.round(v*1000)/1000);if(enable)enable.checked=true;preview();},()=>initial,false);const box=e('span',{class:'fx42-values'});input.before(box);box.append(dial.element,input);dialRefresh.push(dial.refresh);input.addEventListener('input',()=>{if(enable)enable.checked=true;dial.refresh();preview();});}
+ for(const [input,label,min,max,step,initial,enable] of [[opacity,'Layer opacity',0,100,1,100,useOpacity],[blur,'Shadow / glow blur',0,100,1,0,useFx],[x,'Shadow X',-100,100,1,0,useFx],[y,'Shadow Y',-100,100,1,0,useFx],...(!image?[[fadeIn,'Fade in',0,10,.05,0,useFade],[fadeOut,'Fade out',0,10,.05,0,useFade],[outlineWidth,'Outline width',0,16,.5,0,useOutline],[enterDuration,'Entry duration',.08,5,.05,.45,useMotion],[exitDuration,'Exit duration',.08,5,.05,.35,useMotion]]:[])])addDial(input,label,min,max,step,initial,enable);
+ for(const [input,enable] of [[kind,useFx],[color,useFx],[blend,useFx],...(!image?[[outline,useOutline],[enter,useMotion],[exit,useMotion],[enterEase,useMotion],[exitEase,useMotion]]:[])])input.addEventListener('input',()=>{enable.checked=true;preview();});
  for(const input of [search,type,filter])input.addEventListener('input',renderTree);
  for(const input of [useOpacity,useFx,useFade,useOutline,opacity,kind,color,blur,x,y,blend,fadeIn,fadeOut,outline,outlineWidth,useMotion,enter,exit,enterDuration,exitDuration,enterEase,exitEase,scrub])input.addEventListener('input',preview);
  dlg.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();dlg.close();}},true);
