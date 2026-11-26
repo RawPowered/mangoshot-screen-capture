@@ -109,6 +109,7 @@
  function hit(s,x,y,pad=10){
   if(!isVector(s)||s.visible===false)return false;
   const b=bounds(s),p=pad+style(s).strokeWidth/2;
+  if(s.callout3d?.mode==='spatial')return root.MangoSpatialRendererV0730.hit(s.callout3d,b,x,y,pad);
   if(kindOf(s)==='line'||kindOf(s)==='arrow'){
    const a=s.points[0],z=s.points.at(-1),dx=z.x-a.x,dy=z.y-a.y;
    const t=clamp(((x-a.x)*dx+(y-a.y)*dy)/Math.max(1,dx*dx+dy*dy),0,1);

@@ -47,7 +47,11 @@
   const scale=Math.max(.05,sx,sy),c=render(value,b.width*scale,b.height*scale);
   q.save();try{q.globalAlpha*=Math.max(0,Math.min(1,opacity));q.drawImage(c,b.x,b.y,b.width,b.height);}finally{q.restore();}return true;
  }
+ function hit(value,b,x,y,pad=6){if(!b||b.width<=0||b.height<=0||x<b.x-pad||y<b.y-pad||x>b.x+b.width+pad||y>b.y+b.height+pad)return false;
+  const factor=Math.min(1,512/b.width,512/b.height),c=render(value,b.width*factor,b.height*factor),px=(x-b.x)*c.width/b.width,py=(y-b.y)*c.height/b.height,r=Math.max(2,Math.ceil(pad*factor)),left=Math.max(0,Math.floor(px-r)),top=Math.max(0,Math.floor(py-r)),right=Math.min(c.width,Math.ceil(px+r)),bottom=Math.min(c.height,Math.ceil(py+r));if(right<=left||bottom<=top)return false;
+  const a=c.getContext('2d').getImageData(left,top,right-left,bottom-top).data;for(let i=3;i<a.length;i+=4)if(a[i]>20)return true;return false;
+ }
  function stats(){return {backend:'WebGL2 / depth-tested triangles',draws,hits,cachedPixels,entries:cache.size};}
  function clear(){for(const k of [...cache.keys()])drop(k);}
- root.MangoSpatialRendererV0730=Object.freeze({render,paint,requireRenderer,stats,clear,dimensions});
+ root.MangoSpatialRendererV0730=Object.freeze({render,paint,hit,requireRenderer,stats,clear,dimensions});
 })(typeof globalThis!=='undefined'?globalThis:this);

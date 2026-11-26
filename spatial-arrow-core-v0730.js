@@ -24,21 +24,22 @@
   const v=check(value),p=v.points,out=[p[0].slice()];
   for(let i=0;i<p.length-1;i++){
    const a=p[Math.max(0,i-1)],b=p[i],c=p[i+1],d=p[Math.min(p.length-1,i+2)];
-   for(let j=1;j<=12;j++){const t=j/12,t2=t*t,t3=t2*t,q=v.smooth?b.map((x,k)=>.5*(2*x+(-a[k]+c[k])*t+(2*a[k]-5*x+4*c[k]-d[k])*t2+(-a[k]+3*x-3*c[k]+d[k])*t3)):lerp(b,c,t);if(length(sub(q,out.at(-1)))>EPS)out.push(q);}
+   for(let j=1;j<=12;j++){const t=j/12,t2=t*t,t3=t2*t,q=j===12?c.slice():v.smooth?b.map((x,k)=>.5*(2*x+(-a[k]+c[k])*t+(2*a[k]-5*x+4*c[k]-d[k])*t2+(-a[k]+3*x-3*c[k]+d[k])*t3)):lerp(b,c,t);if(length(sub(q,out.at(-1)))>EPS)out.push(q);}
   }return out;
  }
  function frame(t,old){let n=old?sub(old,mul(t,dot(old,t))):[0,0,0];if(length(n)<.001)n=cross(t,Math.abs(t[1])<.85?[0,1,0]:[1,0,0]);n=unit(n);return {n,b:unit(cross(t,n))};}
  function mesh(value){
   const v=check(value),samples=centerline(v),lengths=[0];for(let i=1;i<samples.length;i++)lengths.push(lengths.at(-1)+length(sub(samples[i],samples[i-1])));
-  const total=lengths.at(-1),headLength=Math.min(v.headLength,total*.42),cut=total-headLength;
+  const total=lengths.at(-1),headLength=Math.min(v.headLength,total*.42);let cut=total-headLength;
   let i=1;while(i<lengths.length-1&&lengths[i]<cut)i++;
-  const center=lerp(samples[i-1],samples[i],(cut-lengths[i-1])/Math.max(EPS,lengths[i]-lengths[i-1]));
+  let center=lerp(samples[i-1],samples[i],(cut-lengths[i-1])/Math.max(EPS,lengths[i]-lengths[i-1]));
+  if(length(sub(samples.at(-1),center))<EPS){i=samples.length-1;center=samples[i-1].slice();}
   const shaft=samples.slice(0,i);if(length(sub(center,shaft.at(-1)))>EPS)shaft.push(center);else shaft[shaft.length-1]=center;
   const tip=samples.at(-1),headT=unit(sub(tip,center)),vertices=[],normals=[],rings=[];let old=null;
   const tri=(a,b,c,na,nb,nc)=>{vertices.push(...a,...b,...c);normals.push(...na,...nb,...nc);};
   const radial=(f,k)=>add(mul(f.n,Math.cos(k*2*Math.PI/SIDES)),mul(f.b,Math.sin(k*2*Math.PI/SIDES)));
   for(let j=0;j<shaft.length;j++){
-   const p=shaft[j],t=j===shaft.length-1?headT:unit(sub(shaft[Math.min(shaft.length-1,j+1)],shaft[Math.max(0,j-1)])),f=frame(t,old);old=f.n;
+   const p=shaft[j],delta=sub(shaft[Math.min(shaft.length-1,j+1)],shaft[Math.max(0,j-1)]),t=j===shaft.length-1?headT:unit(length(delta)>EPS?delta:sub(shaft[j+1],shaft[j])),f=frame(t,old);old=f.n;
    rings.push({p,t,f,points:Array.from({length:SIDES},(_,k)=>{const n=radial(f,k);return {n,p:add(p,mul(n,v.radius))};})});
   }
   for(let j=1;j<rings.length;j++)for(let k=0;k<SIDES;k++){const z=(k+1)%SIDES,a=rings[j-1].points[k],b=rings[j-1].points[z],c=rings[j].points[k],d=rings[j].points[z];tri(a.p,b.p,c.p,a.n,b.n,c.n);tri(b.p,d.p,c.p,b.n,d.n,c.n);}

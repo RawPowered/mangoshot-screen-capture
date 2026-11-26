@@ -12,7 +12,7 @@
   let value=S.check(initial),camera=S.copy(value.camera),viewMode='output',selected=0,drag=null,frame=0,error=null;
   const locked=!!opts.locked,prefix=opts.prefix||'sa',wrap=el('section','sa-editor-v0730'),toolbar=el('div','sa-toolbar-v0730'),stage=el('canvas','sa-view-v0730'),controls=el('div','sa-controls-v0730'),status=el('p','sa-status-v0730'),nodeList=select(prefix+'-node',[]),mode=select(prefix+'-mode',[['node','Path point'],['object','Whole arrow']]);
   const reference=opts.reference||null,aspect=opts.aspect||((reference?.width||16)/(reference?.height||9));
-  stage.width=Math.max(1,Math.round(Math.min(780,420*aspect)));stage.height=Math.max(1,Math.round(stage.width/aspect));stage.id=prefix+'-viewport';stage.tabIndex=0;stage.setAttribute('aria-label','Interactive 3D path viewport. Drag point or axis; Alt drag to orbit; wheel zooms.');
+  stage.width=Math.max(1,Math.round(Math.min(780,420*aspect)));stage.height=Math.max(1,Math.round(stage.width/aspect));stage.style.maxWidth=stage.width+'px';stage.id=prefix+'-viewport';stage.tabIndex=0;stage.setAttribute('aria-label','Interactive 3D path viewport. Drag point or axis; Alt drag to orbit; wheel zooms.');
   const viewButtons=new Map();
   function setView(k){viewMode=k;camera=k==='output'?S.copy(value.camera):{...S.copy(value.camera),projection:'orthographic',azimuth:k==='right'?90:0,elevation:k==='top'?89.5:0};sync();}
   for(const [k,t] of [['output','Output camera'],['front','Front'],['top','Top'],['right','Right']]){const b=button(prefix+'-view-'+k,t,()=>setView(k));toolbar.append(b);viewButtons.set(k,b);}
@@ -83,9 +83,10 @@
    const next=S.copy(drag.original);next.points=next.points.map((p,i)=>drag.whole||i===drag.selected?S.add(p,delta):p);
    try{value=S.check(next);error=null;sync();}catch(e){error=e.message;schedule();}
   });
-  for(const k of ['pointerup','pointercancel','lostpointercapture'])stage.addEventListener(k,e=>{if(drag?.id===e.pointerId)drag=null;});
+  stage.addEventListener('pointercancel',e=>{if(drag?.id===e.pointerId){value=drag.original;camera=drag.camera;drag=null;sync();}});
+  for(const k of ['pointerup','lostpointercapture'])stage.addEventListener(k,e=>{if(drag?.id===e.pointerId)drag=null;});
   stage.addEventListener('wheel',e=>{if(locked)return;e.preventDefault();changeCamera({...camera,distance:clamp(camera.distance*Math.exp(e.deltaY*.001),2,18)});},{passive:false});
-  sync();return {value(){R.requireRenderer();return S.check(value);},view:()=>S.copy(camera),refresh:sync};
+  sync();return {value(){R.requireRenderer();R.render(value,stage.width,stage.height);return S.check(value);},view:()=>S.copy(camera),refresh:sync};
  }
  root.MangoSpatialArrowUIV0730=Object.freeze({editor});
 })(typeof globalThis!=='undefined'?globalThis:this);
