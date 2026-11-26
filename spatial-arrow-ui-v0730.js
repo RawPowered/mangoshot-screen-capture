@@ -9,16 +9,18 @@
  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),wrapAngle=a=>((a+180)%360+360)%360-180;
  const axes=[{v:[1,0,0],c:'#ff716e',name:'X'},{v:[0,1,0],c:'#83dc8a',name:'Y'},{v:[0,0,1],c:'#73b6ff',name:'Z'}];
  function editor(host,initial,opts={}){
-  let value=S.check(initial),camera=S.copy(value.camera),viewMode='output',selected=0,drag=null,frame=0,error=null;
+  let value=S.check(initial),camera=S.copy(value.camera),viewMode='output',selected=0,drag=null,frame=0,error=null,topologyLocked=false,maskDraft=null;
   const locked=!!opts.locked,prefix=opts.prefix||'sa',wrap=el('section','sa-editor-v0730'),toolbar=el('div','sa-toolbar-v0730'),stage=el('canvas','sa-view-v0730'),controls=el('div','sa-controls-v0730'),status=el('p','sa-status-v0730'),nodeList=select(prefix+'-node',[]),mode=select(prefix+'-mode',[['node','Path point'],['object','Whole arrow']]);
   const reference=opts.reference||null,aspect=opts.aspect||((reference?.width||16)/(reference?.height||9));
   stage.width=Math.max(1,Math.round(Math.min(780,420*aspect)));stage.height=Math.max(1,Math.round(stage.width/aspect));stage.style.maxWidth=stage.width+'px';stage.id=prefix+'-viewport';stage.tabIndex=0;stage.setAttribute('aria-label','Interactive 3D path viewport. Drag point or axis; Alt drag to orbit; Shift drag to pan; wheel zooms.');
   const viewButtons=new Map();
-  function setView(k){viewMode=k;camera=k==='output'?S.copy(value.camera):{...S.copy(value.camera),projection:'orthographic',azimuth:k==='right'?90:0,elevation:k==='top'?89.5:0};sync();}
+  function setView(k){maskDraft=null;viewMode=k;camera=k==='output'?S.copy(value.camera):{...S.copy(value.camera),projection:'orthographic',azimuth:k==='right'?90:0,elevation:k==='top'?89.5:0};sync();}
   for(const [k,t] of [['output','Output camera'],['front','Front'],['top','Top'],['right','Right']]){const b=button(prefix+'-view-'+k,t,()=>setView(k));toolbar.append(b);viewButtons.set(k,b);}
   const use=button(prefix+'-use-camera','Use view as output',()=>{if(locked)return;value.camera=S.checkCamera(camera);viewMode='output';sync();});
   const bg=el('input');bg.type='checkbox';bg.checked=!!reference;bg.disabled=!reference;bg.id=prefix+'-reference';bg.onchange=schedule;
-  toolbar.append(use,field('Frame reference',bg));const geometry=el('div','sa-panel-v0730'),surface=el('div','sa-panel-v0730'),cameraBox=el('div','sa-panel-v0730'),fields=el('div','sa-grid-v0730'),pose=el('div','sa-grid-v0730'),cameraFields=el('div','sa-grid-v0730');
+  toolbar.append(use,field('Frame reference',bg));
+  const occlude=button(prefix+'-occlude','Draw foreground mask',()=>{if(locked)return;setView('output');maskDraft=[];sync();}),finishMask=button(prefix+'-mask-finish','Close mask',()=>{if(!maskDraft||maskDraft.length<3)return;const poly=maskDraft;maskDraft=null;edit(v=>{v.occlusion=[...(v.occlusion||[]),poly];});}),cancelMask=button(prefix+'-mask-cancel','Cancel drawing',()=>{maskDraft=null;sync();}),removeMask=button(prefix+'-mask-remove','Undo last mask',()=>edit(v=>{const a=(v.occlusion||[]).slice(0,-1);if(a.length)v.occlusion=a;else delete v.occlusion;})),clearMask=button(prefix+'-mask-clear','Clear masks',()=>edit(v=>{delete v.occlusion;}));
+  const maskTools=el('div','sa-toolbar-v0730');maskTools.append(occlude,finishMask,cancelMask,removeMask,clearMask);const geometry=el('div','sa-panel-v0730'),surface=el('div','sa-panel-v0730'),cameraBox=el('div','sa-panel-v0730'),fields=el('div','sa-grid-v0730'),pose=el('div','sa-grid-v0730'),cameraFields=el('div','sa-grid-v0730');
   const add=button(prefix+'-add-node','Insert point',()=>{const i=Math.min(selected,value.points.length-2),p=value.points[i],q=value.points[i+1],v=p.map((x,k)=>(x+q[k])/2);edit(n=>{n.points.splice(i+1,0,v);},i+1);});
   const remove=button(prefix+'-remove-node','Delete point',()=>{if(value.points.length<=2)return;edit(n=>{n.points.splice(selected,1);},Math.max(0,selected-1));});
   const reset=button(prefix+'-reset','Reset path',()=>{edit(n=>{n.points=S.defaults().points;},0);});
@@ -43,7 +45,7 @@
   }
   const targets=[];for(let i=0;i<3;i++){const n=el('input');n.type='number';n.id=prefix+'-target-'+axes[i].name.toLowerCase();n.min=-S.LIMIT;n.max=S.LIMIT;n.step='any';n.onchange=()=>{const t=camera.target.slice();t[i]=n.valueAsNumber;changeCamera({...camera,target:t});};targets.push(n);cameraFields.append(field('Target '+axes[i].name,n));}
   const proj=select(prefix+'-projection',[['perspective','Perspective'],['orthographic','Orthographic']]);proj.onchange=()=>changeCamera({...camera,projection:proj.value});cameraFields.append(field('Projection',proj));cameraBox.append(el('strong','','CAMERA / VIEW'),cameraFields,el('small','','Alt-drag or right-drag to orbit; Shift-drag to pan; wheel to dolly. Inspection views do not change the output until applied.'));
-  controls.append(geometry,surface,cameraBox);status.id=prefix+'-status';status.setAttribute('role','status');wrap.append(el('strong','','SPATIAL 3D ARROW / REAL XYZ MESH'),toolbar,stage,el('p','sa-status-v0730','Reference frame is a local 2D compositing guide, not reconstructed scene depth.'),controls,status);host.append(wrap);
+  controls.append(geometry,surface,cameraBox);status.id=prefix+'-status';status.setAttribute('role','status');wrap.append(el('strong','','SPATIAL 3D ARROW / REAL XYZ MESH'),toolbar,stage,maskTools,el('p','sa-status-v0730','Reference frame is a local 2D compositing guide, not reconstructed scene depth.'),controls,status);host.append(wrap);
   const allInputs=[...xyz,...params.values(),color,material,smooth,...cameraInputs.values(),...targets,proj,mode,add,remove,reset,use,...rotations.querySelectorAll('button')];for(const n of allInputs)n.disabled=locked;
   nodeList.onchange=()=>{selected=Number(nodeList.value);sync();};mode.onchange=schedule;
   function edit(fn,i=selected){if(locked)return;try{const next=S.copy(value);fn(next);value=S.check(next);selected=clamp(i,0,value.points.length-1);error=null;sync();}catch(e){error=e.message;sync();}}
@@ -52,23 +54,25 @@
    const active=d.activeElement;nodeList.replaceChildren();value.points.forEach((p,i)=>{const o=el('option','',(i+1)+' · '+p.map(v=>v.toFixed(2)).join(', '));o.value=i;nodeList.append(o);});nodeList.value=selected;
    xyz.forEach((n,i)=>{if(active!==n)n.value=value.points[selected][i].toFixed(3);});for(const [k,n] of params)if(active!==n)n.value=value[k];color.value=value.color;material.value=value.material;smooth.checked=value.smooth;
    for(const [k,n] of cameraInputs)if(active!==n)n.value=Number(camera[k]).toFixed(k==='distance'?2:1);proj.value=camera.projection;targets.forEach((n,i)=>{if(active!==n)n.value=camera.target[i].toFixed(3);});
-   add.disabled=locked||value.points.length>=S.MAX_NODES;remove.disabled=locked||value.points.length<=2;use.disabled=locked||viewMode==='output';for(const [k,n] of viewButtons)n.setAttribute('aria-pressed',String(k===viewMode));schedule();
+   add.disabled=locked||topologyLocked||value.points.length>=S.MAX_NODES;remove.disabled=locked||topologyLocked||value.points.length<=2;reset.disabled=locked||topologyLocked;
+   occlude.disabled=locked||!!maskDraft||(value.occlusion||[]).length>=4;finishMask.disabled=locked||!maskDraft||maskDraft.length<3;cancelMask.disabled=locked||!maskDraft;removeMask.disabled=clearMask.disabled=locked||!(value.occlusion||[]).length;use.disabled=locked||viewMode==='output';for(const [k,n] of viewButtons)n.setAttribute('aria-pressed',String(k===viewMode));schedule();
   }
   function schedule(){if(!frame)frame=requestAnimationFrame(()=>{frame=0;if(!wrap.isConnected)return;draw();});}
   function draw(){
    const q=stage.getContext('2d'),w=stage.width,h=stage.height;q.clearRect(0,0,w,h);q.fillStyle='#171c22';q.fillRect(0,0,w,h);
    if(viewMode==='output'&&bg.checked&&reference){q.save();q.globalAlpha=.68;q.drawImage(reference,0,0,w,h);q.restore();}
    else{q.strokeStyle='#29333c';q.lineWidth=1;for(let i=0;i<=w;i+=32){q.beginPath();q.moveTo(i,0);q.lineTo(i,h);q.stroke();}for(let i=0;i<=h;i+=32){q.beginPath();q.moveTo(0,i);q.lineTo(w,i);q.stroke();}}
-   try{R.paint(q,{...value,camera},{x:0,y:0,width:w,height:h});}catch(e){status.textContent=e.message;return;}
+   try{const renderValue={...value,camera};if(viewMode!=='output')delete renderValue.occlusion;R.paint(q,renderValue,{x:0,y:0,width:w,height:h});}catch(e){status.textContent=e.message;return;}
    const pp=p=>S.project(p,camera,w,h),samples=S.centerline(value);q.strokeStyle='#e3e9f1';q.lineWidth=1;q.setLineDash([4,4]);q.beginPath();let begun=false;for(const p of samples){const a=pp(p);if(!a){begun=false;continue;}if(!begun){q.moveTo(a.x,a.y);begun=true;}else q.lineTo(a.x,a.y);}q.stroke();q.setLineDash([]);
    value.points.forEach((p,i)=>{const a=pp(p);if(!a)return;q.beginPath();q.arc(a.x,a.y,i===selected?6:4,0,Math.PI*2);q.fillStyle=i===selected?'#b9f75c':'#e3e9f1';q.fill();q.strokeStyle='#11161b';q.stroke();q.fillStyle='#fff';q.font='11px system-ui';q.fillText(String(i+1),a.x+8,a.y-8);});
    const origin=pp(value.points[selected]);if(origin)for(const ax of axes){const b=pp(S.add(value.points[selected],S.mul(ax.v,.65)));if(!b)continue;q.strokeStyle=ax.c;q.fillStyle=ax.c;q.lineWidth=2;q.beginPath();q.moveTo(origin.x,origin.y);q.lineTo(b.x,b.y);q.stroke();q.fillRect(b.x-4,b.y-4,8,8);q.fillText(ax.name,b.x+6,b.y+3);}
-   status.textContent=error||value.points.length+' XYZ points · '+S.mesh(value).triangles+' triangles · '+camera.projection+' · '+(viewMode==='output'?'output camera':'inspection view')+' · WebGL2 depth test';
+   if(viewMode==='output'){const polys=[...(value.occlusion||[]),...(maskDraft?[maskDraft]:[])];q.save();try{q.strokeStyle='#efc06a';q.fillStyle='#efc06a22';q.lineWidth=1.5;q.setLineDash([4,3]);for(const poly of polys){if(!poly.length)continue;q.beginPath();poly.forEach(([x,y],i)=>i?q.lineTo(x*w,y*h):q.moveTo(x*w,y*h));if(poly!==maskDraft){q.closePath();q.fill('evenodd');}q.stroke();for(const [x,y] of poly)q.fillRect(x*w-2,y*h-2,4,4);}}finally{q.restore();}}
+   status.textContent=error||(maskDraft?'Click around foreground object, then Close mask · '+maskDraft.length+' vertices':value.points.length+' XYZ points · '+S.mesh(value).triangles+' triangles · '+camera.projection+' · '+(viewMode==='output'?'output camera':'inspection view')+' · WebGL2 depth test · '+(value.occlusion||[]).length+' foreground masks');
   }
   function local(e){const r=stage.getBoundingClientRect();return {x:(e.clientX-r.left)*stage.width/r.width,y:(e.clientY-r.top)*stage.height/r.height};}
   stage.addEventListener('contextmenu',e=>e.preventDefault());
   stage.addEventListener('pointerdown',e=>{
-   if(locked||drag||![0,2].includes(e.button))return;e.preventDefault();const p=local(e),w=stage.width,h=stage.height,origin=S.project(value.points[selected],camera,w,h);
+   if(locked||drag||![0,2].includes(e.button))return;e.preventDefault();const p=local(e),w=stage.width,h=stage.height;if(maskDraft){if(e.button===0&&maskDraft.length<64){maskDraft.push([clamp(p.x/w,0,1),clamp(p.y/h,0,1)]);sync();}return;}const origin=S.project(value.points[selected],camera,w,h);
    let axis=null,kind=e.shiftKey?'pan':'orbit',best=16;
    if(e.button===0&&!e.altKey&&!e.shiftKey){
     if(origin)for(const a of axes){const b=S.project(S.add(value.points[selected],S.mul(a.v,.65)),camera,w,h);if(!b||Math.hypot(b.x-origin.x,b.y-origin.y)<10)continue;const dist=Math.hypot(p.x-b.x,p.y-b.y);if(dist<best){axis=a.v;best=dist;}}
@@ -88,8 +92,8 @@
   });
   stage.addEventListener('pointercancel',e=>{if(drag?.id===e.pointerId){value=drag.original;camera=drag.camera;drag=null;sync();}});
   for(const k of ['pointerup','lostpointercapture'])stage.addEventListener(k,e=>{if(drag?.id===e.pointerId)drag=null;});
-  stage.addEventListener('wheel',e=>{if(locked)return;e.preventDefault();changeCamera({...camera,distance:clamp(camera.distance*Math.exp(e.deltaY*.001),2,18)});},{passive:false});
-  sync();return {value(){R.requireRenderer();R.render(value,stage.width,stage.height);return S.check(value);},view:()=>S.copy(camera),refresh:sync};
+  stage.addEventListener('wheel',e=>{if(locked||maskDraft)return;e.preventDefault();changeCamera({...camera,distance:clamp(camera.distance*Math.exp(e.deltaY*.001),2,18)});},{passive:false});
+  sync();return {value(){if(maskDraft)throw Error('Finish or cancel the foreground polygon.');R.requireRenderer();R.render(value,stage.width,stage.height);return S.check(value);},draft(){if(maskDraft)throw Error('Finish or cancel the foreground polygon.');return S.check(value);},load(v){value=S.check(v);camera=S.copy(value.camera);viewMode='output';selected=clamp(selected,0,value.points.length-1);maskDraft=null;error=null;sync();},setTopologyLocked(v){topologyLocked=!!v;sync();},view:()=>S.copy(camera),refresh:sync};
  }
  root.MangoSpatialArrowUIV0730=Object.freeze({editor});
 })(typeof globalThis!=='undefined'?globalThis:this);

@@ -23,10 +23,10 @@
  function requireRenderer(){if(!state)state=make();if(state.gl.isContextLost())throw Error('3D graphics context lost. Restore browser graphics before editing or exporting.');return state;}
  function drop(k){const e=cache.get(k);if(!e)return;cache.delete(k);cachedPixels-=e.pixels;e.canvas.width=e.canvas.height=1;}
  function dimensions(w,h){if(!Number.isFinite(w)||!Number.isFinite(h)||w<=0||h<=0)throw Error('Invalid spatial viewport.');const s=Math.min(1,MAX_SIDE/w,MAX_SIDE/h,Math.sqrt(MAX_PIXELS/(w*h)));return [Math.max(1,Math.round(w*s)),Math.max(1,Math.round(h*s))];}
- function render(value,width,height){
-  const v=S.check(value),[w,h]=dimensions(width,height),key=JSON.stringify([v,w,h]);
-  const old=cache.get(key);if(old){cache.delete(key);cache.set(key,old);hits++;return old.canvas;}
-  const {canvas:c,gl,program,vao,buffers,uniforms:u}=requireRenderer(),m=S.mesh(v),b=S.camera(v.camera,w,h);
+ function render(value,width,height,progress=1,transient=false){
+  const v=S.check(value),[w,h]=dimensions(width,height);if(typeof progress!=='number'||!Number.isFinite(progress)||progress<0||progress>1)throw Error('Invalid path reveal.');const key=JSON.stringify([v,w,h,progress]);
+  const old=transient?null:cache.get(key);if(old){cache.delete(key);cache.set(key,old);hits++;return old.canvas;}
+  const {canvas:c,gl,program,vao,buffers,uniforms:u}=requireRenderer(),m=S.mesh(v,progress),b=S.camera(v.camera,w,h);
   if(c.width!==w||c.height!==h){c.width=w;c.height=h;}
   gl.viewport(0,0,w,h);gl.clearColor(0,0,0,0);gl.clearDepth(1);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.depthMask(true);gl.disable(gl.BLEND);gl.disable(gl.CULL_FACE);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
   gl.useProgram(program);gl.bindVertexArray(vao);
@@ -35,17 +35,19 @@
   vec('eye',b.eye);vec('rightAxis',b.right);vec('upAxis',b.up);vec('forwardAxis',b.forward);f('tanHalf',b.t);f('aspect',b.aspect);f('nearZ',S.NEAR);f('farZ',S.FAR);f('orthoScale',b.ortho?b.distance*b.t:0);
   vec('baseColor',[1,3,5].map(i=>parseInt(v.color.slice(i,i+2),16)/255));const a=v.light*Math.PI/180;vec('light',S.add(S.add(S.mul(b.right,Math.cos(a)),S.mul(b.up,-Math.sin(a))),S.mul(b.forward,-.85)));f('gloss',v.material==='matte'?.06:v.material==='metal'?.72:.95);
   gl.drawArrays(gl.TRIANGLES,0,m.positions.length/3);if(gl.getError()!==gl.NO_ERROR||gl.isContextLost())throw Error('Spatial 3D draw failed.');
-  const out=root.document.createElement('canvas');out.width=w;out.height=h;out.getContext('2d').drawImage(c,0,0);
+  const out=root.document.createElement('canvas');out.width=w;out.height=h;const g=out.getContext('2d');g.drawImage(c,0,0);
+  if(v.occlusion?.length){g.save();try{g.globalCompositeOperation='destination-out';g.fillStyle='#ffffff';for(const poly of v.occlusion){g.beginPath();poly.forEach(([x,y],i)=>i?g.lineTo(x*w,y*h):g.moveTo(x*w,y*h));g.closePath();g.fill('evenodd');}}finally{g.restore();}}
+  draws++;if(transient)return out;
   while(cache.size&&(cache.size>=6||cachedPixels+w*h>CACHE_PIXELS))drop(cache.keys().next().value);
-  cache.set(key,{canvas:out,pixels:w*h});cachedPixels+=w*h;draws++;return out;
+  cache.set(key,{canvas:out,pixels:w*h});cachedPixels+=w*h;return out;
  }
- function paint(q,value,b,opacity=1){
+ function paint(q,value,b,opacity=1,progress=1,transient=false){
   if(!b||![b.x,b.y,b.width,b.height].every(Number.isFinite)||b.width<=0||b.height<=0)return false;
   const m=q.getTransform?.(),sx=m?Math.hypot(m.a,m.b):1,sy=m?Math.hypot(m.c,m.d):1;
   // Use the larger device scale in both dimensions so nonuniform 2D transforms
   // do not alter the camera's aspect or geometry.
-  const scale=Math.max(.05,sx,sy),c=render(value,b.width*scale,b.height*scale);
-  q.save();try{q.globalAlpha*=Math.max(0,Math.min(1,opacity));q.drawImage(c,b.x,b.y,b.width,b.height);}finally{q.restore();}return true;
+  const scale=Math.max(.05,sx,sy),c=render(value,b.width*scale,b.height*scale,progress,transient);
+  q.save();try{q.globalAlpha*=Math.max(0,Math.min(1,opacity));q.drawImage(c,b.x,b.y,b.width,b.height);}finally{q.restore();if(transient)c.width=c.height=1;}return true;
  }
  function hit(value,b,x,y,pad=6){if(!b||b.width<=0||b.height<=0||x<b.x-pad||y<b.y-pad||x>b.x+b.width+pad||y>b.y+b.height+pad)return false;
   const factor=Math.min(1,512/b.width,512/b.height),c=render(value,b.width*factor,b.height*factor),px=(x-b.x)*c.width/b.width,py=(y-b.y)*c.height/b.height,r=Math.max(2,Math.ceil(pad*factor)),left=Math.max(0,Math.floor(px-r)),top=Math.max(0,Math.floor(py-r)),right=Math.min(c.width,Math.ceil(px+r)),bottom=Math.min(c.height,Math.ceil(py+r));if(right<=left||bottom<=top)return false;
