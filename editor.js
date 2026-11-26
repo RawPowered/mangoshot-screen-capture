@@ -1064,8 +1064,8 @@ function syncVectorControls(){
  const toolDescription=document.getElementById('image-active-tool-desc');
  const toolStatus=document.getElementById('image-tool-status');
  const name=vectorCore.labels[currentTool]||imageToolNames[currentTool]||'Tool';
- if(toolName)toolName.textContent=vSelected?'Editing '+name:name;
- if(toolDescription)toolDescription.textContent=vSelected?'Editable vector layer · use controls below':
+ if(toolName)toolName.textContent=vSelected?.callout3d?'Editing dimensional callout':vSelected?'Editing '+name:name;
+ if(toolDescription)toolDescription.textContent=vSelected?.callout3d?'Edit geometry in 3D Callouts. Drag, resize or rotate the selected layer.':vSelected?'Editable vector layer · use controls below':
   isVector?'Drag directly on screenshot to draw · select layer to refine':
   currentTool==='select'?'Click a layer to select and edit':currentTool==='text'?'Typography and effects are in Type':
   currentTool.startsWith('mask-')?'Brush controls are in Mask':'Draw directly on the screenshot';
@@ -1077,7 +1077,7 @@ function syncVectorControls(){
   button.classList.toggle('is-active',active);button.setAttribute('aria-pressed',String(active));
  }
  const styles=document.getElementById('image-shape-style');
- if(styles)styles.hidden=!isVector;
+ if(styles)styles.hidden=!isVector||!!vSelected?.callout3d;
  const settings=vSelected?vectorCore.style(vSelected):{...vectorCore.defaults(),...(toolStyles.get(tool.value)||{}),
   stroke:color.value,strokeWidth:Number(size.value),opacity:Number(document.getElementById('image-tool-opacity')?.value||100)/100};
  for(const [id,key] of toolControlFields){
@@ -1981,6 +1981,17 @@ globalThis.MangoToolImageV0711=Object.freeze({state:()=>({selection:batchLayers(
  * Geometry, alpha masks, layer blend and outer effects are applied afterward. */
 /* Pixel selections are not object marquee selection. Source-mask edits are scoped to
  * one unlocked imported asset; sharing exports always start from the normal flattened composition. */
+globalThis.MangoDimensionalImageV0729=Object.freeze({
+ state(){const s=globalThis.MangoLayerImageV0712.state(),l=s.selection.length===1?strokes.find(x=>x.id===s.selection[0]):null;
+  return {ready:s.ready,stamp:s.stamp,selected:l?.callout3d&&!l.locked&&effectiveLayerVisible(l)?{id:l.id,value:globalThis.MangoDimensionalV0729.copy(l.callout3d)}:null};},
+ apply(value,stamp,id=null){
+  const s=this.state(),M=globalThis.MangoDimensionalV0729;if(!s.ready||s.stamp!==stamp)throw Error('Image changed; reopen 3D Callouts.');const v=M.check(value);
+  if(id){if(s.selected?.id!==id)throw Error('Select an unlocked dimensional layer.');return replaceLayer(strokes.findIndex(l=>l.id===id),{callout3d:v});}
+  const x=base.width*.21,y=base.height*.22,w=base.width*.58,h=base.height*.50,l=vectorCore.make('rectangle',{x,y},{x:x+w,y:y+h},{fillEnabled:true,fill:v.color,stroke:v.color});
+  Object.assign(l,{id:crypto.randomUUID(),name:'3D '+(v.shape==='arrow'&&v.curve?'curved arrow':v.shape),callout3d:v,locked:false});
+  clearBatch();snapshot();strokes.push(l);tool.value='select';syncTool();selectLayerAt(strokes.length-1);setReady(ready);label('Dimensional shape inserted. Ctrl+Z to undo.');return true;
+ }
+});
 globalThis.MangoSelectionImageV0728=Object.freeze({
  state(){
   const s=globalThis.MangoLayerImageV0712.state(),l=s.selection.length===1?strokes.find(x=>x.id===s.selection[0]):null,a=l?.type==='image'?layerCore.asset(l):null;
@@ -2093,8 +2104,8 @@ globalThis.MangoImageDocumentV0723=Object.freeze({
     const c=document.createElement('canvas');c.width=a.width;c.height=a.height;c.getContext('2d').drawImage(a.image,0,0);assets.push({id:l.assetId,name:a.name,width:a.width,height:a.height,png:c.toDataURL('image/png')});c.width=c.height=1;assetIds.add(l.assetId);}
    if(l.cutoutKey&&!matteIds.has(l.cutoutKey)){const m=registry.get(l.cutoutKey);if(!m)throw Error('Missing image matte.');mattes.push({id:l.cutoutKey,width:m.width,height:m.height,alpha:D.encode(m.data)});matteIds.add(l.cutoutKey);}
   }
-  const comp=advancedComp?.reconcile(composition,strokes),v2=advancedComp?.active(comp),v3=layers.some(l=>l.brush),v4=layers.some(l=>l.creativeFx),v5=layers.some(l=>Array.isArray(l.rasterFx)),v6=layers.some(l=>l.selectionMask);
-  return D.check({format:'MangoShotImage',version:v6?6:v5?5:v4?4:v3?3:v2?2:1,name,width:base.width,height:base.height,base:base.toDataURL('image/png'),layers,assets,mattes,...(v2||v3||v4||v5||v6?{composition:comp}:{})},this.cores());
+  const comp=advancedComp?.reconcile(composition,strokes),v2=advancedComp?.active(comp),v3=layers.some(l=>l.brush),v4=layers.some(l=>l.creativeFx),v5=layers.some(l=>Array.isArray(l.rasterFx)),v6=layers.some(l=>l.selectionMask),v7=layers.some(l=>l.callout3d);
+  return D.check({format:'MangoShotImage',version:v7?7:v6?6:v5?5:v4?4:v3?3:v2?2:1,name,width:base.width,height:base.height,base:base.toDataURL('image/png'),layers,assets,mattes,...(v2||v3||v4||v5||v6||v7?{composition:comp}:{})},this.cores());
  },
  async open(raw,stamp){
   const D=globalThis.MangoImageDocumentCoreV0723,initial=this.state();if(!initial.canOpen||initial.stamp!==stamp)throw Error('Image editor is busy.');

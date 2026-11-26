@@ -88,6 +88,7 @@
  function paint(ctx,s){
   if(!isVector(s)||s.visible===false)return false;
   const v=style(s),k=kindOf(s);
+  if(s.callout3d&&root.MangoDimensionalV0729)return root.MangoDimensionalV0729.paint(ctx,s.callout3d,bounds(s),v.opacity);
   ctx.save();ctx.globalAlpha*=v.opacity;
   ctx.lineWidth=v.strokeWidth;ctx.lineCap='round';ctx.lineJoin='round';
   ctx.strokeStyle=v.stroke;ctx.fillStyle=v.fill;

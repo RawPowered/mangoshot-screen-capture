@@ -22,12 +22,13 @@
  }
  function encode(bytes){let out='';for(let i=0;i<bytes.length;i+=32768)out+=String.fromCharCode(...bytes.subarray(i,i+32768));return btoa(out);}
  function decode(s){const raw=atob(s),a=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)a[i]=raw.charCodeAt(i);return a;}
- const common=['type','id','name','points','visible','locked','opacity','size','color','text','rotation','layerGroup','layerFx','effectStack','material','kind','vector','fontSize','fontFamily','fontWeight','scaleX','scaleY','styleId','effects','assetId','width','height','mask','cutoutKey','hardness','usePressure','brush','creativeFx','rasterFx','selectionMask'];
+ const common=['type','id','name','points','visible','locked','opacity','size','color','text','rotation','layerGroup','layerFx','effectStack','material','kind','vector','fontSize','fontFamily','fontWeight','scaleX','scaleY','styleId','effects','assetId','width','height','mask','cutoutKey','hardness','usePressure','brush','creativeFx','rasterFx','selectionMask','callout3d'];
  function points(a,unit,budget){if(!Array.isArray(a)||!a.length||a.length>32000)fail('Invalid layer points.');budget.n+=a.length;if(budget.n>MAX_POINTS)fail('Project point budget exceeded.');return a.map(p=>{keys(p,['x','y','p']);if(!finite(p.x,unit?0:-1000000,unit?1:1000000)||!finite(p.y,unit?0:-1000000,unit?1:1000000)||own(p,'p')&&!finite(p.p,0,1))fail('Invalid point coordinate.');return {...p};});}
  const checkOptional=(l,k,fn)=>{if(own(l,k)&&!fn(l[k]))fail('Invalid layer '+k+'.');};
  function layer(l,budget,cores){
   keys(l,common);if(!types.has(l.type)||!id(l.id))fail('Unsupported layer type or identity.');
   const n={...l,points:points(l.points,false,budget)};
+  if(own(l,'callout3d')){if(l.type!=='shape'||l.kind!=='rectangle'||!root.MangoDimensionalV0729||n.points.length!==2)fail('Invalid dimensional shape layer.');n.callout3d=root.MangoDimensionalV0729.check(l.callout3d);}
   if(own(l,'selectionMask')){const S=root.MangoSelectionV0728;if(!S||l.type!=='image')fail('Selection masks require imported image layers.');n.selectionMask=S.check(l.selectionMask);budget.n+=n.selectionMask.regions.reduce((n,r)=>n+r.points.length,0);if(budget.n>MAX_POINTS)fail('Project point budget exceeded.');}
   if(own(l,'rasterFx')){const E=root.MangoRasterLayerV0727;if(!E||l.type!=='image')fail('Raster effects require an imported image layer.');n.rasterFx=E.check(l.rasterFx);}
   if(own(l,'creativeFx')){const E=root.MangoCreativeEffectsV0726;if(!E||!E.eligible(l))fail('Creative effects require a supported unprotected layer.');n.creativeFx=E.check(l.creativeFx);}
@@ -68,7 +69,7 @@
  }
  function check(p,cores){
   keys(p,p?.version>=2?['format','version','name','width','height','base','layers','assets','mattes','composition']:['format','version','name','width','height','base','layers','assets','mattes']);
-  if(p.format!=='MangoShotImage'||![1,2,3,4,5,6].includes(p.version)||!text(p.name,120)||!p.name.trim())fail('Unsupported image project format or version.');
+  if(p.format!=='MangoShotImage'||![1,2,3,4,5,6,7].includes(p.version)||!text(p.name,120)||!p.name.trim())fail('Unsupported image project format or version.');
   dimensions(p.width,p.height);pngHeader(p.base,p.width,p.height);
   if(!Array.isArray(p.layers)||p.layers.length>MAX_LAYERS||!Array.isArray(p.assets)||p.assets.length>128||!Array.isArray(p.mattes)||p.mattes.length>128)fail('Project layer or asset limit exceeded.');
   const budget={n:0},layers=p.layers.map(l=>layer(l,budget,cores)),ids=new Set(),assets=new Map(),mattes=new Map();let total=p.width*p.height,encoded=p.base.length;
@@ -83,7 +84,8 @@
   if(layers.some(l=>l.brush)&&p.version<3)fail('Advanced brush strokes require project version 3 or newer.');
   if(layers.some(l=>l.creativeFx)&&p.version<4)fail('Creative effects require project version 4 or newer.');
   if(layers.some(l=>l.rasterFx)&&p.version<5)fail('Editable raster filters require project version 5 or newer.');
-  if(layers.some(l=>l.selectionMask)&&p.version!==6)fail('Selection masks require project version 6.');
+  if(layers.some(l=>l.selectionMask)&&p.version<6)fail('Selection masks require project version 6 or newer.');
+  if(layers.some(l=>l.callout3d)&&p.version!==7)fail('Dimensional callouts require project version 7.');
   root.MangoSelectionV0728?.requireProject(layers,l=>assets.get(l.assetId),cores.compositor);
   root.MangoRasterLayerV0727?.requireProject(layers,l=>assets.get(l.assetId));
   root.MangoCreativeEffectsV0726?.requireBudget(layers,p.width,p.height,cores.compositor);

@@ -20,9 +20,9 @@
   assertLive(signal);if(v.error||v.seeking||v.readyState<2||Math.abs(v.currentTime-target)>.04)throw Error('Source did not decode at the requested timestamp.');
  }
  const sameMeta=(a,m)=>a.kind==='image'?a.width===m.width&&a.height===m.height:Number.isFinite(m.duration)&&Math.abs(a.duration-m.duration)<.12&&(a.kind!=='video'||a.width===m.width&&a.height===m.height);
- function validateSources(project,registry){for(const c of project.clips){if(c.track==='G1')continue;const a=P.asset(project,c),entry=registry.get(c.assetId);if(!a||!entry||entry.missing||!entry.blob||!entry.url||entry.size!==a.size||entry.kind!==a.kind||entry.name!==a.name)throw Error('Relink missing or mismatched source: '+(a?.name||c.assetId));C?.requireSupport(c.grade);}}
+ function validateSources(project,registry){for(const c of project.clips){if(P.graphic(c.track))continue;const a=P.asset(project,c),entry=registry.get(c.assetId);if(!a||!entry||entry.missing||!entry.blob||!entry.url||entry.size!==a.size||entry.kind!==a.kind||entry.name!==a.name)throw Error('Relink missing or mismatched source: '+(a?.name||c.assetId));C?.requireSupport(c.grade);}}
  async function preflight(project,registry,signal){const p=P.check(project);validateSources(p,registry);const seen=new Set();
-  for(const c of p.clips){if(c.track==='G1'||seen.has(c.assetId))continue;seen.add(c.assetId);const a=P.asset(p,c),m=await inspect(registry.get(c.assetId),signal);if(!sameMeta(a,m))throw Error('Decoded source metadata does not match saved project: '+a.name);}
+  for(const c of p.clips){if(P.graphic(c.track)||seen.has(c.assetId))continue;seen.add(c.assetId);const a=P.asset(p,c),m=await inspect(registry.get(c.assetId),signal);if(!sameMeta(a,m))throw Error('Decoded source metadata does not match saved project: '+a.name);}
   return p;
  }
  function createPool(project,registry,signal,ctx=null,dest=null){
@@ -45,7 +45,7 @@
   function sync(t,running){assertLive(signal);for(const c of at(t)){const e=entries.get(c.id);if(!e)throw Error('Required media decoder is missing.');
     if(e.media){const v=e.media,target=P.sourceAt(c,t),drift=target-v.currentTime;maxDrift=Math.max(maxDrift,Math.abs(drift));
      if(v.error||v.seeking||v.readyState<2||Math.abs(drift)>(running?DRIFT:.045))throw Error('Media synchronization exceeded tolerance: '+P.asset(project,c).name);
-     if(running&&!v.paused){const rate=Math.abs(drift)<.045?1:clamp(1+drift*.6,.92,1.08);if(Math.abs(v.playbackRate-rate)>.01)v.playbackRate=rate;}
+     const nominal=P.rateAt(c,t);if(running&&!v.paused){const rate=clamp(nominal+(Math.abs(drift)<.045?0:clamp(drift*.6,-.12,.12)),.25,4);if(Math.abs(v.playbackRate-rate)>.008)v.playbackRate=rate;}else if(!running)v.playbackRate=nominal;
      if(e.gain){const g=P.mix(project,c,t).gain;if(running)e.gain.gain.setTargetAtTime(g,ctx.currentTime,.012);else e.gain.gain.value=g;}
     }
    }}
@@ -55,7 +55,7 @@
     for(const c of P.active(p,t)){if(!P.visual(c.track)||!P.show(p,c))continue;const e=entries.get(c.id),f=e?.image||e?.media;if(!f)throw Error('Required visual frame unavailable.');
      const dw=c.width*w,dh=c.height*h,r=P.fit(f.videoWidth||f.width,f.videoHeight||f.height,dw,dh,c.fit);q.save();try{q.translate(c.x*w,c.y*h);q.beginPath();q.rect(0,0,dw,dh);q.clip();q.globalAlpha=P.mix(p,c,t).opacity;q.filter=C?.filter(c.grade,h/1080)||'none';q.drawImage(f,r.x,r.y,r.w,r.h);}finally{q.restore();}
     }
-    for(const c of P.active(p,t)){if(c.track!=='G1'||!P.show(p,c))continue;const g=G.create('text',c.preset,c.start,{id:c.id,start:c.start,end:c.end,text:c.text,x:c.x,y:c.y,width:c.width,fontSize:c.fontSize,color:c.color,opacity:c.opacity*p.tracks.G1.opacity,fadeIn:c.fadeIn,fadeOut:c.fadeOut});G.render(q,[g],t,w,h);}
+    for(const c of P.active(p,t)){if(!P.graphic(c.track)||!P.show(p,c))continue;if(P.dimensional(c.track)){root.MangoDimensionalV0729.paint(q,c.callout3d,{x:c.x*w,y:c.y*h,width:c.width*w,height:c.height*h},P.mix(p,c,t).opacity);continue;}const g=G.create('text',c.preset,c.start,{id:c.id,start:c.start,end:c.end,text:c.text,x:c.x,y:c.y,width:c.width,fontSize:c.fontSize,color:c.color,opacity:c.opacity*p.tracks.G1.opacity,fadeIn:c.fadeIn,fadeOut:c.fadeOut});G.render(q,[g],t,w,h);}
    }finally{q.restore();}
   }
   return {prime,start,pause,clear,draw,stats:()=>({active:entries.size,peak,maxDrift,seeks})};

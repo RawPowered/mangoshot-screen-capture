@@ -65,6 +65,11 @@ jobs:
           node tests/creative-effects-v0726.cjs
           node tests/raster-layer-v0727.cjs
           node tests/selection-v0728.cjs
+          node tests/motion-callouts-v0729.cjs
+          node --check speed-ramp-core-v0729.js
+          node --check dimensional-callout-core-v0729.js
+          node --check motion-callouts-controls-v0729.js
+          node --check dimensional-image-ui-v0729.js
           node --check selection-core-v0728.js
           node --check selection-studio-v0728.js
           node --check raster-layer-core-v0727.js
@@ -133,7 +138,7 @@ jobs:
           retention-days: 14
 
   studio-precision-preview:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.28-selection-masking'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.29-motion-callouts'
     runs-on: ubuntu-latest
     needs: browser-extension-unit-tests
     steps:
@@ -224,6 +229,11 @@ jobs:
       - name: Qualify pixel selection, editable masks and native document v6
         if: ${{ !cancelled() }}
         run: timeout 180s node tests/selection-v0728.browser.cjs
+      - name: Qualify editable 3D shape layers and native speed ramp playback/export
+        if: ${{ !cancelled() }}
+        run: |
+          ffmpeg -loglevel error -f lavfi -i color=c=red:s=320x180:r=24:d=1.5 -f lavfi -i color=c=blue:s=320x180:r=24:d=1.5 -filter_complex '[0:v][1:v]concat=n=2:v=1:a=0[v]' -map '[v]' -c:v libvpx-vp9 -pix_fmt yuv420p -y /tmp/mangoshot-ramp-source.webm
+          timeout 180s node tests/motion-callouts-v0729.browser.cjs /tmp/mangoshot-ramp-source.webm
       - name: Package development preview (not a release)
         run: |
           python3 tools/package-extension.py --out dist --version v0.6.18-mango-engine-raster-preview
@@ -246,6 +256,7 @@ jobs:
           unzip -l dist/MangoShot-v0.6.18-mango-engine-raster-preview-Extension.zip | grep selection-core-v0728.js
           unzip -l dist/MangoShot-v0.6.18-mango-engine-raster-preview-Extension.zip | grep selection-studio-v0728.js
           unzip -l dist/MangoShot-v0.6.18-mango-engine-raster-preview-Extension.zip | grep selection-studio-v0728.css
+          for src in speed-ramp-core-v0729.js dimensional-callout-core-v0729.js motion-callouts-controls-v0729.js dimensional-image-ui-v0729.js motion-callouts-v0729.css; do unzip -l dist/MangoShot-v0.6.18-mango-engine-raster-preview-Extension.zip | grep "$src"; done
           unzip -l dist/MangoShot-v0.6.18-mango-engine-raster-preview-Extension.zip | grep carbon-image-v0720.js
           unzip -l dist/MangoShot-v0.6.18-mango-engine-raster-preview-Extension.zip | grep carbon-image-v0720.css
           unzip -l dist/MangoShot-v0.6.18-mango-engine-raster-preview-Extension.zip | grep precision-visual-v0721.js
@@ -262,14 +273,14 @@ jobs:
           for src in professional-sequence.html professional-sequence-v0719.css professional-sequence-ui-v0719.js independent-sequence-core-v0719.js independent-sequence-runtime-v0719.js streaming-media-v0718.js professional-timeline-core-v0717.js professional-timeline-ui-v0717.js professional-timeline-v0717.css multitrack-core-v0716.js multitrack-ui-v0716.js multitrack-v0716.css transform-material-core-v0715.js transform-material-v0715.css compositor-core-v0714.js compositor-ui-v0714.js compositor-v0714.css cinematic-core-v0713.js cinematic-ui-v0713.js cinematic-v0713.css layer-studio-core-v0712.js layer-studio-ui-v0712.js layer-studio-v0712.css tool-studio-core-v0711.js tool-studio-ui-v0711.js tool-studio-v0711.css recorder-control-v0710.js recorder-controls-v0710.css theme-carbon-v078.css bridge-core-v077.js bridge-ui-v077.js bridge-v077.css sequence-engine-v076.js sequence-studio-v076.js sequence-studio-v076.css automation-core-v075.js automation-adapters-v075.js automation-ui-v075.js automation-v075.css; do unzip -l dist/MangoShot-v0.6.18-mango-engine-raster-preview-Extension.zip | grep "$src"; done
       - uses: actions/upload-artifact@v4
         with:
-          name: MangoShot-v0.7.28-Selection-Masking-Extension
+          name: MangoShot-v0.7.29-Motion-Callouts-Extension
           path: dist/MangoShot-v0.6.18-mango-engine-raster-preview-Extension.zip
           retention-days: 14
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: MangoShot-v0.7.28-Selection-Masking-Screenshots
+          name: MangoShot-v0.7.29-Motion-Callouts-Screenshots
           path: |
             carbon-screenshots/
             creative-screenshots/
@@ -292,6 +303,7 @@ jobs:
             creative-effects-screenshots/
             raster-layer-screenshots/
             selection-studio-screenshots/
+            motion-callout-screenshots/
           if-no-files-found: ignore
           retention-days: 14
 
@@ -339,7 +351,7 @@ jobs:
           retention-days: 14
 
   mango-engine-experiment:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.28-selection-masking'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.29-motion-callouts'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
