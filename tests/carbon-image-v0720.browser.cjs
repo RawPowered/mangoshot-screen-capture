@@ -16,8 +16,9 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   await p.waitForFunction(()=>MangoCarbonImageV0720.pinned());
   await p.locator('[data-image-tab=type]').click();assert.equal(await p.locator('.ci-layer-dock-v0720 #stroke-list').isVisible(),true);
   await p.locator('[data-image-tab=layers]').click();await p.waitForFunction(()=>!document.getElementById('ci-open-v0720').disabled);
-  const initial=await pixels();await p.locator('#ci-open-v0720').click();
+  const initial=await pixels();await p.locator('#zs38-image-precision').click();
   await p.locator('#ci-precision-v0720').waitFor({state:'visible'});
+  const dial=p.locator('#ci-dial-rotation-v0720');await dial.focus();await dial.press('ArrowRight');assert.equal(Number(await p.locator('#ci-number-rotation-v0720').inputValue()),1);assert.equal((await state()).layers[0].rotation,0);
   const rotation=p.locator('#ci-number-rotation-v0720');await rotation.fill('45');await rotation.press('Enter');
   await p.waitForFunction(()=>!document.getElementById('ci-apply-v0720').disabled);
   assert.equal((await state()).layers[0].rotation,0);assert.equal(await pixels(),initial);
