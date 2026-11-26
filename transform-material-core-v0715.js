@@ -65,7 +65,7 @@
  }
  // Centralized Escape routing even if re-rendered modal controls lose focus.
  // Loaded before editor handlers. Only these owned advanced dialogs are closed.
- if(root.document&&root.addEventListener){const owned=new Set(['layer-studio-v0712','cinematic-studio-v0713','compositor-v0714']);root.addEventListener('keydown',e=>{if(e.key!=='Escape'||e.isComposing)return;const opened=[...root.document.querySelectorAll('dialog[open]')],d=opened.at(-1);if(d&&owned.has(d.id)){e.preventDefault();e.stopImmediatePropagation();d.close();}},true);}
+ if(root.document&&root.addEventListener){const owned=new Set(['layer-studio-v0712','cinematic-studio-v0713','compositor-v0714','multitrack-v0716']);root.addEventListener('keydown',e=>{if(e.key!=='Escape'||e.isComposing)return;const opened=[...root.document.querySelectorAll('dialog[open]')],d=opened.at(-1);if(d&&owned.has(d.id)){e.preventDefault();e.stopImmediatePropagation();d.close();}},true);}
  const api=Object.freeze({angle,rotation,eligible,center,rotate,local,aabb,delta,pointerAngle,resized,paintRotated,kinds,defaults,presets,checkMaterial,active,requireBudget,materialPaint});
  root.MangoTransformMaterialV0715=api;if(typeof module==='object'&&module.exports)module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

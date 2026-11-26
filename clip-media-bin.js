@@ -1,5 +1,4 @@
-/* v0.6 Clip Studio Media Bin — real local imports and staging (NOT rendered yet).
- * Secondary assets never alter the legacy v0.5.7 export without a compositor. */
+/* Local Media Bin: staged references are inert until prepared and applied in Multitrack Studio. */
 (function(root){
  'use strict';
  const el=id=>document.getElementById(id),view=()=>root.MangoClipView;
@@ -16,9 +15,9 @@
  function updateControls(){const a=registry.get(selected),st=el('v06-stage-asset');
   st.disabled=!a||a.missing||(a.kind!=='image'&&!Number.isFinite(a.duration));
   el('v06-relink-asset').disabled=!a||!a.missing;
-  el('v06-remove-asset').disabled=!a||a.id==='source-primary';
+  el('v06-remove-asset').disabled=!a||a.id==='source-primary'||!!view()?.secondaryReferences?.(a.id)||!!view()?.exporting?.();
   el('v06-restore-project').disabled=!loadedProject?.legacyV1;
-  el('v06-save-project').disabled=!view()?.original();
+  el('v06-save-project').disabled=!view()?.original()||!!view()?.exporting?.();
  }
  function preview(a){const container=el('v06-asset-preview');clean(container);
   if(!a){container.textContent='Select a local image, video or audio file to inspect it.';return;}
@@ -43,7 +42,7 @@
  function draw(){
   const assets=registry.snapshot();
   const stamp=assets.map(a=>[a.id,a.name,a.kind,a.size,a.missing,a.duration,a.width,a.height].join('|')).join('~')+
-   '::'+selected+'::'+staged.map(c=>[c.id,c.assetId,c.track,c.start,c.end].join('|')).join('~');
+   '::'+selected+'::'+JSON.stringify(view()?.multitrack?.()||{})+'::'+staged.map(c=>[c.id,c.assetId,c.track,c.start,c.end].join('|')).join('~');
   updateControls();
   if(stamp===lastAssetSignature)return;
   lastAssetSignature=stamp;
@@ -61,8 +60,9 @@
    row.append(span(`${c.track} · ${a?.name||'Missing asset'} · ${fmt(c.start)} – ${fmt(c.end)}`));
    row.append(button('Remove',()=>{staged=staged.filter(x=>x.id!==c.id);draw();}));drafts.append(row);
   }
-  if(!staged.length)drafts.append(span('No secondary clips staged.','v06-hint'));
-  el('v06-count').textContent=assets.length+' assets · '+staged.length+' staged';
+  for(const c of view()?.multitrack?.().clips||[]){const a=registry.get(c.assetId),r=document.createElement('div');r.className='v06-staged-row';r.append(span('ACTIVE · '+c.track+' · '+(a?.name||'Missing asset')+' · '+fmt(c.start)+'–'+fmt(c.end)),button('Edit',()=>root.MangoMultitrackUIV0716?.open()));drafts.append(r);}
+  if(!staged.length&&!view()?.multitrack?.().clips.length)drafts.append(span('No secondary clips.','v06-hint'));
+  el('v06-count').textContent=assets.length+' assets · '+(view()?.multitrack?.().clips.length||0)+' active · '+staged.length+' staged';
  }
  registry.subscribe(()=>{draw();const a=registry.get(selected);if(a){const target=el('v06-asset-preview');
   if(target?.querySelector('strong')?.textContent!==a.name)preview(a);} });
@@ -72,20 +72,20 @@
    catch(e){errors.push(file.name+': '+e.message);}
   }
   if(selected)preview(registry.get(selected));draw();
-  label(`${added} local asset(s) imported.${errors.length?' '+errors.slice(0,2).join('; '):''} Secondary assets are staged, not yet composited.`);
+  label(`${added} local asset(s) imported.${errors.length?' '+errors.slice(0,2).join('; '):''} Open Multitrack Studio to prepare and apply media.`);
  }
  el('v06-media-input').addEventListener('change',event=>{void addFiles(event.target.files||[]);event.target.value='';});
  el('v06-relink-input').addEventListener('change',event=>{const file=event.target.files?.[0];event.target.value='';if(!file||!selected)return;
   try{registry.relink(selected,file);preview(registry.get(selected));label('Local file relinked.');}
   catch(error){label('Relink rejected: '+error.message);} });
  el('v06-relink-asset').onclick=()=>el('v06-relink-input').click();
- el('v06-remove-asset').onclick=()=>{if(!selected||selected==='source-primary')return;
+ el('v06-remove-asset').onclick=()=>{if(!selected||selected==='source-primary'||view()?.secondaryReferences?.(selected)||view()?.exporting?.())return;
   registry.remove(selected);staged=staged.filter(c=>c.assetId!==selected);selected=null;preview(null);draw();label('Asset removed from this session. Source file was not deleted.');};
  el('v06-stage-asset').onclick=()=>{const a=registry.get(selected);if(!a||a.missing)return;
   try{const manifest=root.MangoProjectV2.create({assets:registry.snapshot(),clips:staged});
    const position=Math.max(0,Number(view()?.sequencePosition?.())||0);
    staged=root.MangoProjectV2.stage(manifest,a,{start:position}).timeline.clips;
-   draw();label('Staged '+a.name+' on '+(a.kind==='audio'?'A2':'V2')+'. Staged clips are NOT composited or exported yet.');
+   draw();label('Staged '+a.name+'. Open Multitrack Studio and use staged clips to prepare and apply.');
   }catch(e){label('Cannot stage asset: '+e.message);}};
  function activeLegacy(){const v=view(),source=v?.original();if(!source)return null;
   const format=source.type?.includes('mp4')?'mp4':'webm';
@@ -97,7 +97,8 @@
  function save(){const current=activeLegacy();if(!current){label('Load a primary video before saving a v2 project.');return;}
   try{const converted=root.MangoProjectV2.fromV1(current.legacy,current.source,root.MangoProject);
    const assets=[...converted.assets,...registry.snapshot().filter(x=>x.id!=='source-primary')];
-   const project=root.MangoProjectV2.create({assets,clips:[...converted.timeline.clips,...staged],legacyV1:current.legacy});
+   const multi=view()?.multitrack?.()||root.MangoMultitrackV0716.defaults(),active=multi.clips.map(c=>({...c,staged:false}));
+   const project=root.MangoProjectV2.create({assets,clips:[...converted.timeline.clips,...staged.filter(c=>!active.some(a=>a.id===c.id)),...active],legacyV1:current.legacy,multitrack:multi});
    project.creative={zoomFrames:view()?.zoomFrames?.()||[],cursorDirector:view()?.cursorDirectorState?.()||undefined};
    root.MangoProjectV2.check(project);
    const blob=new Blob([JSON.stringify(project,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob);
@@ -110,6 +111,7 @@
  el('v06-open-project').addEventListener('change',async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;
   try{if(file.size>3*1024*1024)throw new Error('Project metadata exceeds 3 MiB.');
    const p=root.MangoProjectV2.check(JSON.parse(await file.text()));
+   if(view()?.exporting?.()||registry.snapshot().some(a=>view()?.secondaryReferences?.(a.id)))throw Error('Close this editor and open the other project in a fresh session; current undo history references local media.');
    registry.clear();selected=null;loadedProject=p;staged=p.timeline.clips.filter(c=>c.staged);
    // Restore creative data only after the primary source identity check succeeds.
    for(const a of p.assets){if(a.id!=='source-primary')registry.addPlaceholder(a);}
@@ -120,11 +122,14 @@
   const primary=loadedProject.assets.find(a=>a.id==='source-primary');
   const v=view();if(!primary||!v?.original()){label('Load the matching primary video using Import video before restoring decisions.');return;}
   try{if(typeof v.restoreLegacyProject!=='function')throw new Error('Legacy restore adapter unavailable.');
-   v.restoreLegacyProject(loadedProject.legacyV1,loadedProject.creative||null);
-   label('Primary timeline, camera and cursor effects restored; secondary assets remain staging-only.');}
+   const project=loadedProject,multi=project.multitrack||root.MangoMultitrackV0716.defaults(),span=project.legacyV1.segments.reduce((n,s)=>n+s.end-s.start,0),before=v.automationCapture();
+   if(!before.ready)throw Error(before.reason);root.MangoProject.check(project.legacyV1,{size:v.original().size,format:v.sourceFormat(),duration:v.duration()});
+   await v.prepareSecondary(multi,span);if(project!==loadedProject||v.automationCapture().stamp!==before.stamp||v.original()!==before.identity)throw Error('Project or source changed during preparation.');
+   v.restoreLegacyProject(project.legacyV1,project.creative||null,multi);
+   label('Primary and active secondary timeline restored. Staged references remain inactive.');}
   catch(e){label('Cannot restore primary timeline: '+e.message);}
  };
- root.MangoMediaBin={registry,addFiles,refresh:draw,staged:()=>staged.map(x=>({...x})),snapshot:()=>registry.snapshot()};
+ root.MangoMediaBin={registry,addFiles,refresh:draw,staged:()=>staged.map(x=>({...x})),snapshot:()=>registry.snapshot(),consumeStaged(ids){staged=staged.filter(c=>!ids.includes(c.id));draw();}};
  el("video")?.addEventListener("loadedmetadata",draw);
  draw();
 })(typeof globalThis!=='undefined'?globalThis:this);

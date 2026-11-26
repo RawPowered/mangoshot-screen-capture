@@ -118,6 +118,7 @@
    const cinematic=await root.MangoCinematicV0713?.exact(ctx,url,s.source.duration,s.segments,s.transitions,request.time,w,h,s.zoomFrames);
    if(!current()||bridge.frameRequest().id!==request.id)return;
    if(!cinematic&&!root.MangoMotion.paintTransition(ctx,v,s.zoomFrames,s.segments,s.transitions,request.time,w,h)){const z=root.MangoCreativeZoom.draw(ctx,v,s.zoomFrames,request.time,w,h);root.MangoCompositorV0714?.gradeFrame(ctx,s.sourceGrade||[]);root.MangoCursorDirectorCoreV074.paint(ctx,s.cursorTrace,s.cursorRegions,s.segments,request.time,z,w,h);}else root.MangoCompositorV0714?.gradeFrame(ctx,s.sourceGrade||[]);
+   if(s.secondary?.clips.length){await view.prepareSecondary(s.secondary,s.segments.reduce((n,c)=>n+c.end-c.start,0));if(!current()||bridge.frameRequest().id!==request.id)return;view.paintSecondary(ctx,s.secondary,request.time,w,h);}
    root.MangoGraphics.render(ctx,s.layers,request.time,w,h);
    const data=canvas.toDataURL('image/jpeg',.78),prefix='data:image/jpeg;base64,';
    if(!data.startsWith(prefix)||data.length-prefix.length>300000)throw Error('Rendered frame exceeds sharing limit');

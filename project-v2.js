@@ -1,5 +1,4 @@
-/* MangoShot v0.6 project schema. Referential, non-destructive and non-executable.
- * V2 secondary clips are staging metadata until multi-source compositor is shipped. */
+/* Referential local V2 project schema. Active secondary media requires validated multitrack metadata. */
 (function(root){
  'use strict';
  const schema='mangoshot.project.v2';
@@ -33,11 +32,13 @@
   }
   if(project.legacyV1!=null){if(!project.legacyV1||project.legacyV1.schema!=='mangoshot.project.v1'||!project.legacyV1.source||
     !Array.isArray(project.legacyV1.segments)||!Array.isArray(project.legacyV1.layers))throw new Error('Invalid legacy editing decisions.');}
-  return copy(project);
+  const out=copy(project),secondary=project.timeline.clips.filter(c=>!c.staged&&['V2','V3','A2'].includes(c.track));
+  if(project.multitrack!=null){if(!root.MangoMultitrackV0716||!project.legacyV1)throw Error('Multitrack schema or primary edit list unavailable.');const span=project.legacyV1.segments.reduce((n,s)=>n+s.end-s.start,0);out.multitrack=root.MangoMultitrackV0716.check(project.multitrack,project.assets,span);if(secondary.length!==out.multitrack.clips.length||out.multitrack.clips.some(c=>!secondary.some(x=>x.id===c.id&&x.assetId===c.assetId&&x.track===c.track&&x.start===c.start&&x.end===c.end&&x.sourceIn===c.sourceIn&&x.sourceOut===c.sourceOut&&x.opacity===c.opacity&&x.volume===c.volume)))throw Error('Secondary timeline metadata mismatch.');}
+  else if(secondary.length)throw Error('Active secondary clips require multitrack metadata.');return out;
  }
- function create({assets=[],clips=[],legacyV1=null}={}){
+ function create({assets=[],clips=[],legacyV1=null,multitrack=null}={}){
   return check({schema,version:2,created:new Date().toISOString(),assets:copy(assets),
-   timeline:{tracks:copy(tracks),clips:copy(clips)},legacyV1:legacyV1?copy(legacyV1):null});
+   timeline:{tracks:copy(tracks),clips:copy(clips)},legacyV1:legacyV1?copy(legacyV1):null,...(multitrack?{multitrack:copy(multitrack)}:{})});
  }
  function fromV1(data,expectedSource,validator){
   if(!validator||typeof validator.check!=='function')throw new Error('v1 validation adapter is required.');
