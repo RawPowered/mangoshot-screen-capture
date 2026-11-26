@@ -186,6 +186,7 @@
   input.dataset.v070Source=spec.id;
   const relay=kind=>{
    if(source.disabled)return;
+   if(precision){if(kind==='change')precision.commitExact();return;}
    if(input.type==='checkbox')source.checked=input.checked;
    else source.value=input.value;
    source.dispatchEvent(new Event(kind,{bubbles:true}));
@@ -197,9 +198,9 @@
   let precision=null;
   if(U&&Object.hasOwn(dialReset,spec.id)&&['number','range'].includes(source.type)&&source.min!==''&&source.max!==''&&Number.isFinite(min)&&Number.isFinite(max)&&max>min){
    // The original proxy remains the exact-value field; both controls have one authoritative source.
-   input.type='number';input.step='any';label.classList.add('ux40-option-dial');let draft=null,held=false;
+   input.type='number';input.step='any';label.classList.add('ux40-option-dial');let draft=null,held=false,editing=false;
    const get=()=>draft??(Number.isFinite(source.valueAsNumber)?source.valueAsNumber:dialReset[spec.id]);
-   const apply=v=>{if(source.disabled)return;const n=Math.max(min,Math.min(max,Math.round(v*10000)/10000));input.value=String(n);source.value=input.value;
+   const apply=v=>{if(source.disabled)return;const n=Math.max(min,Math.min(max,Math.round(v*10000)/10000));input.value=String(n);if(Number(source.value)===n){input.value=source.value;return;}source.value=input.value;
     source.dispatchEvent(new Event('input',{bubbles:true}));source.dispatchEvent(new Event('change',{bubbles:true}));schedule();};
    const commit=()=>{if(draft===null)return;const v=draft;draft=null;apply(v);};
    const dial=U.dial(spec.label,min,max,step,get,v=>{if(source.disabled)return;if(held){draft=v;input.value=String(Math.round(v*100)/100);}else apply(v);},()=>dialReset[spec.id],false);
@@ -209,7 +210,11 @@
    for(const k of ['pointercancel','lostpointercapture'])dial.element.addEventListener(k,()=>{if(held){held=false;draft=null;input.value=source.value;dial.refresh();}});
    dial.element.addEventListener('keydown',e=>{if(source.disabled)e.stopImmediatePropagation();},true);
    const field=create('span','ux40-exact');field.append(input,readout);label.append(dial.element,field);
-   precision={refresh(){dial.element.setAttribute('aria-disabled',String(!!source.disabled));dial.element.tabIndex=source.disabled?-1:0;if(!held){input.value=source.value;dial.refresh();}},held:()=>held};
+   function commitExact(){editing=false;if(Number.isFinite(input.valueAsNumber)){apply(input.valueAsNumber);}input.value=source.value;dial.refresh();}
+   input.addEventListener('focus',()=>{editing=true;});
+   input.addEventListener('blur',()=>{if(editing)commitExact();});
+   input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();commitExact();input.blur();}else if(e.key==='Escape'){e.preventDefault();editing=false;input.value=source.value;input.blur();}});
+   precision={refresh(){dial.element.setAttribute('aria-disabled',String(!!source.disabled));dial.element.tabIndex=source.disabled?-1:0;if(!held&&!editing){input.value=source.value;dial.refresh();}},held:()=>held||editing,commitExact};
   }else{label.append(input);if(['range','number'].includes(input.type))label.append(readout);}
   return {label,input,readout,source,spec,precision};
  }
@@ -290,6 +295,7 @@
   const rail=doc.querySelector(studio==='image'?'.image-toolrail':'.v06-rail');
   if(rail)observer.observe(rail,{subtree:true,attributes:true,attributeFilter:['aria-pressed']});
   if(studio==='clip')observer.observe(body,{attributes:true,attributeFilter:['data-clip-tool']});
+  const selectionStatus=byId(studio==='image'?'image-inspector-state':'layer-list');if(selectionStatus)observer.observe(selectionStatus,{childList:true,characterData:true,subtree:true});
  }
  root.addEventListener?.('storage',e=>{
   if(e.key!==storeKey)return;

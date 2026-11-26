@@ -15,7 +15,7 @@
  function activeTool(host,id,key,name){const b=proxy(host,'tool-'+id,key,name,name+' tool',()=>root.MangoToolGroupsV071?.activate(id));b.dataset.ux40Tool=id;return b;}
  function refresh(){for(const {b,target} of proxies)b.disabled=!!target.disabled;for(const b of strip.querySelectorAll('[data-ux40-tool]'))b.setAttribute('aria-pressed',String(by('tool')?.value===b.dataset.ux40Tool));}
  if(image){
-  const direct=group('Direct drawing and selection');activeTool(direct,'pen','pen','Pen');activeTool(direct,'marquee','marquee','Select');activeTool(direct,'arrow','arrow','Arrow');activeTool(direct,'rectangle','rectangle','Box');activeTool(direct,'ellipse','ellipse','Ellipse');
+  const direct=group('Direct drawing and selection');activeTool(direct,'pen','pen','Pen');activeTool(direct,'marquee','marquee','Marquee');activeTool(direct,'arrow','arrow','Arrow');activeTool(direct,'rectangle','rectangle','Box');activeTool(direct,'ellipse','ellipse','Ellipse');
   let armed=false;const ink=by('ink'),sample=el('button','ux40-launch');sample.type='button';sample.id='ux40-sample';decorate(sample,'sample','Sample','Sample drawing color from canvas');sample.setAttribute('aria-pressed','false');direct.append(sample);
   const set=v=>{armed=v;sample.setAttribute('aria-pressed',String(v));d.body.classList.toggle('ux40-sampling',v);if(v)by('status').textContent='Click a pixel to sample its visible color · Esc to cancel';};
   sample.onclick=()=>{if(!root.MangoImageActions?.state().ready)return;set(!armed);};

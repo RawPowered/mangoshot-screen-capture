@@ -1730,7 +1730,7 @@ ink.addEventListener('dblclick',event=>{
 document.querySelector('#undo').addEventListener('click',undo);document.getElementById('redo')?.addEventListener('click',redo);
 document.querySelector('#clear').addEventListener('click',()=>{if(strokes.length){snapshot();clearBatch();strokes=[];
  selectedText=-1;selectedImage=-1;selectedObject=-1;redraw();setReady(true);}});
-function isTyping(target){return !!target?.matches?.('input,textarea,select,[contenteditable],[role="textbox"]');}
+function isTyping(target){return !!target?.matches?.('input,textarea,select,[contenteditable],[role="textbox"],[role="slider"]');}
 window.addEventListener('keydown',event=>{
  if(rotationDrag){if(event.key==='Escape'){finishRotation(null,true);}event.preventDefault();event.stopImmediatePropagation?.();return;}
  if(document.getElementById('automation-dialog-v075')?.open||document.querySelector?.('dialog[open]')||event.target?.closest?.('dialog[open]')||!ready)return;
