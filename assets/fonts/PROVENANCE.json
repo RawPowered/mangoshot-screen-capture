@@ -81,6 +81,86 @@
       "license": "allura-OFL.txt",
       "licenseId": "OFL-1.1",
       "modified": false
+    },
+    {
+      "id": "cinzel",
+      "name": "Cinzel",
+      "source": "ofl/cinzel/Cinzel[wght].ttf",
+      "gitBlobSha1": "d218a0b9c8879fd5a708872cc0ef357e507b35ca",
+      "file": "cinzel.ttf",
+      "license": "cinzel-OFL.txt",
+      "licenseId": "OFL-1.1",
+      "modified": false
+    },
+    {
+      "id": "anton",
+      "name": "Anton",
+      "source": "ofl/anton/Anton-Regular.ttf",
+      "gitBlobSha1": "4d65707db9d8663ccfa99cd28cd3a4e0025be178",
+      "file": "anton.ttf",
+      "license": "anton-OFL.txt",
+      "licenseId": "OFL-1.1",
+      "modified": false
+    },
+    {
+      "id": "bebasneue",
+      "name": "Bebas Neue",
+      "source": "ofl/bebasneue/BebasNeue-Regular.ttf",
+      "gitBlobSha1": "c328c6e08b20a20a1de47d823e007ee73812a438",
+      "file": "bebasneue.ttf",
+      "license": "bebasneue-OFL.txt",
+      "licenseId": "OFL-1.1",
+      "modified": false
+    },
+    {
+      "id": "dmserifdisplay",
+      "name": "DM Serif Display",
+      "source": "ofl/dmserifdisplay/DMSerifDisplay-Regular.ttf",
+      "gitBlobSha1": "bc5ed0cea657f264ea9c2a11a54da62ed619c5da",
+      "file": "dmserifdisplay.ttf",
+      "license": "dmserifdisplay-OFL.txt",
+      "licenseId": "OFL-1.1",
+      "modified": false
+    },
+    {
+      "id": "orbitron",
+      "name": "Orbitron",
+      "source": "ofl/orbitron/Orbitron[wght].ttf",
+      "gitBlobSha1": "1fc54ce7116a6ec549f37358466bcc92f9a72c33",
+      "file": "orbitron.ttf",
+      "license": "orbitron-OFL.txt",
+      "licenseId": "OFL-1.1",
+      "modified": false
+    },
+    {
+      "id": "outfit",
+      "name": "Outfit",
+      "source": "ofl/outfit/Outfit[wght].ttf",
+      "gitBlobSha1": "466d6245f9582df39bf73da91a8b3c938fd061cd",
+      "file": "outfit.ttf",
+      "license": "outfit-OFL.txt",
+      "licenseId": "OFL-1.1",
+      "modified": false
+    },
+    {
+      "id": "lexend",
+      "name": "Lexend",
+      "source": "ofl/lexend/Lexend[wght].ttf",
+      "gitBlobSha1": "f70999106bfa76d48051b73ad7c888573663879c",
+      "file": "lexend.ttf",
+      "license": "lexend-OFL.txt",
+      "licenseId": "OFL-1.1",
+      "modified": false
+    },
+    {
+      "id": "caveat",
+      "name": "Caveat",
+      "source": "ofl/caveat/Caveat[wght].ttf",
+      "gitBlobSha1": "f84acf2ce2d1b3329b194749530dbaec047e6df6",
+      "file": "caveat.ttf",
+      "license": "caveat-OFL.txt",
+      "licenseId": "OFL-1.1",
+      "modified": false
     }
   ]
 }

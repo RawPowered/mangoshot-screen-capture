@@ -6,9 +6,9 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
  await p.setViewportSize({width:1366,height:768});await p.goto(base+'editor.html');await p.waitForFunction(()=>!!window.MangoCaptureStore);
  await p.evaluate(async()=>{const c=document.createElement('canvas');c.width=1280;c.height=720;const x=c.getContext('2d');x.fillStyle='#203142';x.fillRect(0,0,1280,720);await MangoCaptureStore.save('creative-fixture',{width:1280,height:720,pageHeight:720,dpr:1,frames:1,full:false},[{index:0,scrollY:0,dataUrl:c.toDataURL()}]);});
  await p.goto(base+'editor.html?stored=creative-fixture');await p.waitForFunction(()=>MangoCreativeImageV079.state().ready);
- async function open(){await p.locator('.v06-menu > summary').filter({hasText:'Layer'}).click();await p.locator('#creative-open-v079').click();await p.waitForFunction(()=>MangoCreativeLibraryV079.state().loaded);assert.equal(await p.evaluate(()=>MangoCreativeV079.fonts.filter(f=>MangoCreativeV079.loaded(f.id)).length),8);}
- await open();assert.equal(await p.locator('.cr-card-v079').count(),12);await p.screenshot({path:path.join(out,'01-image-presets.png')});
- await p.locator('#cr-fonts-v079').click();assert.equal(await p.locator('.cr-card-v079').count(),8);
+ async function open(){await p.locator('.v06-menu > summary').filter({hasText:'Layer'}).click();await p.locator('#creative-open-v079').click();await p.waitForFunction(()=>MangoCreativeLibraryV079.state().loaded);assert.equal(await p.evaluate(()=>MangoCreativeV079.fonts.filter(f=>MangoCreativeV079.loaded(f.id)).length),16);}
+ await open();assert.equal(await p.locator('.cr-card-v079').count(),24);await p.screenshot({path:path.join(out,'01-image-presets.png')});
+ await p.locator('#cr-fonts-v079').click();assert.equal(await p.locator('.cr-card-v079').count(),16);
  const widths=await p.evaluate(()=>{const c=document.createElement('canvas').getContext('2d');return MangoCreativeV079.fonts.map(f=>{c.font='400 42px '+MangoCreativeV079.family(f.id,'sans-serif');return Math.round(c.measureText('MangoShot 0123').width);});});
  assert.ok(new Set(widths).size>=5,'Different local font metrics expected');await p.screenshot({path:path.join(out,'02-font-library.png')});
  await p.locator('#cr-search-v079').fill('Bodoni');assert.equal(await p.locator('.cr-card-v079').count(),1);
