@@ -250,7 +250,9 @@ jobs:
         run: timeout 180s node tests/spatial-motion-v0731.browser.cjs
       - name: Qualify advanced spatial primitives, alignment and keyed foreground masks
         if: ${{ !cancelled() }}
-        run: timeout 180s node tests/spatial-scene-v0732.browser.cjs
+        run: |
+          ffmpeg -loglevel error -f lavfi -i color=c=0x111111:s=320x180:r=24:d=1.5 -f lavfi -i color=c=0x303030:s=320x180:r=24:d=1.5 -filter_complex '[0:v][1:v]concat=n=2:v=1:a=0[v]' -map '[v]' -c:v libvpx-vp9 -pix_fmt yuv420p -y /tmp/mangoshot-spatial-reference.webm
+          timeout 180s node tests/spatial-scene-v0732.browser.cjs /tmp/mangoshot-spatial-reference.webm
       - name: Package development preview (not a release)
         run: |
           python3 tools/package-extension.py --out dist --version v0.6.18-mango-engine-raster-preview
