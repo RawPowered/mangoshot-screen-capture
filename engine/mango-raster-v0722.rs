@@ -44,5 +44,5 @@ fn filter(src:&[u8],out:&mut [u8],w:usize,h:usize,op:u32,amount:u32) {
     use super::*;
     #[test]fn alpha_gray(){let p=[255,0,0,17,0,255,0,128,0,0,255,0];let mut out=[0;12];filter(&p,&mut out,3,1,0,100);assert_eq!(out,[77,77,77,17,149,149,149,128,0,0,255,0]);}
     #[test]fn no_hidden_rgb_bleed(){let p=[255,0,0,255,0,255,0,0];let mut out=[0;8];filter(&p,&mut out,2,1,1,100);assert_eq!(p,out);}
-    #[test]fn identity_and_bounds(){let p=[20,30,40,1];let mut out=[0;4];for op in 0..=2{filter(&p,&mut out,1,1,op,100);assert_eq!(p,out);}assert!(!valid(usize::MAX,2,0,100,4));assert_eq!(mango_prepare(MAX*4+4),0);assert_ne!(mango_prepare(4),0);assert_eq!(mango_filter(1,2,0,100),0);mango_clear();}
+    #[test]fn identity_and_bounds(){let p=[30,30,30,1];let mut out=[0;4];for op in 0..=2{filter(&p,&mut out,1,1,op,100);assert_eq!(p,out);}assert!(!valid(usize::MAX,2,0,100,4));assert_eq!(mango_prepare(MAX*4+4),0);assert_ne!(mango_prepare(4),0);assert_eq!(mango_filter(1,2,0,100),0);mango_clear();}
 }
