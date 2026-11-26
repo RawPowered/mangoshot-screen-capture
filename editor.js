@@ -198,8 +198,12 @@ function pointerSamples(event){
 }
 function drawStroke(stroke){
  if(!stroke||stroke.visible===false)return;
- if(layerOps?.apply)layerOps.apply(pen,stroke,()=>drawStrokeRaw(stroke));
- else drawStrokeRaw(stroke);
+ paintCompositorStroke(pen,stroke);
+}
+function paintCompositorStroke(target,stroke,previewScale=1){
+ const C=globalThis.MangoCompositorV0714;
+ const paint=()=>C?.active(stroke.effectStack)&&layerOps.mayStyle(stroke)?C.paintStack(target,stroke.effectStack,p=>drawStrokeRaw(stroke,p),target.canvas.height/1080):drawStrokeRaw(stroke,target);
+ if(layerOps?.apply)layerOps.apply(target,stroke,paint);else paint();
 }
 const imageStrokeContext=pen;
 function drawStrokeRaw(stroke,pen=imageStrokeContext){
@@ -1902,7 +1906,7 @@ globalThis.MangoLayerImageV0712=Object.freeze({
   p.scale(rw/base.width,rh/base.height);
   for(const l of draft){if(l.visible===false)continue;let x=l;
    if(l.layerFx){const f=MangoLayerStudioV0712.appearance(l);x={...l,layerFx:{...f,blur:f.blur*scale,offsetX:f.offsetX*scale,offsetY:f.offsetY*scale}};}
-   layerOps.apply(p,x,()=>drawStrokeRaw(x,p));
+   paintCompositorStroke(p,x,scale);
   }
   out.clearRect(0,0,w,h);out.fillStyle='#111315';out.fillRect(0,0,w,h);const left=(w-rw)/2,top=(h-rh)/2;out.drawImage(base,left,top,rw,rh);out.drawImage(off,left,top);
  }

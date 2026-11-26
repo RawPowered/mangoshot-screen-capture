@@ -49,7 +49,7 @@
   return {schema:SCHEMA,name:raw.name||'Untitled sequence',variables:copy(variables),functions:copy(functions),steps:copy(raw.steps)};
  }
  function validateDraft(s){
-  const checked=root.MangoProject.check(root.MangoProject.pack(s.source,s.segments,s.layers,s.markers,s.transitions),s.source);
+  const checked=root.MangoProject.check(root.MangoProject.pack(s.source,s.segments,s.layers,s.markers,s.transitions,s.sourceGrade||[]),s.source);
   const zoom=root.MangoCreativeZoom.check(s.zoomFrames);const len=root.MangoEditOps.length(checked.segments);
   if(zoom.some(e=>e.start>=len||e.start+e.duration>len+.005)||new Set(zoom.map(e=>e.id)).size!==zoom.length)throw Error('Camera events must fit in the sequence');
   const d=root.MangoCursorDirectorCoreV074.check({schema:root.MangoCursorDirectorCoreV074.SCHEMA,regions:s.cursorRegions,trace:s.cursorTrace},s.source.duration);

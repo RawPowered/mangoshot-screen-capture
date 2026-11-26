@@ -51,9 +51,9 @@ async function renderFrame(){
   const cinematic=await root.MangoCinematicV0713?.exact(ctx,url,s.source.duration,s.segments,s.transitions,t,w,h,s.zoomFrames);
   if(run!==serial)return;engine.frame(ticket,t);
   if(!cinematic&&!root.MangoMotion.paintTransition(ctx,video,s.zoomFrames,s.segments,s.transitions,t,w,h)){
-   const z=root.MangoCreativeZoom.draw(ctx,video,s.zoomFrames,t,w,h);
+   const z=root.MangoCreativeZoom.draw(ctx,video,s.zoomFrames,t,w,h);root.MangoCompositorV0714?.gradeFrame(ctx,s.sourceGrade||[]);
    root.MangoCursorDirectorCoreV074.paint(ctx,s.cursorTrace,s.cursorRegions,s.segments,t,z,w,h);
-  }
+  }else root.MangoCompositorV0714?.gradeFrame(ctx,s.sourceGrade||[]);
   root.MangoGraphics.render(ctx,s.layers,t,w,h);el('frame-note').textContent='Rendered proposed frame · '+t.toFixed(2)+'s sequence / '+source.toFixed(2)+'s source · no audio';
  }catch(e){if(run===serial)el('frame-note').textContent='Frame unavailable: '+e.message;}
  finally{if(run===serial){release();el('render').disabled=!ticket;}}

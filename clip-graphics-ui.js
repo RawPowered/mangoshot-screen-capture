@@ -151,9 +151,9 @@
  }
  function selectionOutline(ctx,seconds,w,h){const selected=activeLayer();
   if(!selected||selected.locked||!selected.visible||seconds===null||seconds<selected.start||seconds>=selected.end)return;
-  const r=MangoGraphics.bounds(selected,w,h,ctx);ctx.save();ctx.globalAlpha=1;ctx.setLineDash([9,5]);
+  const r=MangoGraphics.animatedBounds(selected,w,h,ctx,seconds);ctx.save();ctx.globalAlpha=1;ctx.setLineDash([9,5]);
   ctx.lineWidth=Math.max(2,h/450);ctx.strokeStyle='#aee3fa';ctx.strokeRect(r.x,r.y,r.w,r.h);
-  ctx.setLineDash([]);ctx.fillStyle='#aee3fa';ctx.fillRect(r.x+r.w-9,r.y+r.h-9,16,16);ctx.restore();
+  ctx.setLineDash([]);if(!selected.keyframes?.length){ctx.fillStyle='#aee3fa';ctx.fillRect(r.x+r.w-9,r.y+r.h-9,16,16);}ctx.restore();
  }
  function propertyChange(e){const layer=activeLayer(),st=current();if(!layer||!st||layer.locked)return;
   const [field,coerce]=fields[e.currentTarget.id],value=coerce(e.currentTarget.value);
@@ -192,10 +192,11 @@
   if(!st||now===null)return;
   const p=canvasPoint(e),w=canvas.width,h=canvas.height;
   const visible=MangoGraphics.at(st.layers(),now).reverse();
-  const clicked=visible.find(l=>{if(l.locked)return false;const r=MangoGraphics.bounds(l,w,h,canvas.getContext?.('2d'));
+  const clicked=visible.find(l=>{if(l.locked)return false;const r=MangoGraphics.animatedBounds(l,w,h,canvas.getContext?.('2d'),now);
    return p.x>=r.x/w-.018&&p.x<=(r.x+r.w)/w+.018&&p.y>=r.y/h-.025&&p.y<=(r.y+r.h)/h+.025;});
   if(!clicked){return;}e.preventDefault();canvas.setPointerCapture?.(e.pointerId);
   select(clicked.id,true);
+  if(clicked.keyframes?.length){st.message('Animated layer selected. Edit transform keyframes in Professional Compositor.');return;}
   const box=MangoGraphics.bounds(clicked,w,h),size=20;
   const onHandle=st.selectedLayer()===clicked.id&&Math.abs(p.x*w-(box.x+box.w))<size&&Math.abs(p.y*h-(box.y+box.h))<size;
   movingCanvas={id:clicked.id,startX:p.x,startY:p.y,x:clicked.x,y:clicked.y,width:clicked.width,

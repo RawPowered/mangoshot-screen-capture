@@ -33,6 +33,8 @@
     if(l.premium!=null){if(!root.MangoPremium)fail('premium schema unavailable');root.MangoPremium.validate(l.premium);}
     if(l.layerGroup!=null){if(!root.MangoLayerStudioV0712)fail('layer group schema unavailable');root.MangoLayerStudioV0712.checkGroup(l.layerGroup);}
     if(l.layerFx!=null){if(!root.MangoLayerStudioV0712)fail('layer effect schema unavailable');root.MangoLayerStudioV0712.checkFx(l.layerFx);}
+    if(l.effectStack!=null){if(!root.MangoCompositorV0714)fail('effect stack schema unavailable');root.MangoCompositorV0714.checkStack(l.effectStack);}
+    if(l.keyframes!=null){if(!root.MangoCompositorV0714)fail('keyframe schema unavailable');root.MangoCompositorV0714.checkKeys(l.keyframes);}
     return {...l};
   });
   const markers=Array.isArray(data.markers)?data.markers:[];
@@ -42,8 +44,10 @@
   const boundaries=new Set(segments.slice(1).map((p,i)=>segments[i].end.toFixed(5)+':'+p.start.toFixed(5)));
   if(transitions.some(t=>!boundaries.has(t.fromEnd.toFixed(5)+':'+t.toStart.toFixed(5))))fail('transition boundary');
   if(root.MangoCinematicV0713)root.MangoCinematicV0713.plans(segments,transitions,source.duration);
-  return {segments,layers,markers,transitions};
+  if(data.sourceGrade!=null&&!root.MangoCompositorV0714)fail('source grade schema unavailable');
+  const grade=data.sourceGrade!=null?{sourceGrade:root.MangoCompositorV0714.checkStack(data.sourceGrade)}:{};
+  return {segments,layers,markers,transitions,...grade};
  }
- function pack(source,segments,layers,markers=[],transitions=[]){return {schema:'mangoshot.project.v1',created:new Date().toISOString(),source,segments,layers,markers,transitions};}
+ function pack(source,segments,layers,markers=[],transitions=[],sourceGrade=[]){return {schema:'mangoshot.project.v1',created:new Date().toISOString(),source,segments,layers,markers,transitions,...(sourceGrade.length?{sourceGrade}:{} )};}
  root.MangoProject={check,pack};
 })(typeof globalThis!=='undefined'?globalThis:this);

@@ -86,6 +86,8 @@
    lineH=fontsize*1.22;boxH=rendered.length*lineH+2*pad;
    if(boxH<=h-y-4||fontsize<=10)break;fontsize=Math.max(10,fontsize*.87);
   }
+  const compositor=root.MangoCompositorV0714;
+  if(compositor&&l.keyframes?.length){const pose=compositor.at(l,sec);ctx.globalAlpha*=pose.opacity;compositor.transform(ctx,pose,{x,y,w:width,h:boxH},w,h);}
   const motion=root.MangoMotion?.textFrame?.(l,sec);
   const fullText=motion?.text??l.text;
   // Preserve the complete glyph layout while a typing reveal advances.
@@ -149,8 +151,9 @@
  }
  function render(ctx,layers,seconds,w,h){if(!ctx||!Number.isFinite(seconds))return;
   for(const layer of at(layers,seconds)){
-   if(layer.layerFx&&root.MangoLayerStudioV0712)root.MangoLayerStudioV0712.composite(ctx,layer,w,h,p=>paintOne(p,layer,w,h,seconds));
-   else paintOne(ctx,layer,w,h,seconds);
+   const C=root.MangoCompositorV0714,paint=p=>C?.active(layer.effectStack)?C.paintStack(p,layer.effectStack,q=>paintOne(q,layer,w,h,seconds),h/1080):paintOne(p,layer,w,h,seconds);
+   if(layer.layerFx&&root.MangoLayerStudioV0712)root.MangoLayerStudioV0712.composite(ctx,layer,w,h,paint);
+   else paint(ctx);
   }
  }
  function ripple(layers,start,end){const d=end-start;if(d<=0)return cp(layers);
@@ -167,5 +170,6 @@
   }return result;
  }
  function bounds(layer,w,h,ctx){const fh=clamp(layer.fontSize*h/1080,9,200),x=clamp(layer.x*w,0,w-40),y=clamp(layer.y*h,0,h-24),width=clamp(layer.width*w,40,Math.max(40,w-x));if(ctx){ctx.save();ctx.font=`${resolveWeight(layer.font,layer.weight)} ${fh}px ${resolveFont(layer.font)}`;const rows=lines(ctx,layer.text,width-2*Math.max(5,fh*.32),7);ctx.restore();return {x,y,w:width,h:Math.min(h-y,rows.length*fh*1.22+fh*.64)};}return {x,y,w:width,h:Math.min(h-y,fh*2.5)};}
- root.MangoGraphics={styles,create,style,render,ripple,trim,bounds,at,clone:cp};
+ function animatedBounds(layer,w,h,ctx,seconds){const r=bounds(layer,w,h,ctx);return Number.isFinite(seconds)&&layer.keyframes?.length&&root.MangoCompositorV0714?root.MangoCompositorV0714.box(r,root.MangoCompositorV0714.at(layer,seconds),w,h):r;}
+ root.MangoGraphics={styles,create,style,render,ripple,trim,bounds,animatedBounds,at,clone:cp};
 })(typeof globalThis!=='undefined'?globalThis:this);

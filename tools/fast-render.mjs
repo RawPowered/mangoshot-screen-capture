@@ -35,6 +35,7 @@ function validate(project,stat,info){
  const visible=(project.layers||[]).filter(x=>x.visible!==false&&x.end>x.start);
  if(visible.length)throw Error('This fast path supports cuts only; visible graphics must be exported inside Clip Studio.');
  if(project.transitions?.length)throw Error('This fast path supports cuts only; transitions must be exported inside Clip Studio.');
+ if(project.sourceGrade?.length)throw Error('This fast path supports cuts only; source grading must be exported inside Clip Studio.');
  for(const [i,s] of project.segments.entries()){
   if(!Number.isFinite(s.start)||!Number.isFinite(s.end)||s.start<0||s.end-s.start<.04||s.end>duration+.10)
    throw Error('Invalid segment '+i);
