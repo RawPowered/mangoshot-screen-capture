@@ -20,6 +20,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   const key=p.locator('[data-layer-id="'+lid+'"] .pt-key-marker-v0717[data-key-index="1"]');await key.scrollIntoViewIfNeeded();const kb=await key.boundingBox();await p.mouse.move(kb.x+kb.width/2,kb.y+kb.height/2);await p.mouse.down();await p.keyboard.down('Alt');await p.mouse.move(kb.x+kb.width/2+.4*width/total,kb.y+kb.height/2,{steps:8});await p.keyboard.up('Alt');await p.mouse.up();
   await p.waitForFunction(id=>MangoClipView.layers().find(l=>l.id===id).keyframes[1].t>.55,lid);const keys=await p.evaluate(id=>MangoClipView.layers().find(l=>l.id===id).keyframes,lid);assert.equal(keys[1].x,.3);assert.equal(keys[2].rotation,50);
   await p.screenshot({path:path.join(out,'01-timeline-keys-and-tracks.png')});
+  await key.dblclick();const kd=p.locator('#compositor-v0714');await kd.waitFor({state:'visible'});assert.ok(Math.abs(Number(await p.locator('#pc-scrub-v0714').inputValue())/1000-keys[1].t)<.002);await p.keyboard.press('Escape');await kd.waitFor({state:'hidden'});
   // Ripple across an active secondary clip creates two source-continuous fragments.
   const old=await state(),c=old.clips[0],cutStart=c.start+.3,cutEnd=cutStart+.3;
   assert.equal(await p.evaluate(([a,b])=>MangoClipView.rippleDelete(a,b),[cutStart,cutEnd]),true);

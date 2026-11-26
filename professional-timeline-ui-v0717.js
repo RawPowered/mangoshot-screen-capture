@@ -4,7 +4,7 @@
  const V=root.MangoClipView,P=root.MangoProfessionalTimelineV0717,M=root.MangoMultitrackV0716,B=root.MangoMediaBin,d=root.document;if(!V||!P||!M||!B)return;
  const by=id=>d.getElementById(id),inner=by('timeline-inner'),primary=by('timeline');if(!inner||!primary)return;
  const visual=d.createElement('div'),audio=d.createElement('div');visual.id='pt-visual-tracks-v0717';audio.id='pt-audio-tracks-v0717';visual.className=audio.className='pt-tracks-v0717';primary.before(visual);(by('v061-voice-track')||primary).after(audio);
- const tracks=['V3','V2','A2'];let selected=null,gesture=null,committing=false,signature=null;
+ const tracks=['V3','V2','A2'];let selected=null,gesture=null,keyCancel=null,committing=false,signature=null;
  const n=(tag,cls,text)=>{const x=d.createElement(tag);if(cls)x.className=cls;if(text!=null)x.textContent=text;return x;};
  const fmt=t=>Number(t).toFixed(2)+'s',name=c=>B.registry.get(c.assetId)?.name||'Missing local media';
  const stop=e=>{e.preventDefault();e.stopPropagation();};
@@ -57,19 +57,19 @@
   for(const [index,k] of layer.keyframes.entries()){
    const mark=n('button','pt-key-marker-v0717');mark.type='button';mark.style.left=(100*k.t)+'%';mark.dataset.keyIndex=String(index);mark.title='Keyframe '+(index+1)+' · '+fmt(layer.start+(layer.end-layer.start)*k.t)+' · drag to retime, Enter to edit';mark.setAttribute('aria-label',mark.title);lane.append(mark);
    let down=null;
-   mark.addEventListener('pointerdown',e=>{stop(e);if(layer.locked||!current().ready)return;down={id:e.pointerId,x:e.clientX,stamp:current().stamp,value:k.t,moved:false};mark.setPointerCapture?.(e.pointerId);});
-   mark.addEventListener('pointermove',e=>{if(!down||e.pointerId!==down.id)return;stop(e);if(Math.abs(e.clientX-down.x)<2&&!down.moved)return;down.moved=true;const total=V.outputDuration(),px=Math.max(1,inner.getBoundingClientRect().width)*(layer.end-layer.start)/total;let t=k.t+(e.clientX-down.x)/Math.max(1,px);
+   mark.addEventListener('pointerdown',e=>{stop(e);if(layer.locked||!current().ready)return;down={id:e.pointerId,x:e.clientX,stamp:current().stamp,value:k.t,moved:false};keyCancel=cancel;mark.setPointerCapture?.(e.pointerId);});
+   mark.addEventListener('pointermove',e=>{if(!down||e.pointerId!==down.id)return;stop(e);if(Math.abs(e.clientX-down.x)<2&&!down.moved)return;down.moved=true;const px=Math.max(1,lane.getBoundingClientRect().width);let t=k.t+(e.clientX-down.x)/Math.max(1,px);
     if(snapOn(e)){const play=(V.sequencePosition()-layer.start)/(layer.end-layer.start);if(Math.abs(t-play)*px<=8)t=play;}
     try{down.value=P.keyTime(layer.keyframes,index,t)[index].t;mark.style.left=(100*down.value)+'%';}catch{}
    });
-   const cancel=()=>{if(down){down=null;mark.style.left=(100*k.t)+'%';}};
+   const cancel=()=>{const g=down;down=null;if(keyCancel===cancel)keyCancel=null;mark.style.left=(100*k.t)+'%';try{if(g&&mark.hasPointerCapture?.(g.id))mark.releasePointerCapture(g.id);}catch{}};
    mark.addEventListener('pointercancel',cancel);mark.addEventListener('lostpointercapture',cancel);
-   mark.addEventListener('pointerup',e=>{stop(e);const g=down;down=null;if(!g||!g.moved){V.selectLayer(layer.id);V.seekOutput(layer.start+(layer.end-layer.start)*k.t);return;}try{V.commitGraphicKeyTime(layer.id,index,g.value,g.stamp);}catch(err){mark.style.left=(100*k.t)+'%';V.message(err.message);}});
+   mark.addEventListener('pointerup',e=>{stop(e);const g=down;down=null;if(keyCancel===cancel)keyCancel=null;if(!g)return;if(!g.moved){V.selectLayer(layer.id,true);V.seekOutput(layer.start+(layer.end-layer.start)*k.t);return;}try{V.commitGraphicKeyTime(layer.id,index,g.value,g.stamp);}catch(err){mark.style.left=(100*k.t)+'%';V.message(err.message);}});
    mark.addEventListener('click',e=>e.stopPropagation());mark.addEventListener('dblclick',e=>{stop(e);root.MangoCompositorUIV0714?.openAtKeyframe(layer.id,k.t);});
    mark.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){stop(e);root.MangoCompositorUIV0714?.openAtKeyframe(layer.id,k.t);return;}if(['ArrowLeft','ArrowRight'].includes(e.key)&&!layer.locked){stop(e);try{V.commitGraphicKeyTime(layer.id,index,k.t+(e.key==='ArrowLeft'?-1:1)*(e.shiftKey?1:1/30)/(layer.end-layer.start),current().stamp);}catch(err){V.message(err.message);}}});
   }
  }
- root.addEventListener('keydown',e=>{if(e.key==='Escape'&&gesture){stop(e);e.stopImmediatePropagation();release(true);}},true);
- root.addEventListener('blur',()=>release(true));
+ root.addEventListener('keydown',e=>{if(e.key==='Escape'&&(gesture||keyCancel)){stop(e);e.stopImmediatePropagation();release(true);keyCancel?.();}},true);
+ root.addEventListener('blur',()=>{release(true);keyCancel?.();});
  root.MangoProfessionalTimelineUIV0717=Object.freeze({refresh,attachKeys});refresh();root.MangoLayerUI?.render?.();
 })(typeof globalThis!=='undefined'?globalThis:this);

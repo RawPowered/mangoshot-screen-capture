@@ -47,7 +47,7 @@
   async function prepare(raw,length,notify=()=>{}){
    const m=check(raw,asset,length),wanted=signature(m);
    for(const c of m.clips){const a=asset(c.assetId);if(!a||a.missing||!a.url||!a.blob)throw Error('Relink missing local asset: '+(a?.name||c.assetId));root.MangoCompositorV0714?.requireSupport(c.grade);}
-   if(key===wanted){if(failed)throw failed;if(pending){await pending;return m;}return m;}
+   if(key===wanted){if(failed)throw failed;if(pending)await pending;for(const c of m.clips){if(!visual(c)&&c.sourceOut>(cache.get(c.id)?.audio?.duration??0)+.03)throw Error('Audio trim exceeds the prepared source duration.');}return m;}
    clear();key=wanted;if(!m.clips.length)return m;
    controller=new AbortController();const signal=controller.signal,local=new Map(),count=m.clips.reduce((n,c)=>n+(visual(c)?framesFor(c,asset(c.assetId)):0),0);
    pending=Promise.resolve().then(async()=>{let ac=null,totalAudio=0,progress=0;
