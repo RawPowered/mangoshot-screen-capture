@@ -44,7 +44,7 @@ function setReady(value){
  document.getElementById('undo').disabled=!value||!history.length;
  const redo=document.getElementById('redo');if(redo)redo.disabled=!value||!redoHistory.length;
  renderStrokeList();updateEditorControls();
- window.dispatchEvent(new Event('mango-image-state-v0743'));
+ globalThis.MangoPixelUIV0741?.refresh?.();
 }
 function image(dataUrl){return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error('Screenshot image failed to decode.'));img.src=dataUrl;});}
 function zoom(){if(!base.width)return;const selected=document.querySelector('#zoom').value;
@@ -123,7 +123,7 @@ async function begin(){
     // Do not leave sensitive screenshot copies in the transfer database after
     // they have been successfully assembled in Image Studio.
     await globalThis.MangoCaptureStore.remove(stored).catch(()=>{});
-  }catch(error){label('Capture failed: '+error.message);}finally{documentLoadPending=false;globalThis.MangoImageDocumentUIV0723?.refresh();window.dispatchEvent(new Event('mango-image-state-v0743'));}
+  }catch(error){label('Capture failed: '+error.message);}finally{documentLoadPending=false;globalThis.MangoImageDocumentUIV0723?.refresh();globalThis.MangoPixelUIV0741?.refresh?.();}
 }
 
 /* Explicit clipboard import: never read in the background or on page load.
