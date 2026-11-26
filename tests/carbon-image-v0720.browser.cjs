@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),{chromium}=require('playwright');
 (async()=>{
- const dir=path.resolve(__dirname,'..'),out=path.join(dir,'carbon-image-screenshots');fs.mkdirSync(out,{recursive:true});
+ const dir=path.resolve(process.env.MANGO_EXTENSION_ROOT||path.resolve(__dirname,'..')),out=path.join(dir,'carbon-image-screenshots');fs.mkdirSync(out,{recursive:true});
  const ctx=await chromium.launchPersistentContext('',{channel:'chromium',headless:true,args:['--disable-extensions-except='+dir,'--load-extension='+dir,'--no-sandbox']});
  try{
   let [worker]=ctx.serviceWorkers();if(!worker)worker=await ctx.waitForEvent('serviceworker',{timeout:20000});

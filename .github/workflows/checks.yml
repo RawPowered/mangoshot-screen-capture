@@ -163,6 +163,60 @@ jobs:
           path: dist/MangoShot-v0.6.18-uix-b1-preview-Extension.zip
           retention-days: 14
 
+  zoom-recovery-packaged-preview:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.38-zoom-studio-recovery'
+    runs-on: ubuntu-latest
+    needs: browser-extension-unit-tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Compile and qualify bundled raster module
+        run: |
+          rustup target add wasm32-unknown-unknown
+          rustc --edition=2021 --test engine/mango-raster-v0722.rs -o /tmp/mango-raster-native-tests
+          /tmp/mango-raster-native-tests
+          rustc --edition=2021 --target wasm32-unknown-unknown --crate-type=cdylib -C opt-level=3 -C panic=abort engine/mango-raster-v0722.rs -o mango-engine-v0722.wasm
+          node tests/mango-raster-wasm-v0722.cjs mango-engine-v0722.wasm
+      - name: Build exact installation ZIP
+        run: |
+          python3 tools/package-extension.py --out dist --version v0.6.18-mango-engine-raster-preview
+          unzip -t dist/MangoShot-v0.6.18-mango-engine-raster-preview-Extension.zip
+          mkdir -p /tmp/mango-zoom-recovery
+          unzip -q dist/MangoShot-v0.6.18-mango-engine-raster-preview-Extension.zip -d /tmp/mango-zoom-recovery
+          python3 -c "import json; m=json.load(open('/tmp/mango-zoom-recovery/manifest.json')); assert m['version_name']=='0.7.38 Zoom Studio Recovery preview'"
+      - name: Install browser test tooling
+        run: |
+          npm install --no-save --no-package-lock playwright
+          npx playwright install --with-deps chromium
+      - name: Exercise real installation, Clip Studio, Zoom Studio and encoded camera
+        env:
+          MANGO_EXTENSION_ROOT: /tmp/mango-zoom-recovery
+        run: timeout 180s node tests/zoom-studio-v0738.browser.cjs
+      - name: Exercise image dials and independent sequence callout motion from same ZIP
+        env:
+          MANGO_EXTENSION_ROOT: /tmp/mango-zoom-recovery
+        run: |
+          timeout 180s node tests/carbon-image-v0720.browser.cjs
+          timeout 180s node tests/callout-motion-v0736.browser.cjs
+          timeout 180s node tests/smart-focus-v0737.browser.cjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MangoShot-v0.7.38-Packaged-Recovery-Preview
+          path: dist/MangoShot-v0.6.18-mango-engine-raster-preview-Extension.zip
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: MangoShot-v0.7.38-Packaged-Recovery-Evidence
+          path: |
+            /tmp/mango-zoom-recovery/zoom-recovery-screenshots/
+            /tmp/mango-zoom-recovery/carbon-image-screenshots/
+            /tmp/mango-zoom-recovery/callout-motion-screenshots/
+            /tmp/mango-zoom-recovery/smart-focus-screenshots/
+          retention-days: 14
+
   studio-precision-preview:
     if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.38-zoom-studio-recovery'
     runs-on: ubuntu-latest
