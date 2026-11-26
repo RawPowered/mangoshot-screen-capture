@@ -34,7 +34,7 @@
  filter.before(anchor);
  const home=make('div','ci-layer-home-v0720');anchor.after(home);home.append(filter,selectActions,list);
  const dock=make('section','ci-layer-dock-v0720');dock.hidden=true;dock.setAttribute('aria-label','Persistent layer stack');
- const dockHead=make('div','ci-dock-title-v0720');dockHead.append(make('strong','','Layers'),make('small','','Top = front'));dock.append(dockHead);aside.append(dock);
+ const dockHead=make('div','ci-dock-title-v0720');dockHead.append(make('strong','','Layers'),make('small','','Top = front'));dock.append(dockHead);aside.append(dock);root.MangoPrecisionVisualV0721?.dock(aside,dock);
  const toggle=action('Pin layers',()=>{pin=!pin;try{root.localStorage.setItem(store,String(pin));}catch{}syncDock();});
  toggle.id='ci-pin-layers-v0720';toggle.title='Keep layers visible while editing Type, Tools or Mask on a wide right-docked workspace';
  aside.querySelector('.panel-heading').append(toggle);
@@ -79,6 +79,7 @@
  const apply=action('Apply',()=>commit());apply.classList.add('primary');apply.id='ci-apply-v0720';apply.disabled=true;
  footerButtons.append(reset,apply);footer.append(status,footerButtons);body.append(previews,controls,effects);dialog.append(header,body,footer);doc.body.append(dialog);
  let session=null,values={},frame=0,renderOK=false,returnFocus=null;
+ const advanced=root.MangoPrecisionVisualV0721?.mount(body,kind,()=>schedule());
  const dials=new Map();
  function setValue(spec,n){if(!session||!Number.isFinite(n)||spec.key==='blur'&&kind.value==='none')return;values[spec.key]=snap(n,spec.min,spec.max,spec.step);updateDial(spec);schedule();}
  function updateDial(spec){
@@ -110,18 +111,18 @@
   input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();input.blur();}});
   card.append(label,knob,input);controls.append(card);dials.set(spec.key,{knob,readout,input});
  }
- function setInitial(){const l=session.layer;values={rotation:l.rotation,opacity:l.opacity*100,blur:l.fx.blur};kind.value=l.fx.kind;for(const s of specs)updateDial(s);}
- kind.addEventListener('change',()=>{updateDial(specs[2]);schedule();});
+ function setInitial(){const l=session.layer;values={rotation:l.rotation,opacity:l.opacity*100,blur:l.fx.blur};kind.value=l.fx.kind;for(const s of specs)updateDial(s);advanced?.reset(l);}
+ kind.addEventListener('change',()=>{updateDial(specs[2]);advanced?.sync();schedule();});
  function schedule(){if(!session||!dialog.open)return;renderOK=false;apply.disabled=true;if(frame)return;frame=root.requestAnimationFrame(()=>{frame=0;render();});}
- function args(){return draftArgs(session.layer,values,kind.value);}
+ function args(){const d=draftArgs(session.layer,values,kind.value);return advanced?advanced.patch(session.layer,d):d;}
  function render(){
   if(!session||!dialog.open)return;try{
-   const d=args();api.preview(after,[session.layer.id],d,session.stamp);renderOK=true;apply.disabled=!Object.keys(d).length;status.textContent=apply.disabled?'No draft changes.':'Draft ready · Apply commits one undo step.';
+   const d=args();if(d.material){const ink=by('ink');root.MangoTransformMaterialV0715.requireBudget([{material:d.material}],ink.width,ink.height);}api.preview(after,[session.layer.id],d,session.stamp);renderOK=true;apply.disabled=!Object.keys(d).length;status.textContent=apply.disabled?'No draft changes.':'Draft ready · Apply commits one undo step.';
   }catch(e){renderOK=false;apply.disabled=true;status.textContent=String(e.message||e);}
  }
  function selected(){const s=api.state();if(!s.ready||s.selection.length!==1)return null;const l=s.layers.find(v=>v.id===s.selection[0]);return l&&l.eligible&&!l.locked&&l.visible?{layer:l,stamp:s.stamp}:null;}
  function open(){
-  const s=selected();if(!s||dialog.open)return false;
+  const s=selected();if(!s||dialog.open||doc.querySelector('dialog[open]'))return false;
   returnFocus=doc.activeElement;session=s;setInitial();subtitle.textContent=s.layer.name+' · Non-destructive draft';dialog.showModal();
   try{api.preview(original,[s.layer.id],{},s.stamp);render();}catch(e){status.textContent=String(e.message||e);apply.disabled=true;}
   return true;
@@ -131,6 +132,7 @@
   try{const d=args();api.apply('effects',[session.layer.id],d,session.stamp);dialog.close();}
   catch(e){status.textContent=String(e.message||e);apply.disabled=true;renderOK=false;}
  }
+ dialog.addEventListener('keydown',e=>{if(e.key==='Escape'&&!e.isComposing){e.preventDefault();e.stopPropagation();dialog.close();}},true);
  dialog.addEventListener('close',()=>{if(frame)root.cancelAnimationFrame(frame);frame=0;session=null;renderOK=false;apply.disabled=true;returnFocus?.focus?.();returnFocus=null;refresh();});
  const precision=action('Precision…',open);precision.id='ci-open-v0720';precision.title='Draft rotation, opacity and shadow/glow using the real image compositor';buttons.append(precision);quick.prepend(buttons);
  function refresh(){
