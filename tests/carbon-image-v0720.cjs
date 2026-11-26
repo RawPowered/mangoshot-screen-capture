@@ -1,0 +1,13 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const {snap,draftArgs,specs}=require('../carbon-image-v0720.js');
+assert.equal(specs.length,3);assert.equal(snap(999,-180,180,1),180);assert.equal(snap(-999,-180,180,1),-180);assert.equal(snap(49.6,0,100,1),50);assert.throws(()=>snap(NaN,0,100,1));
+const initial={rotation:0,opacity:.75,fx:{kind:'shadow',color:'#000000',blur:4,offsetX:2,offsetY:5,blend:'source-over'}};
+assert.deepEqual(draftArgs(initial,{rotation:0,opacity:75,blur:4},'shadow'),{});
+assert.deepEqual(draftArgs(initial,{rotation:180,opacity:45,blur:4},'shadow'),{rotation:-180,opacity:.45});
+const changed=draftArgs(initial,{rotation:0,opacity:75,blur:18},'glow');
+assert.equal(changed.fx.blur,18);assert.equal(changed.fx.kind,'glow');assert.equal(changed.fx.offsetX,2);assert.equal(initial.fx.blur,4);
+const html=fs.readFileSync('editor.html','utf8');
+assert.equal((html.match(/id="stroke-list"/g)||[]).length,1);
+assert.ok(html.includes('carbon-image-v0720.css')&&html.includes('carbon-image-v0720.js'));
+console.log('Carbon Image Studio dial and draft contract passed');
