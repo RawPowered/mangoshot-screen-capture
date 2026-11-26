@@ -1,0 +1,28 @@
+.co35 .co35-scalar{grid-template-columns:36px minmax(0,1fr) minmax(52px,.8fr);gap:4px 6px;align-items:center}
+.co35 .co35-scalar>label{grid-column:2;grid-row:1;min-width:0}
+.co35 .co35-scalar>input[type=number]{grid-column:3;grid-row:1}
+.co35 .co35-scalar>input[type=range]{grid-column:2/-1;grid-row:2}
+.co36-dial{grid-column:1;grid-row:1/3;width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:conic-gradient(from 225deg,#b9f35d 0deg var(--dial-sweep),#4c5662 var(--dial-sweep) 270deg,#252b32 270deg);cursor:ns-resize;touch-action:none;box-shadow:0 1px 3px #080b0f;outline-offset:2px}
+.co36-dial:focus-visible{outline:2px solid #b9f35d}
+.co36-dial[aria-disabled=true]{opacity:.45;cursor:default}
+.co36-dial-face{width:27px;height:27px;display:grid;place-items:center;border-radius:50%;background:linear-gradient(150deg,#4c5764,#141920 65%);border:1px solid #20262e;box-shadow:inset 0 1px 2px #87919a55}
+.co36-dial-needle{width:2px;height:19px;display:block;position:relative;transform-origin:center}
+.co36-dial-needle:before{content:'';position:absolute;top:0;left:0;width:2px;height:7px;background:#e9f5f9;border-radius:1px}
+.co36-editor{display:grid;gap:8px;min-width:0}
+.co36-notice,.co36-status{font-size:11px;color:#c0c9d3;line-height:1.4;margin:0}
+.co36-track-head,.co36-key-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;align-items:center}
+.co36-track-head select{grid-column:1/-1;min-width:0;width:100%}
+.co36-count{font-size:10px;color:#b7c4ce;text-align:right}
+.co36-graph{width:100%;height:auto;display:block;border:1px solid #49545f;cursor:crosshair}
+.co36-key-strip{display:flex;gap:4px;flex-wrap:wrap}
+.co36-key-strip button{font-size:10px;padding:4px;min-width:0}
+.co36-key-strip button[aria-pressed=true]{border-color:#b9f35d;color:#b9f35d}
+.co36-key-fields,.co36-curve{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.co36-curve,.co36-key-fields>button{grid-column:1/-1}
+.co36-field{font-size:11px;min-width:0;display:grid;gap:3px;color:#c1cbd4}
+.co36-field input,.co36-field select{width:100%;min-width:0;box-sizing:border-box;font-size:11px;padding:4px}
+.co36-path-presets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.co36-path-presets strong{grid-column:1/-1;font-size:10px;letter-spacing:.08em;color:#b7c4ce}
+.co36-editor button{font-size:11px;white-space:normal;padding:5px}
+.co36-editor [hidden]{display:none!important}
+.co35-dialog .co35-controls{max-height:500px}
