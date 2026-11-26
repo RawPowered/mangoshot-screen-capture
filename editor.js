@@ -20,7 +20,7 @@ const layerCore=globalThis.MangoImageLayersV0612;
 const typeEffects=globalThis.MangoImageTypeV0613;
 const vectorCore=globalThis.MangoImageVectorV0615;
 const penInput=globalThis.MangoPenInputV0616;
-const precisionBrush=globalThis.MangoBrushV0725,creativeEffects=globalThis.MangoCreativeEffectsV0726;
+const precisionBrush=globalThis.MangoBrushV0725,creativeEffects=globalThis.MangoCreativeEffectsV0726,rasterLayers=globalThis.MangoRasterLayerV0727;
 let brushPreference=precisionBrush?.read().profile||null;
 const layerOps=globalThis.MangoLayerOpsV0618;
 const selectedBox=document.getElementById('text-selection-box'),inline=document.getElementById('text-inline'),
@@ -534,7 +534,7 @@ function moveLayerAt(index,delta){
  if(selectedObject===index)selectedObject=target;else if(selectedObject===target)selectedObject=index;
  redraw();setReady(ready);syncLayerProperties();return true;
 }
-function creativeCopyAllowed(copies){try{creativeEffects?.requireBudget([...strokes,...copies],ink.width,ink.height);return true;}catch(e){label(e.message);return false;}}
+function creativeCopyAllowed(copies){try{const next=[...strokes,...copies];creativeEffects?.requireBudget(next,ink.width,ink.height);rasterLayers?.requireProject(next,l=>layerCore.asset(l));return true;}catch(e){label(e.message);return false;}}
 function duplicateSelectedLayer(){
  const i=selectedAnyIndex();if(i<0||!strokes[i]||strokes[i].locked)return false;
  if(!creativeCopyAllowed([strokes[i]]))return false;
@@ -1977,6 +1977,22 @@ globalThis.MangoToolImageV0711=Object.freeze({state:()=>({selection:batchLayers(
 /* Raster Lab reads the exact currently exported composition, never unredacted source. */
 /* Portable project adapter. Validation and decoding precede document replacement. */
 /* Brush profiles are captured per stroke; preferences never rewrite existing artwork. */
+/* Editable raster recipes are evaluated against the immutable imported source asset.
+ * Geometry, alpha masks, layer blend and outer effects are applied afterward. */
+globalThis.MangoRasterLayerImageV0727=Object.freeze({
+ state(){
+  const s=globalThis.MangoLayerImageV0712.state(),l=s.selection.length===1?strokes.find(x=>x.id===s.selection[0]):null,a=l?.type==='image'?layerCore.asset(l):null;
+  return {ready:s.ready,stamp:s.stamp,selected:l&&a&&!l.locked&&effectiveLayerVisible(l)?{id:l.id,name:l.name||'Imported image',width:a.width,height:a.height,stack:rasterLayers.copy(l.rasterFx||[])}:null};
+ },
+ async prepare(id,stack,stamp,backend,signal){
+  const s=this.state();if(!s.ready||s.stamp!==stamp||s.selected?.id!==id)throw Error('Image layer changed, is locked or is busy. Reopen Raster Effects.');
+  const l=strokes.find(x=>x.id===id),next=rasterLayers.check(stack);
+  rasterLayers.requireProject(strokes.map(x=>x.id===id?{...x,rasterFx:next}:x),x=>layerCore.asset(x));
+  const result=await rasterLayers.prepare(layerCore.asset(l),next,backend,signal);
+  const now=this.state();if(signal?.aborted||!now.ready||now.stamp!==stamp||now.selected?.id!==id)throw Error('Image changed while preparing raster effects.');
+  return result;
+ }
+});
 globalThis.MangoBrushImageV0725=Object.freeze({
  state(){const s=globalThis.MangoLayerImageV0712.state(),l=s.selection.length===1?strokes.find(x=>x.id===s.selection[0]):null;
   return {ready:s.ready,stamp:s.stamp,width:base.width,height:base.height,tool:tool.value,size:Number(size.value),color:color.value,opacity:Number(document.getElementById('image-tool-opacity')?.value||100)/100,preference:brushPreference?precisionBrush.copy(brushPreference):null,selected:l&&['pen','highlighter'].includes(l.type)&&!l.locked&&effectiveLayerVisible(l)?cloneStrokes([l])[0]:null};
@@ -2041,8 +2057,8 @@ globalThis.MangoImageDocumentV0723=Object.freeze({
     const c=document.createElement('canvas');c.width=a.width;c.height=a.height;c.getContext('2d').drawImage(a.image,0,0);assets.push({id:l.assetId,name:a.name,width:a.width,height:a.height,png:c.toDataURL('image/png')});c.width=c.height=1;assetIds.add(l.assetId);}
    if(l.cutoutKey&&!matteIds.has(l.cutoutKey)){const m=registry.get(l.cutoutKey);if(!m)throw Error('Missing image matte.');mattes.push({id:l.cutoutKey,width:m.width,height:m.height,alpha:D.encode(m.data)});matteIds.add(l.cutoutKey);}
   }
-  const comp=advancedComp?.reconcile(composition,strokes),v2=advancedComp?.active(comp),v3=layers.some(l=>l.brush),v4=layers.some(l=>l.creativeFx);
-  return D.check({format:'MangoShotImage',version:v4?4:v3?3:v2?2:1,name,width:base.width,height:base.height,base:base.toDataURL('image/png'),layers,assets,mattes,...(v2||v3||v4?{composition:comp}:{})},this.cores());
+  const comp=advancedComp?.reconcile(composition,strokes),v2=advancedComp?.active(comp),v3=layers.some(l=>l.brush),v4=layers.some(l=>l.creativeFx),v5=layers.some(l=>l.rasterFx?.length);
+  return D.check({format:'MangoShotImage',version:v5?5:v4?4:v3?3:v2?2:1,name,width:base.width,height:base.height,base:base.toDataURL('image/png'),layers,assets,mattes,...(v2||v3||v4||v5?{composition:comp}:{})},this.cores());
  },
  async open(raw,stamp){
   const D=globalThis.MangoImageDocumentCoreV0723,initial=this.state();if(!initial.canOpen||initial.stamp!==stamp)throw Error('Image editor is busy.');
@@ -2052,6 +2068,7 @@ globalThis.MangoImageDocumentV0723=Object.freeze({
   for(const m of p.mattes)nextMattes.set(m.id,{width:m.width,height:m.height,data:D.decode(m.alpha)});
   const fontIds=p.layers.filter(l=>l.type==='text').map(l=>l.fontFamily||'sans').filter(id=>globalThis.MangoCreativeV079?.font(id));
   await globalThis.MangoCreativeV079?.ready;globalThis.MangoCreativeV079?.requireFonts(fontIds);
+  if(rasterLayers)for(const l of p.layers)if(l.rasterFx&&rasterLayers.active(l.rasterFx))await rasterLayers.prepare(nextAssets.get(l.assetId),l.rasterFx);
   const now=this.state();if(!now.canOpen||now.stamp!==stamp)throw Error('Image changed while opening the project.');
   // Render staged content with its own registry. No document pixels/history are touched until successful.
   const oldAssets=new Map(layerCore.assets),oldMattes=layerCore.projectMattes(),staged=document.createElement('canvas');staged.width=p.width;staged.height=p.height;
@@ -2059,7 +2076,7 @@ globalThis.MangoImageDocumentV0723=Object.freeze({
   const g=staged.getContext('2d');try{layerCore.replaceProjectRegistry(nextAssets,nextMattes);paintComposedLayers(g,p.layers,nextComp);}
   catch(e){layerCore.replaceProjectRegistry(oldAssets,oldMattes);throw e;}
   base.width=ink.width=p.width;base.height=ink.height=p.height;ctx.drawImage(source,0,0);pen.drawImage(staged,0,0);staged.width=staged.height=1;
-  clearBatch();strokes=p.layers;composition=nextComp;sourceGeneration++;history=[];redoHistory=[];selectedText=selectedImage=selectedObject=-1;layerClipboard=styleClipboard=null;composedSource();
+  rasterLayers?.retain(nextAssets.values());clearBatch();strokes=p.layers;composition=nextComp;sourceGeneration++;history=[];redoHistory=[];selectedText=selectedImage=selectedObject=-1;layerClipboard=styleClipboard=null;composedSource();
   meta={width:p.width,height:p.height,pageHeight:p.height,dpr:1,frames:1,full:false};frames=[];
   const landing=document.getElementById('image-clipboard-landing');if(landing)landing.hidden=true;
   tool.value='select';syncTool();switchInspectorTab('layers');document.getElementById('zoom').value='fit';
@@ -2110,6 +2127,7 @@ globalThis.MangoLayerImageV0712=Object.freeze({
   const r=MangoLayerStudioV0712.plan('image',strokes,ids,command,args,()=>crypto.randomUUID());
   if(!r.changed)return {changed:false,selection:r.selection};
   globalThis.MangoCompositorV0714?.requireProject(r.layers,[],ink.width,ink.height);
+  rasterLayers?.requireProject(r.layers,l=>layerCore.asset(l));
   if(advancedComp&&!advancedComp.canOrder(composition,r.layers))throw Error('Move the complete isolated group or ungroup first.');
   snapshot();strokes=r.layers;setBatch(r.selection);redraw();setReady(ready);syncSelectedText();syncLayerProperties();label('Layer Studio edit applied. Ctrl+Z to undo.');
   return {changed:true,selection:r.selection};
@@ -2119,6 +2137,7 @@ globalThis.MangoLayerImageV0712=Object.freeze({
   const s=this.state();if(!s.ready||stamp!==s.stamp)throw Error('Image changed or is busy. Reopen Layer Studio.');
   let draft=strokes;if(ids.length&&Object.keys(args).length)draft=MangoLayerStudioV0712.plan('image',strokes,ids,'effects',args).layers;
   creativeEffects?.requireBudget(draft,base.width,base.height);
+  rasterLayers?.requireProject(draft,l=>layerCore.asset(l));
   const w=canvas.width,h=canvas.height,scale=Math.min(w/base.width,h/base.height),rw=Math.max(1,Math.round(base.width*scale)),rh=Math.max(1,Math.round(base.height*scale));
   const off=document.createElement('canvas');off.width=rw;off.height=rh;const p=off.getContext('2d'),out=canvas.getContext('2d');
   p.scale(rw/base.width,rh/base.height);
