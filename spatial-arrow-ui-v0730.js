@@ -10,7 +10,7 @@
  const axes=[{v:[1,0,0],c:'#ff716e',name:'X'},{v:[0,1,0],c:'#83dc8a',name:'Y'},{v:[0,0,1],c:'#73b6ff',name:'Z'}];
  function editor(host,initial,opts={}){
   let value=S.check(initial),camera=S.copy(value.camera),viewMode='output',selected=0,drag=null,frame=0,error=null,topologyLocked=false,maskDraft=null,maskEdit=false;
-  const locked=!!opts.locked,prefix=opts.prefix||'sa',wrap=el('section','sa-editor-v0730'),toolbar=el('div','sa-toolbar-v0730'),stage=el('canvas','sa-view-v0730'),controls=el('div','sa-controls-v0730'),status=el('p','sa-status-v0730'),nodeList=select(prefix+'-node',[]),mode=select(prefix+'-mode',[['node','Path point'],['object','Whole arrow']]);
+  const locked=!!opts.locked,prefix=opts.prefix||'sa',wrap=el('section','sa-editor-v0730'),toolbar=el('div','sa-toolbar-v0730'),stage=el('canvas','sa-view-v0730'),controls=el('div','sa-controls-v0730'),status=el('p','sa-status-v0730'),nodeList=select(prefix+'-node',[]),mode=select(prefix+'-mode',[['node','Control point'],['object','Whole object']]);
   const reference=opts.reference||null,aspect=opts.aspect||((reference?.width||16)/(reference?.height||9));
   stage.width=Math.max(1,Math.round(Math.min(780,420*aspect)));stage.height=Math.max(1,Math.round(stage.width/aspect));stage.style.maxWidth=stage.width+'px';stage.id=prefix+'-viewport';stage.tabIndex=0;stage.setAttribute('aria-label','Interactive 3D path viewport. Drag point or axis; Alt drag to orbit; Shift drag to pan; wheel zooms.');
   const viewButtons=new Map();
@@ -46,7 +46,7 @@
   }
   const targets=[];for(let i=0;i<3;i++){const n=el('input');n.type='number';n.id=prefix+'-target-'+axes[i].name.toLowerCase();n.min=-S.LIMIT;n.max=S.LIMIT;n.step='any';n.onchange=()=>{const t=camera.target.slice();t[i]=n.valueAsNumber;changeCamera({...camera,target:t});};targets.push(n);cameraFields.append(field('Target '+axes[i].name,n));}
   const proj=select(prefix+'-projection',[['perspective','Perspective'],['orthographic','Orthographic']]);proj.onchange=()=>changeCamera({...camera,projection:proj.value});cameraFields.append(field('Projection',proj));cameraBox.append(el('strong','','CAMERA / VIEW'),cameraFields,el('small','','Alt-drag or right-drag to orbit; Shift-drag to pan; wheel to dolly. Inspection views do not change the output until applied.'));
-  controls.append(geometry,surface,cameraBox);status.id=prefix+'-status';status.setAttribute('role','status');wrap.append(el('strong','','SPATIAL 3D ARROW / REAL XYZ MESH'),toolbar,stage,maskTools,el('p','sa-status-v0730','Reference frame is a local 2D compositing guide, not reconstructed scene depth.'),controls,status);host.append(wrap);
+  controls.append(geometry,surface,cameraBox);status.id=prefix+'-status';status.setAttribute('role','status');wrap.append(el('strong','',opts.scene?'SELECTED OBJECT / XYZ MESH':'SPATIAL 3D / REAL XYZ MESH'),toolbar,stage,maskTools,el('p','sa-status-v0730','Reference frame is a local 2D compositing guide, not reconstructed scene depth.'),controls,status);host.append(wrap);
   const guides=el('input');guides.type='checkbox';guides.id=prefix+'-ground-grid';guides.checked=false;guides.onchange=schedule;toolbar.append(field('3D ground grid',guides));
   const allInputs=[shapeType,...xyz,...params.values(),color,material,smooth,...cameraInputs.values(),...targets,proj,mode,add,remove,reset,use,...rotations.querySelectorAll('button')];for(const n of allInputs)n.disabled=locked;
   nodeList.onchange=()=>{selected=Number(nodeList.value);sync();};mode.onchange=schedule;
@@ -65,7 +65,8 @@
    if(viewMode==='output'&&bg.checked&&reference){q.save();q.globalAlpha=.68;q.drawImage(reference,0,0,w,h);q.restore();}
    else{q.strokeStyle='#29333c';q.lineWidth=1;for(let i=0;i<=w;i+=32){q.beginPath();q.moveTo(i,0);q.lineTo(i,h);q.stroke();}for(let i=0;i<=h;i+=32){q.beginPath();q.moveTo(0,i);q.lineTo(w,i);q.stroke();}}
    if(guides.checked){q.save();try{q.strokeStyle='#8aa5bf80';q.lineWidth=1;const line=(a,b)=>{const p=S.project(a,camera,w,h),r=S.project(b,camera,w,h);if(!p||!r)return;q.beginPath();q.moveTo(p.x,p.y);q.lineTo(r.x,r.y);q.stroke();};for(let i=-6;i<=6;i++){for(let j=-6;j<6;j++){line([i,0,j],[i,0,j+1]);line([j,0,i],[j+1,0,i]);}}}finally{q.restore();}}
-   try{const renderValue={...value,camera};if(viewMode!=='output')delete renderValue.occlusion;R.paint(q,renderValue,{x:0,y:0,width:w,height:h});}catch(e){status.textContent=e.message;return;}
+   try{const renderValue={...value,camera};if(viewMode!=='output')delete renderValue.occlusion;R.paint(q,opts.compose?opts.compose(renderValue):renderValue,{x:0,y:0,width:w,height:h});}catch(e){status.textContent=e.message;return;}
+   opts.drawGuides?.(q,camera,w,h);
    const pp=p=>S.project(p,camera,w,h),samples=S.isPath(value.shape)?S.centerline(value):S.mesh(value).samples;q.strokeStyle='#e3e9f1';q.lineWidth=1;q.setLineDash([4,4]);q.beginPath();let begun=false;for(const p of samples){const a=pp(p);if(!a){begun=false;continue;}if(!begun){q.moveTo(a.x,a.y);begun=true;}else q.lineTo(a.x,a.y);}q.stroke();q.setLineDash([]);
    value.points.forEach((p,i)=>{const a=pp(p);if(!a)return;q.beginPath();q.arc(a.x,a.y,i===selected?6:4,0,Math.PI*2);q.fillStyle=i===selected?'#b9f75c':'#e3e9f1';q.fill();q.strokeStyle='#11161b';q.stroke();q.fillStyle='#fff';q.font='11px system-ui';q.fillText(String(i+1),a.x+8,a.y-8);});
    const origin=pp(value.points[selected]);if(origin)for(const ax of axes){const b=pp(S.add(value.points[selected],S.mul(ax.v,.65)));if(!b)continue;q.strokeStyle=ax.c;q.fillStyle=ax.c;q.lineWidth=2;q.beginPath();q.moveTo(origin.x,origin.y);q.lineTo(b.x,b.y);q.stroke();q.fillRect(b.x-4,b.y-4,8,8);q.fillText(ax.name,b.x+6,b.y+3);}
@@ -80,7 +81,7 @@
    if(e.button===0&&!e.altKey&&!e.shiftKey){
     if(origin)for(const a of axes){const b=S.project(S.add(value.points[selected],S.mul(a.v,.65)),camera,w,h);if(!b||Math.hypot(b.x-origin.x,b.y-origin.y)<10)continue;const dist=Math.hypot(p.x-b.x,p.y-b.y);if(dist<best){axis=a.v;best=dist;}}
     if(axis)kind='axis';
-    else{let index=-1;value.points.forEach((v,i)=>{const b=S.project(v,camera,w,h);if(!b)return;const a=Math.hypot(p.x-b.x,p.y-b.y);if(a<best){index=i;best=a;}});if(index>=0){selected=index;kind='plane';}else return;}
+    else{let index=-1;value.points.forEach((v,i)=>{const b=S.project(v,camera,w,h);if(!b)return;const a=Math.hypot(p.x-b.x,p.y-b.y);if(a<best){index=i;best=a;}});if(index>=0){selected=index;kind='plane';}else{opts.pickObject?.(p,camera,w,h);return;}}
    }
    drag={id:e.pointerId,kind,axis,start:p,camera:S.copy(camera),original:S.copy(value),selected,whole:mode.value==='object'};stage.setPointerCapture(e.pointerId);sync();
   });
@@ -96,7 +97,7 @@
   stage.addEventListener('pointercancel',e=>{if(drag?.id===e.pointerId){value=drag.original;camera=drag.camera;drag=null;sync();}});
   for(const k of ['pointerup','lostpointercapture'])stage.addEventListener(k,e=>{if(drag?.id===e.pointerId)drag=null;});
   stage.addEventListener('wheel',e=>{if(locked||maskDraft||maskEdit)return;e.preventDefault();changeCamera({...camera,distance:clamp(camera.distance*Math.exp(e.deltaY*.001),2,18)});},{passive:false});
-  sync();return {value(){if(maskDraft)throw Error('Finish or cancel the foreground polygon.');R.requireRenderer();R.render(value,stage.width,stage.height);return S.check(value);},draft(){if(maskDraft)throw Error('Finish or cancel the foreground polygon.');return S.check(value);},load(v){value=S.check(v);camera=S.copy(value.camera);viewMode='output';selected=clamp(selected,0,value.points.length-1);maskDraft=null;maskEdit=false;error=null;sync();},setTopologyLocked(v){topologyLocked=!!v;sync();},view:()=>S.copy(camera),refresh:sync};
+  sync();return {value(){if(maskDraft)throw Error('Finish or cancel the foreground polygon.');R.requireRenderer();R.render(opts.compose?opts.compose(value):value,stage.width,stage.height);return S.check(value);},draft(){if(maskDraft)throw Error('Finish or cancel the foreground polygon.');return S.check(value);},load(v){value=S.check(v);camera=S.copy(value.camera);viewMode='output';selected=clamp(selected,0,value.points.length-1);maskDraft=null;maskEdit=false;error=null;sync();},setTopologyLocked(v){topologyLocked=!!v;sync();},view:()=>S.copy(camera),refresh:sync};
  }
  root.MangoSpatialArrowUIV0730=Object.freeze({editor});
 })(typeof globalThis!=='undefined'?globalThis:this);

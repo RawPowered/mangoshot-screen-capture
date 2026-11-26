@@ -1757,7 +1757,7 @@ window.addEventListener('keydown',event=>{
  else if(event.key.toLowerCase()==='y'){event.preventDefault();redo();}
 },true);
 function flatten(includeInk=true){
- if(includeInk&&strokes.some(l=>l.visible!==false&&l.callout3d?.mode==='spatial'))globalThis.MangoSpatialRendererV0730.requireRenderer();
+ if(includeInk&&strokes.some(l=>l.visible!==false&&['spatial','scene'].includes(l.callout3d?.mode)))globalThis.MangoSpatialRendererV0730.requireRenderer();
  const sourceImage=includeInk?composedSource():base;
  if(editorCore?.merge)return editorCore.merge(sourceImage,ink,includeInk);
  const canvas=document.createElement('canvas');canvas.width=base.width;canvas.height=base.height;
@@ -1989,10 +1989,10 @@ globalThis.MangoDimensionalImageV0729=Object.freeze({
   if(l){const a=document.createElement('canvas'),scale=Math.min(1,780/base.width,420/base.height);a.width=Math.max(1,Math.round(base.width*scale));a.height=Math.max(1,Math.round(base.height*scale));const g=a.getContext('2d');g.scale(a.width/base.width,a.height/base.height);paintComposedLayers(g,strokes.map(x=>x.id===id?{...x,visible:false}:x),composition,scale);q.drawImage(a,b.x*a.width/base.width,b.y*a.height/base.height,b.width*a.width/base.width,b.height*a.height/base.height,0,0,c.width,c.height);a.width=a.height=1;}
   else q.drawImage(ink,b.x,b.y,b.width,b.height,0,0,c.width,c.height);return {canvas:c,aspect:b.width/b.height};},
  apply(value,stamp,id=null){
-  const s=this.state(),M=globalThis.MangoDimensionalV0729;if(!s.ready||s.stamp!==stamp)throw Error('Image changed; reopen 3D Callouts.');const v=M.check(value);if(v.mode==='spatial')globalThis.MangoSpatialRendererV0730.requireRenderer();
+  const s=this.state(),M=globalThis.MangoDimensionalV0729;if(!s.ready||s.stamp!==stamp)throw Error('Image changed; reopen 3D Callouts.');const v=M.check(value);if(['spatial','scene'].includes(v.mode))globalThis.MangoSpatialRendererV0730.requireRenderer();
   if(id){if(s.selected?.id!==id)throw Error('Select an unlocked dimensional layer.');return replaceLayer(strokes.findIndex(l=>l.id===id),{callout3d:v});}
-  const spatial=v.mode==='spatial',x=spatial?0:base.width*.21,y=spatial?0:base.height*.22,w=spatial?base.width:base.width*.58,h=spatial?base.height:base.height*.50,l=vectorCore.make('rectangle',{x,y},{x:x+w,y:y+h},{fillEnabled:true,fill:v.color,stroke:v.color});
-  Object.assign(l,{id:crypto.randomUUID(),name:spatial?'Spatial 3D '+v.shape:'3D '+(v.shape==='arrow'&&v.curve?'curved arrow':v.shape),callout3d:v,locked:false});
+  const spatial=['spatial','scene'].includes(v.mode),x=spatial?0:base.width*.21,y=spatial?0:base.height*.22,w=spatial?base.width:base.width*.58,h=spatial?base.height:base.height*.50,l=vectorCore.make('rectangle',{x,y},{x:x+w,y:y+h},{fillEnabled:true,fill:v.color||v.objects?.[0]?.geometry.color||'#ffffff',stroke:v.color||v.objects?.[0]?.geometry.color||'#ffffff'});
+  Object.assign(l,{id:crypto.randomUUID(),name:v.mode==='scene'?'3D Scene':spatial?'Spatial 3D '+v.shape:'3D '+(v.shape==='arrow'&&v.curve?'curved arrow':v.shape),callout3d:v,locked:false});
   clearBatch();snapshot();strokes.push(l);tool.value='select';syncTool();selectLayerAt(strokes.length-1);setReady(ready);label('Dimensional shape inserted. Ctrl+Z to undo.');return true;
  }
 });
@@ -2108,12 +2108,12 @@ globalThis.MangoImageDocumentV0723=Object.freeze({
     const c=document.createElement('canvas');c.width=a.width;c.height=a.height;c.getContext('2d').drawImage(a.image,0,0);assets.push({id:l.assetId,name:a.name,width:a.width,height:a.height,png:c.toDataURL('image/png')});c.width=c.height=1;assetIds.add(l.assetId);}
    if(l.cutoutKey&&!matteIds.has(l.cutoutKey)){const m=registry.get(l.cutoutKey);if(!m)throw Error('Missing image matte.');mattes.push({id:l.cutoutKey,width:m.width,height:m.height,alpha:D.encode(m.data)});matteIds.add(l.cutoutKey);}
   }
-  const comp=advancedComp?.reconcile(composition,strokes),v2=advancedComp?.active(comp),v3=layers.some(l=>l.brush),v4=layers.some(l=>l.creativeFx),v5=layers.some(l=>Array.isArray(l.rasterFx)),v6=layers.some(l=>l.selectionMask),v7=layers.some(l=>l.callout3d),v8=layers.some(l=>l.callout3d?.mode==='spatial'),v9=layers.some(l=>l.callout3d?.occlusion?.length),v10=layers.some(l=>l.callout3d?.mode==='spatial'&&(l.callout3d.shape!=='arrow'||l.callout3d.camera?.roll));
-  return D.check({format:'MangoShotImage',version:v10?10:v9?9:v8?8:v7?7:v6?6:v5?5:v4?4:v3?3:v2?2:1,name,width:base.width,height:base.height,base:base.toDataURL('image/png'),layers,assets,mattes,...(v2||v3||v4||v5||v6||v7?{composition:comp}:{})},this.cores());
+  const comp=advancedComp?.reconcile(composition,strokes),v2=advancedComp?.active(comp),v3=layers.some(l=>l.brush),v4=layers.some(l=>l.creativeFx),v5=layers.some(l=>Array.isArray(l.rasterFx)),v6=layers.some(l=>l.selectionMask),v7=layers.some(l=>l.callout3d),v8=layers.some(l=>l.callout3d?.mode==='spatial'),v9=layers.some(l=>l.callout3d?.occlusion?.length),v10=layers.some(l=>l.callout3d?.mode==='spatial'&&(l.callout3d.shape!=='arrow'||l.callout3d.camera?.roll)),v11=layers.some(l=>l.callout3d?.mode==='scene');
+  return D.check({format:'MangoShotImage',version:v11?11:v10?10:v9?9:v8?8:v7?7:v6?6:v5?5:v4?4:v3?3:v2?2:1,name,width:base.width,height:base.height,base:base.toDataURL('image/png'),layers,assets,mattes,...(v2||v3||v4||v5||v6||v7?{composition:comp}:{})},this.cores());
  },
  async open(raw,stamp){
   const D=globalThis.MangoImageDocumentCoreV0723,initial=this.state();if(!initial.canOpen||initial.stamp!==stamp)throw Error('Image editor is busy.');
-  const p=D.check(raw,this.cores());if(p.layers.some(l=>l.callout3d?.mode==='spatial'))globalThis.MangoSpatialRendererV0730.requireRenderer();const source=await image(p.base),nextAssets=new Map(),nextMattes=new Map();
+  const p=D.check(raw,this.cores());if(p.layers.some(l=>['spatial','scene'].includes(l.callout3d?.mode)))globalThis.MangoSpatialRendererV0730.requireRenderer();const source=await image(p.base),nextAssets=new Map(),nextMattes=new Map();
   if(source.naturalWidth!==p.width||source.naturalHeight!==p.height)throw Error('Base image decode dimensions differ.');
   for(const a of p.assets){const decoded=await image(a.png);if(decoded.naturalWidth!==a.width||decoded.naturalHeight!==a.height)throw Error('Asset decode dimensions differ.');nextAssets.set(a.id,{image:decoded,width:a.width,height:a.height,name:a.name,version:0});}
   for(const m of p.mattes)nextMattes.set(m.id,{width:m.width,height:m.height,data:D.decode(m.alpha)});

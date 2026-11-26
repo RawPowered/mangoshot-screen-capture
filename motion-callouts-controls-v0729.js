@@ -6,6 +6,7 @@
  const field=(label,n)=>{const l=el('label','mc-field-v0729',label);l.append(n);return l;};
  const select=(id,items)=>{const n=el('select');n.id=id;for(const [v,t] of items){const o=el('option','',t);o.value=v;n.append(o);}return n;};
  function shapeEditor(host,initial,opts={}){
+  if(initial?.mode==='scene')return root.MangoUnifiedSceneUIV0733.editor(host,initial,opts);
   if(initial?.mode==='spatial')return root.MangoSpatialArrowUIV0730.editor(host,initial,opts);
   let value=M.check(initial),locked=!!opts.locked;const prefix=opts.prefix||'mc',wrap=el('section','mc-panel-v0729'),presets=el('div','mc-presets-v0729'),grid=el('div','mc-fields-v0729'),preview=el('canvas','mc-preview-v0729'),status=el('p','mc-note-v0729');
   preview.width=440;preview.height=220;preview.id=prefix+'-preview';preview.setAttribute('aria-label','Live projected 3D mesh preview');

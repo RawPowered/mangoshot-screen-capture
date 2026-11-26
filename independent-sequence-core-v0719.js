@@ -1,6 +1,6 @@
 /* Independent sequence document. Local media references only; no recording clock. */
 (function(root){'use strict';
- const SCHEMA='mangoshot.sequence.v3',SCHEMA4='mangoshot.sequence.v4',SCHEMA5='mangoshot.sequence.v5',SCHEMA6='mangoshot.sequence.v6',SCHEMA7='mangoshot.sequence.v7',TRACKS=['V1','V2','V3','A1','A2','G1','G2','G3'],FPS=[24,25,30,50,60],MAX_CLIPS=64,MAX_SECONDS=3600,MAX_PIXELS=4096*2160,MIN=.1,EPS=.00001;
+ const SCHEMA='mangoshot.sequence.v3',SCHEMA4='mangoshot.sequence.v4',SCHEMA5='mangoshot.sequence.v5',SCHEMA6='mangoshot.sequence.v6',SCHEMA7='mangoshot.sequence.v7',SCHEMA8='mangoshot.sequence.v8',TRACKS=['V1','V2','V3','A1','A2','G1','G2','G3'],FPS=[24,25,30,50,60],MAX_CLIPS=64,MAX_SECONDS=3600,MAX_PIXELS=4096*2160,MIN=.1,EPS=.00001;
  const PRESETS=['title','lowerThird','minimal','editorial','kinetic','glass','premium','outline'];
  const copy=x=>JSON.parse(JSON.stringify(x)),finite=(x,a,b)=>typeof x==='number'&&Number.isFinite(x)&&x>=a&&x<=b,clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
  const uid=()=>root.crypto?.randomUUID?.()||'clip-'+Date.now()+'-'+Math.random().toString(36).slice(2);
@@ -8,7 +8,7 @@
  const speed=()=>root.MangoSpeedRampV0729,mesh=()=>root.MangoDimensionalV0729;
  const advanced=v=>v?.mode==='spatial'&&(v.shape!=='arrow'||!!v.camera?.roll);
  const motionAdvanced=m=>m?.maskMode==='keyed'||m?.keys?.some(k=>advanced(k.pose));
- const upgrade=(p,version=4)=>{if(p.version<version){p.schema=version===7?SCHEMA7:version===6?SCHEMA6:version===5?SCHEMA5:SCHEMA4;p.version=version;}return p;};
+ const upgrade=(p,version=4)=>{if(p.version<version){p.schema=version===8?SCHEMA8:version===7?SCHEMA7:version===6?SCHEMA6:version===5?SCHEMA5:SCHEMA4;p.version=version;}return p;};
  const color=x=>typeof x==='string'&&/^#[0-9a-f]{6}$/i.test(x),id=x=>typeof x==='string'&&/^[\w-]{1,90}$/.test(x);
  function settings(x){
   if(!x||typeof x.name!=='string'||!x.name.trim()||x.name.length>100||!Number.isInteger(x.width)||!Number.isInteger(x.height)||x.width%2||x.height%2||!finite(x.width,160,4096)||!finite(x.height,160,4096)||x.width*x.height>MAX_PIXELS||!FPS.includes(x.fps)||!finite(x.duration,1,MAX_SECONDS)||!color(x.background))throw Error('Invalid sequence settings. Use even dimensions, at most 8.85 MP, 24/25/30/50/60 fps, and 1–3600 seconds.');
@@ -21,7 +21,7 @@
   return {id:a.id,name:a.name,kind:a.kind,size:a.size,lastModified:a.lastModified,mime:a.mime,duration:a.duration??null,width:a.width??null,height:a.height??null};
  }
  function check(p){
-  if(!p||!((p.schema===SCHEMA&&p.version===3)||(p.schema===SCHEMA4&&p.version===4)||(p.schema===SCHEMA5&&p.version===5)||(p.schema===SCHEMA6&&p.version===6)||(p.schema===SCHEMA7&&p.version===7))||!Array.isArray(p.assets)||p.assets.length>200||!Array.isArray(p.clips)||p.clips.length>MAX_CLIPS||!Array.isArray(p.transitions)||p.transitions.length>MAX_CLIPS||!p.tracks)throw Error('Invalid independent sequence document or clip budget.');
+  if(!p||!((p.schema===SCHEMA&&p.version===3)||(p.schema===SCHEMA4&&p.version===4)||(p.schema===SCHEMA5&&p.version===5)||(p.schema===SCHEMA6&&p.version===6)||(p.schema===SCHEMA7&&p.version===7)||(p.schema===SCHEMA8&&p.version===8))||!Array.isArray(p.assets)||p.assets.length>200||!Array.isArray(p.clips)||p.clips.length>MAX_CLIPS||!Array.isArray(p.transitions)||p.transitions.length>MAX_CLIPS||!p.tracks)throw Error('Invalid independent sequence document or clip budget.');
   const out=empty(p.settings),assets=new Map(),ids=new Set();if(p.version>=4)upgrade(out,p.version);
   for(const raw of p.assets){const a=assetAllowed(raw);if(assets.has(a.id))throw Error('Duplicate media asset.');assets.set(a.id,a);out.assets.push(a);}
   for(const t of TRACKS){const a=p.tracks[t]||(p.version===3&&dimensional(t)?out.tracks[t]:null);if(!a||typeof a.visible!=='boolean'||typeof a.muted!=='boolean'||typeof a.locked!=='boolean'||!finite(a.opacity,0,1)||!finite(a.gain,0,2))throw Error('Invalid track controls.');out.tracks[t]={visible:a.visible,muted:a.muted,locked:a.locked,opacity:a.opacity,gain:a.gain};}
@@ -36,7 +36,7 @@
    if(title&&(!PRESETS.includes(c.preset)||typeof c.text!=='string'||c.text.length>400||!finite(c.fontSize,12,220)||!color(c.color)||c.x<0||c.y<0||c.width>1||c.width<.1))throw Error('Invalid title settings.');
    if(shape&&(p.version<4||!mesh()||!c.callout3d))throw Error('Dimensional graphics require a v4 callout.');if(!shape&&c.callout3d!=null)throw Error('Dimensional callout requires a graphics track.');
    const normalized={id:c.id,assetId:g?null:c.assetId,track:c.track,start:c.start,end:c.end,sourceIn:c.sourceIn,sourceOut:c.sourceOut,opacity:c.opacity,gain:c.gain,visible:c.visible,muted:c.muted,locked:c.locked,x:c.x,y:c.y,width:c.width,height:c.height,fit:c.fit,fadeIn:c.fadeIn,fadeOut:c.fadeOut,grade};
-   if(title)Object.assign(normalized,{text:c.text,preset:c.preset,fontSize:c.fontSize,color:c.color});if(shape){normalized.callout3d=mesh().check(c.callout3d);if(normalized.callout3d.mode==='spatial'&&p.version<5)throw Error('Spatial arrows require sequence v5.');if(advanced(normalized.callout3d)&&p.version<7)throw Error('Advanced spatial primitives and camera roll require sequence v7.');if(normalized.callout3d.occlusion?.length&&p.version<6)throw Error('Foreground masks require sequence v6.');}if(c.spatialMotion!=null){if(p.version<6||normalized.callout3d?.mode!=='spatial'||!root.MangoSpatialMotionV0731)throw Error('Spatial motion requires a v6 spatial arrow.');normalized.spatialMotion=root.MangoSpatialMotionV0731.check(c.spatialMotion,normalized.callout3d);if(motionAdvanced(normalized.spatialMotion)&&p.version<7)throw Error('Advanced spatial motion requires sequence v7.');}if(ramp)normalized.speedRamp=ramp;
+   if(title)Object.assign(normalized,{text:c.text,preset:c.preset,fontSize:c.fontSize,color:c.color});if(shape){normalized.callout3d=mesh().check(c.callout3d);if(normalized.callout3d.mode==='spatial'&&p.version<5)throw Error('Spatial arrows require sequence v5.');if(normalized.callout3d.mode==='scene'&&p.version<8)throw Error('Unified scenes require sequence v8.');if(advanced(normalized.callout3d)&&p.version<7)throw Error('Advanced spatial primitives and camera roll require sequence v7.');if(normalized.callout3d.occlusion?.length&&p.version<6)throw Error('Foreground masks require sequence v6.');}if(c.spatialMotion!=null){if(p.version<6||normalized.callout3d?.mode!=='spatial'||!root.MangoSpatialMotionV0731)throw Error('Spatial motion requires a v6 spatial arrow.');normalized.spatialMotion=root.MangoSpatialMotionV0731.check(c.spatialMotion,normalized.callout3d);if(motionAdvanced(normalized.spatialMotion)&&p.version<7)throw Error('Advanced spatial motion requires sequence v7.');}if(ramp)normalized.speedRamp=ramp;
    ids.add(c.id);out.clips.push(normalized);
   }
   out.clips.sort((a,b)=>TRACKS.indexOf(a.track)-TRACKS.indexOf(b.track)||a.start-b.start||a.id.localeCompare(b.id));
@@ -72,7 +72,7 @@
   else n.clips.push(make(n,a,track,at));
   if(dimensional(track))upgrade(n);return check(n);
  }
- function addCallout(p,at,value){const n=copy(p),end=Math.min(n.settings.duration,at+4),t=['G2','G3'].find(t=>!n.tracks[t].locked&&!n.clips.some(c=>c.track===t&&c.start<end-EPS&&c.end>at+EPS));if(!t)throw Error('Both dimensional graphics tracks overlap this range or are locked.');const c=make(n,null,t,at);c.callout3d=mesh().check(value);const spatial=c.callout3d.mode==='spatial';if(spatial)Object.assign(c,{x:0,y:0,width:1,height:1});n.clips.push(c);return check(upgrade(n,advanced(c.callout3d)?7:c.callout3d.occlusion?.length?6:spatial?5:4));}
+ function addCallout(p,at,value){const n=copy(p),end=Math.min(n.settings.duration,at+4),t=['G2','G3'].find(t=>!n.tracks[t].locked&&!n.clips.some(c=>c.track===t&&c.start<end-EPS&&c.end>at+EPS));if(!t)throw Error('Both dimensional graphics tracks overlap this range or are locked.');const c=make(n,null,t,at);c.callout3d=mesh().check(value);const spatial=['spatial','scene'].includes(c.callout3d.mode);if(spatial)Object.assign(c,{x:0,y:0,width:1,height:1});n.clips.push(c);return check(upgrade(n,c.callout3d.mode==='scene'?8:advanced(c.callout3d)?7:c.callout3d.occlusion?.length?6:spatial?5:4));}
  function change(p,id,patch){
   const n=copy(p),i=n.clips.findIndex(c=>c.id===id);if(i<0)throw Error('Clip no longer exists.');const c=n.clips[i];
   if(patch===null){unlocked(n,c);if(attached(n,c))throw Error('Remove its dissolve before deleting the clip.');n.clips.splice(i,1);}
@@ -82,7 +82,7 @@
    if(attached(n,c)&&keys.some(k=>['track','start','end','sourceIn','sourceOut','speedRamp'].includes(k)&&patch[k]!==c[k]))throw Error('Remove the attached dissolve before editing clip timing.');
    const next={...c,...patch};if(Object.hasOwn(patch,'speedRamp')){if(patch.speedRamp===null)delete next.speedRamp;else{next.speedRamp=speed().check(patch.speedRamp);upgrade(n);}}
    if(next.speedRamp||Object.hasOwn(patch,'speedRamp')){if(keys.some(k=>['start','end','sourceIn','speedRamp'].includes(k)))next.sourceOut=speed().sourceOut(next);}
-   if(Object.hasOwn(patch,'spatialMotion')&&patch.spatialMotion===null)delete next.spatialMotion;if(advanced(next.callout3d)||motionAdvanced(next.spatialMotion))upgrade(n,7);else if(next.spatialMotion||next.callout3d?.occlusion?.length)upgrade(n,6);else if(Object.hasOwn(patch,'callout3d'))upgrade(n,next.callout3d?.mode==='spatial'?5:4);n.clips[i]=next;
+   if(Object.hasOwn(patch,'spatialMotion')&&patch.spatialMotion===null)delete next.spatialMotion;if(next.callout3d?.mode==='scene')upgrade(n,8);else if(advanced(next.callout3d)||motionAdvanced(next.spatialMotion))upgrade(n,7);else if(next.spatialMotion||next.callout3d?.occlusion?.length)upgrade(n,6);else if(Object.hasOwn(patch,'callout3d'))upgrade(n,next.callout3d?.mode==='spatial'?5:4);n.clips[i]=next;
   }return check(n);
  }
  function move(p,id,mode,delta,track,snap=0,playhead=0){
@@ -123,6 +123,6 @@
  const sourceAt=(c,t)=>c.speedRamp?speed().source(c,t):clamp(c.sourceIn+t-c.start,c.sourceIn,c.sourceOut);
  const rateAt=(c,t)=>c.speedRamp?speed().rate(c.speedRamp,speed().fraction(c,t)):1;
  function fit(sw,sh,dw,dh,mode){if(mode==='stretch')return {x:0,y:0,w:dw,h:dh};const f=(mode==='cover'?Math.max:Math.min)(dw/sw,dh/sh);return {x:(dw-sw*f)/2,y:(dh-sh*f)/2,w:sw*f,h:sh*f};}
- const api=Object.freeze({SCHEMA,SCHEMA4,SCHEMA5,SCHEMA6,SCHEMA7,TRACKS,FPS,PRESETS,MAX_CLIPS,MAX_SECONDS,MAX_PIXELS,MIN,EPS,copy,settings,empty,assetAllowed,check,asset,attached,visual,audio,graphic,dimensional,make,add,addCallout,change,move,dissolve,removeDissolve,active,show,sound,needed,fade,mix,intervals,sourceAt,rateAt,fit});
+ const api=Object.freeze({SCHEMA,SCHEMA4,SCHEMA5,SCHEMA6,SCHEMA7,SCHEMA8,TRACKS,FPS,PRESETS,MAX_CLIPS,MAX_SECONDS,MAX_PIXELS,MIN,EPS,copy,settings,empty,assetAllowed,check,asset,attached,visual,audio,graphic,dimensional,make,add,addCallout,change,move,dissolve,removeDissolve,active,show,sound,needed,fade,mix,intervals,sourceAt,rateAt,fit});
  root.MangoIndependentSequenceV0719=api;if(typeof module==='object'&&module.exports)module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

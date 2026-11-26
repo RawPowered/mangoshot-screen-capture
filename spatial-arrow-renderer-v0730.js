@@ -24,17 +24,21 @@
  function drop(k){const e=cache.get(k);if(!e)return;cache.delete(k);cachedPixels-=e.pixels;e.canvas.width=e.canvas.height=1;}
  function dimensions(w,h){if(!Number.isFinite(w)||!Number.isFinite(h)||w<=0||h<=0)throw Error('Invalid spatial viewport.');const s=Math.min(1,MAX_SIDE/w,MAX_SIDE/h,Math.sqrt(MAX_PIXELS/(w*h)));return [Math.max(1,Math.round(w*s)),Math.max(1,Math.round(h*s))];}
  function render(value,width,height,progress=1,transient=false){
-  const v=S.check(value),[w,h]=dimensions(width,height);if(typeof progress!=='number'||!Number.isFinite(progress)||progress<0||progress>1)throw Error('Invalid path reveal.');const key=JSON.stringify([v,w,h,progress]);
+  const scene=value?.mode==='scene',Q=root.MangoUnifiedSceneV0733,v=scene?Q.check(value):S.check(value),[w,h]=dimensions(width,height);if(typeof progress!=='number'||!Number.isFinite(progress)||progress<0||progress>1)throw Error('Invalid path reveal.');const key=JSON.stringify([v,w,h,progress]);
   const old=transient?null:cache.get(key);if(old){cache.delete(key);cache.set(key,old);hits++;return old.canvas;}
-  const {canvas:c,gl,program,vao,buffers,uniforms:u}=requireRenderer(),m=S.mesh(v,progress),b=S.camera(v.camera,w,h);
+  const {canvas:c,gl,program,vao,buffers,uniforms:u}=requireRenderer(),objects=scene?Q.entries(v).map(e=>e.value):[v],b=S.camera(v.camera,w,h);
   if(c.width!==w||c.height!==h){c.width=w;c.height=h;}
   gl.viewport(0,0,w,h);gl.clearColor(0,0,0,0);gl.clearDepth(1);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.depthMask(true);gl.disable(gl.BLEND);gl.disable(gl.CULL_FACE);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
   gl.useProgram(program);gl.bindVertexArray(vao);
-  for(const [i,data] of [m.positions,m.normals].entries()){gl.bindBuffer(gl.ARRAY_BUFFER,buffers[i]);gl.bufferData(gl.ARRAY_BUFFER,data,gl.DYNAMIC_DRAW);}
   const f=(k,n)=>gl.uniform1f(u[k],n),vec=(k,n)=>gl.uniform3fv(u[k],n);
   vec('eye',b.eye);vec('rightAxis',b.right);vec('upAxis',b.up);vec('forwardAxis',b.forward);f('tanHalf',b.t);f('aspect',b.aspect);f('nearZ',S.NEAR);f('farZ',S.FAR);f('orthoScale',b.ortho?b.distance*b.t:0);
-  vec('baseColor',[1,3,5].map(i=>parseInt(v.color.slice(i,i+2),16)/255));const a=v.light*Math.PI/180;vec('light',S.add(S.add(S.mul(b.right,Math.cos(a)),S.mul(b.up,-Math.sin(a))),S.mul(b.forward,-.85)));f('gloss',v.material==='matte'?.06:v.material==='metal'?.72:.95);
-  gl.drawArrays(gl.TRIANGLES,0,m.positions.length/3);if(gl.getError()!==gl.NO_ERROR||gl.isContextLost())throw Error('Spatial 3D draw failed.');
+  // Do not clear the depth attachment between objects. Independent materials,
+  // world-space vertices and a single shared camera produce actual occlusion.
+  for(const o of objects){const m=S.mesh(o,progress);
+   for(const [i,data] of [m.positions,m.normals].entries()){gl.bindBuffer(gl.ARRAY_BUFFER,buffers[i]);gl.bufferData(gl.ARRAY_BUFFER,data,gl.DYNAMIC_DRAW);}
+   vec('baseColor',[1,3,5].map(i=>parseInt(o.color.slice(i,i+2),16)/255));const a=o.light*Math.PI/180;vec('light',S.add(S.add(S.mul(b.right,Math.cos(a)),S.mul(b.up,-Math.sin(a))),S.mul(b.forward,-.85)));f('gloss',o.material==='matte'?.06:o.material==='metal'?.72:.95);
+   gl.drawArrays(gl.TRIANGLES,0,m.positions.length/3);
+  }if(gl.getError()!==gl.NO_ERROR||gl.isContextLost())throw Error('Spatial 3D draw failed.');
   const out=root.document.createElement('canvas');out.width=w;out.height=h;const g=out.getContext('2d');g.drawImage(c,0,0);
   if(v.occlusion?.length){g.save();try{g.globalCompositeOperation='destination-out';g.fillStyle='#ffffff';for(const poly of v.occlusion){g.beginPath();poly.forEach(([x,y],i)=>i?g.lineTo(x*w,y*h):g.moveTo(x*w,y*h));g.closePath();g.fill('evenodd');}}finally{g.restore();}}
   draws++;if(transient)return out;

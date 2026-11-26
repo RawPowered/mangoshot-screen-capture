@@ -6,6 +6,7 @@
  const defaults=()=>({shape:'arrow',color:'#f1b640',material:'metal',curve:-.34,thickness:.12,head:.25,depth:.12,pitch:24,yaw:-25,roll:0,light:-55});
  const copy=x=>JSON.parse(JSON.stringify(x));
  function check(v){
+  if(v?.mode==='scene'){if(!root.MangoUnifiedSceneV0733)throw Error('Unified scene engine unavailable.');return root.MangoUnifiedSceneV0733.check(v);}
   if(v?.mode==='spatial'){if(!root.MangoSpatialArrowV0730)throw Error('Spatial arrow engine unavailable.');return root.MangoSpatialArrowV0730.check(v);}
   const d=defaults();
   if(!v||typeof v!=='object'||Array.isArray(v)||Object.keys(v).length!==Object.keys(d).length||Object.keys(d).some(k=>!Object.hasOwn(v,k))||!shapes.includes(v.shape)||!materials.includes(v.material)||typeof v.color!=='string'||!/^#[0-9a-f]{6}$/i.test(v.color))throw Error('Invalid dimensional callout.');
@@ -48,7 +49,7 @@
  }
  const tint=(hex,k)=>'#'+[1,3,5].map(i=>{const n=parseInt(hex.slice(i,i+2),16),v=k>=0?n+(255-n)*k:n*(1+k);return Math.round(clamp(v,0,255)).toString(16).padStart(2,'0');}).join('');
  function paint(q,value,b,opacity=1){
-  if(value?.mode==='spatial'){if(!root.MangoSpatialRendererV0730)throw Error('Spatial renderer unavailable.');return root.MangoSpatialRendererV0730.paint(q,value,b,opacity);}
+  if(value?.mode==='scene'||value?.mode==='spatial'){if(!root.MangoSpatialRendererV0730)throw Error('Spatial renderer unavailable.');return root.MangoSpatialRendererV0730.paint(q,value,b,opacity);}
   const p=check(value),m=mesh(p);if(!b||![b.x,b.y,b.width,b.height].every(Number.isFinite)||b.width<=0||b.height<=0)return false;
   const s=Math.min(b.width/Math.max(.001,m.bounds.w),b.height/Math.max(.001,m.bounds.h)),cx=b.x+(b.width-m.bounds.w*s)/2-m.bounds.x*s,cy=b.y+(b.height-m.bounds.h*s)/2-m.bounds.y*s;
   const l=[Math.cos(rad(p.light))*.62,Math.sin(rad(p.light))*.62,.78],project=v=>[cx+v[0]*s,cy+v[1]*s];
