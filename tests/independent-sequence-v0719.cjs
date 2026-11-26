@@ -1,0 +1,16 @@
+const assert=require('node:assert/strict');require('../media-assets.js');require('../compositor-core-v0714.js');const P=require('../independent-sequence-core-v0719.js');
+const meta=(id,kind,duration=3)=>({id,name:id+(kind==='video'?'.webm':kind==='audio'?'.wav':'.png'),kind,duration:kind==='image'?null:duration,width:kind==='audio'?null:320,height:kind==='audio'?null:180,mime:kind==='video'?'video/webm':kind==='audio'?'audio/wav':'image/png',size:200,lastModified:0});
+const a=meta('red','video'),b=meta('blue','video'),music=meta('music','audio',12);
+let p=P.empty({duration:8,width:320,height:180,fps:24});assert.equal(p.clips.length,0);assert.deepEqual(P.intervals(p),[{start:0,end:8}]);assert.equal(P.needed(p,2).length,0);
+p=P.add(p,a,'V1',0,true);p=P.add(p,b,'V1',0,true);assert.equal(p.clips[1].start,3);assert.equal(p.settings.duration,8);
+const [first,second]=p.clips;p=P.dissolve(p,second.id,1);assert.equal(p.clips[1].start,2);assert.equal(p.clips[1].end,5);assert.equal(P.active(p,2.5).length,2);assert.ok(Math.abs(P.mix(p,p.clips[1],2.5).opacity-.5)<.00001);assert.ok(Math.abs(P.mix(p,p.clips[0],2.5).gain-Math.SQRT1_2)<.00001);
+assert.throws(()=>P.move(p,second.id,'move',.5,'V1'),/dissolve/);assert.throws(()=>P.change(p,first.id,null),/dissolve/);
+p=P.removeDissolve(p,second.id);assert.equal(p.clips[1].start,3);assert.equal(p.transitions.length,0);
+p=P.add(p,music,'A2',0);const au=p.clips.find(c=>c.track==='A2');p=P.change(p,au.id,{fadeIn:1,gain:.5});assert.equal(P.mix(p,p.clips.find(c=>c.id===au.id),.5).gain,.25);
+p=P.add(p,null,'G1',1);assert.ok(p.clips.some(c=>c.track==='G1'));assert.doesNotThrow(()=>P.check(JSON.parse(JSON.stringify(p))));
+assert.throws(()=>P.check({...p,settings:{...p.settings,duration:2}}),/timing/);assert.throws(()=>P.settings({...p.settings,width:321}),/settings/);
+assert.throws(()=>P.add(p,a,'V1',1),/Overlapping/);assert.throws(()=>P.add(p,a,'A1',0),/compatible/);
+const n=P.move(p,second.id,'out',-1,'V1');assert.equal(n.clips.find(c=>c.id===second.id).sourceOut,2);
+const locked=P.change(p,second.id,{locked:true});assert.throws(()=>P.move(locked,second.id,'move',1,'V1'),/Unlock/);
+assert.ok(P.intervals(p).some(i=>i.start===6&&i.end===8));assert.deepEqual(P.fit(320,180,180,320,'contain'),{x:0,y:109.375,w:180,h:101.25});
+console.log('Independent sequence: blank settings, independent duration, multiple V1 assets, dissolve validation, audio gain/fades, titles, strict timing and lock protection passed');
