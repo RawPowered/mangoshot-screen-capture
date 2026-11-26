@@ -2161,6 +2161,34 @@ globalThis.MangoImageDocumentV0723=Object.freeze({
   g.clearRect(0,0,w,h);g.save();try{g.translate((w-bounds.width*scale)/2,(h-bounds.height*scale)/2);g.scale(scale,scale);g.translate(-bounds.x,-bounds.y);paintCompositorStroke(g,l,scale);}finally{g.restore();}return true;
  }
 });
+/* Pixel retouching commits a cropped, transparent image layer through the same
+ * registry/history as imported images. The composed reference is read-only. */
+globalThis.MangoPixelImageV0741=Object.freeze({
+ state(){const s=globalThis.MangoLayerImageV0712.state();return {ready:s.ready&&!documentLoadPending,stamp:s.stamp,width:base.width,height:base.height};},
+ capture(stamp){const s=this.state();if(!s.ready||s.stamp!==stamp)throw Error('Image changed or is busy.');globalThis.MangoPixelToolsV0741.dimensions(s.width,s.height);return flatten(true);},
+ async commit(canvas,x,y,name,stamp){
+  const guard=()=>{const s=this.state();if(!s.ready||s.stamp!==stamp)throw Error('Image changed. Cancel the pixel draft and reopen.');return s;},s=guard(),D=globalThis.MangoImageDocumentCoreV0723;
+  if(!canvas||!Number.isInteger(x)||!Number.isInteger(y)||x<0||y<0||x+canvas.width>s.width||y+canvas.height>s.height)throw Error('Pixel layer is outside the document.');
+  D.dimensions(canvas.width,canvas.height);if(canvas.width>8192||canvas.height>8192)throw Error('Pixel layer exceeds the asset dimension limit.');
+  if(!['Clone Stamp','Dodge','Burn','Bucket Fill','Gradient'].includes(name))throw Error('Unknown pixel tool.');
+  if(strokes.length>=D.MAX_LAYERS)throw Error('Project layer limit reached.');
+  const ids=new Set(strokes.filter(l=>l.type==='image').map(l=>l.assetId));if(ids.size>=128)throw Error('Project asset limit reached.');
+  let total=s.width*s.height+canvas.width*canvas.height;for(const id of ids){const a=layerCore.assets.get(id);if(!a)throw Error('Missing image asset.');total+=a.width*a.height;}
+  const mattes=layerCore.projectMattes();for(const id of new Set(strokes.map(l=>l.cutoutKey).filter(Boolean))){const m=mattes.get(id);if(m)total+=m.width*m.height;}
+  if(total>D.MAX_TOTAL_PIXELS)throw Error('Pixel edit would exceed the decoded project asset budget.');
+  const blob=await toPng(canvas);guard();let layer;
+  try{
+   layer=await layerCore.importFile(new File([blob],name+'.png',{type:'image/png'}));guard();
+   layer.name=name;layer.points[0]={x,y,p:1};
+   const next=[...strokes,layer];
+   globalThis.MangoCompositorV0714?.requireProject(next,[],ink.width,ink.height);
+   rasterLayers?.requireProject(next,l=>layerCore.asset(l));selectionCore?.requireProject(next,l=>layerCore.asset(l));
+   if(advancedComp&&!advancedComp.canOrder(composition,next))throw Error('Cannot insert layer into this isolated group order.');
+  }catch(e){if(layer)layerCore.assets.delete(layer.assetId);throw e;}
+  clearBatch();snapshot();strokes.push(layer);tool.value='select';syncTool();selectLayerAt(strokes.length-1);redraw();setReady(true);switchInspectorTab('layers');syncLayerProperties();
+  label(name+' added as an editable pixel layer. Ctrl+Z to undo.');return {id:layer.id,x,y,width:layer.width,height:layer.height};
+ }
+});
 globalThis.MangoRasterImageV0722=Object.freeze({
  state(){const s=globalThis.MangoLayerImageV0712.state();return {ready:s.ready,stamp:s.stamp,width:base.width,height:base.height};},
  capture(stamp,mode){

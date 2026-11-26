@@ -21,7 +21,8 @@
   sample.onclick=()=>{if(!root.MangoImageActions?.state().ready)return;set(!armed);};
   root.addEventListener('pointerdown',e=>{if(!armed)return;if(sample.contains(e.target))return;if(e.target!==ink){set(false);return;}e.preventDefault();e.stopImmediatePropagation();const b=ink.getBoundingClientRect();try{const value=root.MangoColorSampleV0740.use((e.clientX-b.left)*ink.width/b.width,(e.clientY-b.top)*ink.height/b.height);sample.style.setProperty('--ux40-sample',value);}catch(err){by('status').textContent=err.message;}finally{set(false);}},true);
   root.addEventListener('keydown',e=>{if(armed&&e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();set(false);}},true);
-  const precision=group('Precision and pixel tools');
+  const retouch=group('Pixel painting and retouching');retouch.id='ux41-pixel-tools';
+ const precision=group('Precision and pixel tools');
   real(precision,'ci-open-v0720','dial','Dials','Precision dials');
   real(precision,'bs-open-v0725','pen','Brush','Precision Brush Studio');
   real(precision,'ps-open-v0728','marquee','Pixels','Pixel Selection and Mask Studio');

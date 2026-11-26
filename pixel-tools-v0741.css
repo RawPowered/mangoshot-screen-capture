@@ -1,0 +1,24 @@
+/* Pixel painting belongs to the existing image canvas and context rail. */
+body.studio-image .ux41-controls{grid-column:1/3;grid-row:1;display:flex;gap:9px;align-items:center;min-width:0;max-height:44px;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}
+body.studio-image .ux41-controls[hidden],body.studio-image .ux41-overlay[hidden],body.studio-image .ux41-ring[hidden],body.studio-image .ux41-marker[hidden]{display:none!important}
+body.studio-image.ux41-editing .v070-tool-identity,body.studio-image.ux41-editing .v070-fields{display:none!important}
+.ux41-title{font-size:11px;white-space:nowrap;flex:0 0 auto;color:var(--carbon-text)}
+.ux41-knobs,.ux41-actions{display:flex;align-items:center;gap:7px;flex:0 0 auto}
+.ux41-knob{display:grid;grid-template-columns:34px 52px;grid-template-rows:13px 23px;gap:1px 4px;align-items:center;min-width:90px;font-size:10px}
+.ux41-knob>.co36-dial{grid-column:1;grid-row:1/3;width:34px;height:34px}
+.ux41-knob>span{grid-column:2;grid-row:1;color:var(--carbon-secondary);white-space:nowrap}
+body.studio-image .ux41-knob>input{grid-column:2;grid-row:2;min-height:22px;height:23px;width:52px;padding:2px 4px;font-size:11px;box-sizing:border-box;text-align:right;font-variant-numeric:tabular-nums}
+.ux41-knob>input::-webkit-inner-spin-button{appearance:none}
+.ux41-color,.ux41-pressure{display:flex;gap:4px;align-items:center;white-space:nowrap;font-size:10px}
+body.studio-image .ux41-color input{width:31px;height:27px;min-height:27px;padding:2px}
+.ux41-pressure input{width:14px;height:14px}
+.ux41-actions button{min-height:28px;font-size:11px;white-space:nowrap}
+.ux41-note{font-size:10px;color:var(--carbon-secondary);white-space:nowrap;min-width:70px}
+body.studio-image .canvas-wrap>.ux41-overlay{position:absolute;inset:0;width:100%;height:100%;z-index:32;display:block;touch-action:none;cursor:crosshair;outline:none;max-width:none;max-height:none}
+.ux41-ring,.ux41-marker{position:absolute;z-index:33;transform:translate(-50%,-50%);pointer-events:none;border:1px solid #e9f1f7;box-shadow:0 0 0 1px #111;border-radius:50%;box-sizing:border-box}
+.ux41-marker{width:13px;height:13px;border-color:var(--carbon-accent,#b9f35d);border-radius:0}
+.ux41-marker::before,.ux41-marker::after{content:'';position:absolute;background:var(--carbon-accent,#b9f35d)}
+.ux41-marker::before{width:1px;height:21px;left:5px;top:-5px}.ux41-marker::after{height:1px;width:21px;left:-5px;top:5px}
+body.ux40-workspace .ux41-launch{padding:3px 5px!important}
+body.ux40-workspace #ux41-pixel-tools .ux40-tool-label{display:none}
+body.studio-image.ux41-editing .ux41-launch[aria-pressed=true]{color:var(--carbon-accent);border-color:var(--carbon-accent)}
