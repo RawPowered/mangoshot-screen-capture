@@ -3,7 +3,7 @@ const byId=id=>document.getElementById(id),video=byId('video'),status=byId('stat
 let original=null,originalUrl=null,segments=[],layers=[],selectedLayerId=null,history=[],duration=0,sequencePlaying=false,exporting=false,cancelExport=false,originalFormat=null;
 let previewSequenceTime=null,loadVersion=0,selectedClipIndex=null,rangeSelected=false,redoHistory=[],automationRevisionV075=0,automationLoadReadyV075=false;
 let sequencePreview=null,zoomEvents=[],transitions=[],cursorTrace=null,cursorRegions=[],sourceGrade=[];
-const compositor=globalThis.MangoCompositorV0714,MT=globalThis.MangoMultitrackV0716;
+const compositor=globalThis.MangoCompositorV0714,MT=globalThis.MangoMultitrackV0716,PT=globalThis.MangoProfessionalTimelineV0717;
 let secondary=MT?.defaults()||{clips:[]},multiPreparing=false,multiRequest=null,multiAudioContext=null,multiPreviewMix=null;
 const mediaAsset=id=>globalThis.MangoMediaBin?.registry.get(id),multiRuntime=MT?.createRuntime(mediaAsset),hasMulti=()=>secondary.clips.length>0;
 const director=()=>globalThis.MangoCursorDirectorCoreV074;
@@ -30,15 +30,15 @@ const time=t=>`${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}.$
 const mp4Types=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4'];
 const webmTypes=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
 function supported(types){if(typeof MediaRecorder==='undefined')return null;return types.find(t=>MediaRecorder.isTypeSupported(t))||null;}
-function setControls(){const loaded=!!original;
- byId('file').disabled=exporting;byId('open-last').disabled=exporting;byId('forget-last').disabled=exporting;
- byId('save-original').disabled=!loaded||exporting;byId('save-project').disabled=!loaded||exporting;byId('open-project').disabled=!loaded||exporting;
- for(const id of ['in','out','mark-in','mark-out','trim','cut','split','ripple-delete','range-tool','add-marker','make-thumbnails','analyze-audio','timeline-zoom','reset','play-edited','export-webm','export-mp4'])byId(id).disabled=!loaded||exporting;
- byId('undo').disabled=!loaded||!history.length||exporting;byId('redo').disabled=!loaded||!redoHistory.length||exporting;
- byId('clear-range').disabled=!loaded||exporting||(!rangeSelected&&selectedClipIndex===null);
- byId('export-webm').disabled=!loaded||exporting||!supported(webmTypes)||!segments.length;
- byId('export-mp4').disabled=!loaded||exporting|| (!supported(mp4Types)&&!(MangoFormat.fastCopy(originalFormat,'mp4',segments,duration)&&!hasGraphics()&&!hasCreative()))||!segments.length;
- byId('export-webm').disabled=!loaded||exporting|| (!supported(webmTypes)&&!(MangoFormat.fastCopy(originalFormat,'webm',segments,duration)&&!hasGraphics()&&!hasCreative()))||!segments.length;
+function setControls(){const loaded=!!original,busy=exporting||multiPreparing;
+ byId('file').disabled=busy;byId('open-last').disabled=busy;byId('forget-last').disabled=busy;
+ byId('save-original').disabled=!loaded||busy;byId('save-project').disabled=!loaded||busy;byId('open-project').disabled=!loaded||busy;
+ for(const id of ['in','out','mark-in','mark-out','trim','cut','split','ripple-delete','range-tool','add-marker','make-thumbnails','analyze-audio','timeline-zoom','reset','play-edited','export-webm','export-mp4'])byId(id).disabled=!loaded||busy;
+ byId('undo').disabled=!loaded||!history.length||busy;byId('redo').disabled=!loaded||!redoHistory.length||busy;
+ byId('clear-range').disabled=!loaded||busy||(!rangeSelected&&selectedClipIndex===null);
+ byId('export-webm').disabled=!loaded||busy||!supported(webmTypes)||!segments.length;
+ byId('export-mp4').disabled=!loaded||busy|| (!supported(mp4Types)&&!(MangoFormat.fastCopy(originalFormat,'mp4',segments,duration)&&!hasGraphics()&&!hasCreative()))||!segments.length;
+ byId('export-webm').disabled=!loaded||busy|| (!supported(webmTypes)&&!(MangoFormat.fastCopy(originalFormat,'webm',segments,duration)&&!hasGraphics()&&!hasCreative()))||!segments.length;
  byId('cancel-export').disabled=!exporting;
  const mp4Instant=!hasGraphics()&&!hasCreative()&&MangoFormat.fastCopy(originalFormat,'mp4',segments,duration);
  const webmInstant=!hasGraphics()&&!hasCreative()&&MangoFormat.fastCopy(originalFormat,'webm',segments,duration);
@@ -90,7 +90,7 @@ function waitVideoEvent(type,timeout=8000){return new Promise((resolve,reject)=>
  const done=()=>{clear();resolve();};const failed=()=>{clear();reject(video.error||new Error('Video decoding failed.'));};
  video.addEventListener(type,done,{once:true});video.addEventListener('error',failed,{once:true});
  });}
-async function load(blob,attachedCursorTrace=null){if(exporting)throw new Error('Finish the current export first.');
+async function load(blob,attachedCursorTrace=null){if(exporting||multiPreparing)throw new Error('Finish the current export first.');
  globalThis.MangoBridgeV077?.disconnect?.('Source changed');automationLoadReadyV075=false;automationRevisionV075++;const request=++loadVersion;cursorTrace=null;cursorRegions=[];globalThis.MangoCursorClipV073?.refresh?.();
  if(!(blob instanceof Blob)||!blob.size)throw new Error('Select a nonempty video.');
  sequencePlaying=false;sequencePreview?.stop();video.pause();stopMultiPreview();multiRuntime?.clear();multiRequest=null;secondary=MT?.defaults()||{clips:[]};cinematic?.clear();cinematicRequest=null;if(originalUrl)URL.revokeObjectURL(originalUrl);
@@ -120,7 +120,7 @@ async function load(blob,attachedCursorTrace=null){if(exporting)throw new Error(
 function readRange(){const clip=selectedClipIndex!==null&&!rangeSelected?MangoSequenceOps.bounds(segments,selectedClipIndex):null;
  return clip||MangoTimeline.range(Number(byId('in').value),Number(byId('out').value),MangoEditOps.length(segments));}
 function commitSequence(next,message,newLayers=layers){
- if(!original||exporting||!next.length)return false;
+ if(!original||exporting||multiPreparing||!next.length)return false;
  if(hasMulti()&&Math.abs(MangoEditOps.length(next)-MangoEditOps.length(segments))>.00001){label('Remove secondary clips before changing primary sequence duration.');return false;}
  remember();segments=clone(next);layers=clone(newLayers);transitions=reconcileTransitions(transitions,segments);selectedClipIndex=null;rangeSelected=false;
  const out=MangoEditOps.length(segments);byId('out').max=out.toFixed(2);byId('in').max=out.toFixed(2);
@@ -128,12 +128,17 @@ function commitSequence(next,message,newLayers=layers){
  refreshed();label(message);return true;
 }
 function applyTransaction(transaction,message,removedRanges=null){
- if(!transaction||!original||exporting)return false;
- if(hasMulti()&&Math.abs(MangoEditOps.length(transaction.segments)-MangoEditOps.length(segments))>.00001){label('Remove secondary clips before ripple/trim changes to the primary duration.');return false;}
+ if(!transaction||!original||exporting||multiPreparing)return false;
+ let nextSecondary=secondary;const oldLength=MangoEditOps.length(segments),newLength=MangoEditOps.length(transaction.segments);
+ if(hasMulti()&&Math.abs(newLength-oldLength)>.00001){
+  if(globalThis.MangoCreativeUI?.hasVoice?.())throw Error('Remove recorded voiceover before duration-changing multitrack edits.');
+  const ranges=removedRanges||transaction.removedRanges;if(!PT||!ranges)throw Error('Primary edit does not provide a secondary timing mapping.');
+  nextSecondary=MT.check(PT.ripple(secondary,ranges,oldLength,newLength),mediaAsset,newLength);
+ }
  const same=JSON.stringify(segments)===JSON.stringify(transaction.segments)&&JSON.stringify(layers)===JSON.stringify(transaction.layers)
   &&JSON.stringify(globalThis.MangoClipTimeline?.markers?.()||[])===JSON.stringify(transaction.markers);
  if(same){label('Nothing changed. Choose a different range or clip.');return false;}
- remember();
+ remember();secondary=nextSecondary;multiRequest=null;stopMultiPreview();
  if(Array.isArray(removedRanges)&&removedRanges.length){
   for(const range of [...removedRanges].sort((a,b)=>b.start-a.start))zoomEvents=MangoCreativeZoom.ripple(zoomEvents,range.start,range.end);
  }
@@ -234,9 +239,9 @@ byId('clear-range').onclick=clearSelection;
 byId('trim').onclick=()=>edit('trim');byId('cut').onclick=()=>{
  if(rangeSelected||selectedClipIndex!==null)deleteSelection();else edit('cut');
 };
-byId('undo').onclick=()=>{if(!history.length)return;redoHistory.push(snapshot());restore(history.pop());label('Undo complete.');};
-byId('redo').onclick=()=>{if(!redoHistory.length)return;history.push(snapshot());restore(redoHistory.pop());label('Redo complete.');};
-byId('reset').onclick=()=>{if(!original||exporting)return;remember();segments=[{start:0,end:duration}];layers=[];zoomEvents=[];cursorRegions=[];transitions=[];sourceGrade=[];secondary=MT?.defaults()||{clips:[]};stopMultiPreview();multiRequest=null;multiRuntime?.clear();cinematic?.clear();cinematicRequest=null;selectedLayerId=null;
+byId('undo').onclick=()=>{if(exporting||multiPreparing||!history.length)return;redoHistory.push(snapshot());restore(history.pop());label('Undo complete.');};
+byId('redo').onclick=()=>{if(exporting||multiPreparing||!redoHistory.length)return;history.push(snapshot());restore(redoHistory.pop());label('Redo complete.');};
+byId('reset').onclick=()=>{if(!original||exporting||multiPreparing)return;remember();segments=[{start:0,end:duration}];layers=[];zoomEvents=[];cursorRegions=[];transitions=[];sourceGrade=[];secondary=MT?.defaults()||{clips:[]};stopMultiPreview();multiRequest=null;multiRuntime?.clear();cinematic?.clear();cinematicRequest=null;selectedLayerId=null;
  selectedClipIndex=null;rangeSelected=false;byId('in').value='0';byId('out').value=duration.toFixed(2);
  globalThis.MangoClipTimeline?.loadMarkers?.([]);refreshed();label('Source, graphics and markers reset.');};
 byId('file').addEventListener('change',event=>{if(event.target.files?.[0])load(event.target.files[0]).catch(e=>label('Open failed: '+e.message));});
@@ -408,6 +413,9 @@ globalThis.MangoClipView={
  segments:()=>segments,layers:()=>layers,transitions:()=>clone(transitions),selectedLayer:()=>selectedLayerId,url:()=>originalUrl,original:()=>original,
  exporting:()=>exporting,isPlaying:()=>sequencePreview?.isPlaying?.()||false,updateControls:setControls,
   multitrack:()=>clone(secondary),
+  multitrackBusy:()=>multiPreparing,
+  async commitSecondaryTimeline(id,candidate,expected){const s=this.automationCapture();if(!s.ready||s.stamp!==expected)throw Error('Timeline edit is stale.');return this.applyMultitrack(PT.change(secondary,id,candidate),expected);},
+  commitGraphicKeyTime(id,index,at,expected){const s=this.automationCapture(),i=layers.findIndex(l=>l.id===id);if(!s.ready||s.stamp!==expected||i<0||layers[i].locked)throw Error('Keyframe edit is stale or locked.');const next=compositor.checkKeys(PT.keyTime(layers[i].keyframes,index,at));if(PT.eq(next,layers[i].keyframes))return false;remember();layers[i]={...layers[i],keyframes:next};selectedLayerId=id;refreshed();label('Keyframe time updated. Ctrl+Z to undo.');return true;},
   secondaryReferences:id=>[secondary,...history.map(x=>x.secondary),...redoHistory.map(x=>x.secondary)].some(m=>m?.clips.some(c=>c.assetId===id)),
   async applyMultitrack(model,expected,notify=()=>{},allowed=()=>true){
    const before=this.automationCapture();if(!before.ready||before.stamp!==expected)throw Error('Editor changed. Reopen Multitrack Studio.');
@@ -415,11 +423,11 @@ globalThis.MangoClipView={
    if(JSON.stringify(next)===JSON.stringify(secondary))return false;
    for(const c of secondary.clips){const n=next.clips.find(x=>x.id===c.id),locked=(c.locked&&n?.locked!==false)||(secondary.tracks[c.track].locked&&next.tracks[c.track].locked);
     if(locked&&JSON.stringify(n)!==JSON.stringify(c))throw Error('Unlock the existing clip and track before editing it.');}
-   multiPreparing=true;stopMultiPreview();
+   multiPreparing=true;stopMultiPreview();setControls();
    try{await multiRuntime.prepare(next,MangoEditOps.length(segments),notify);multiPreparing=false;
     const after=this.automationCapture();if(!allowed()||!after.ready||after.stamp!==before.stamp||after.identity!==before.identity)throw Error('Multitrack draft cancelled or stale.');
     remember();secondary=next;multiRequest=null;refreshed();label('Secondary media applied. Ctrl+Z to undo.');return true;
-   }catch(e){multiPreparing=false;multiRuntime.clear();multiRequest=null;paintPreview();throw e;}finally{multiPreparing=false;}
+   }catch(e){multiPreparing=false;multiRuntime.clear();multiRequest=null;paintPreview();throw e;}finally{multiPreparing=false;setControls();}
   },
   async prepareSecondary(model=secondary,length=MangoEditOps.length(segments)){if(!model.clips.length)return;await multiRuntime.prepare(model,length);},
   paintSecondary(ctx,model,t,w,h){if(model?.clips.length&&!multiRuntime.paint(ctx,model,t,w,h))throw Error('Secondary media preparation required.');},

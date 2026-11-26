@@ -22,13 +22,18 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   await p.locator('#pc-material-gold-v0715').click();await p.locator('#pc-apply-v0714').click();assert.equal((await state()).layers[0].material.kind,'metal');assert.notEqual(await pixels(),initial);await p.screenshot({path:path.join(out,'02-image-material.png')});
   await p.keyboard.press('Escape');await dlg.waitFor({state:'hidden'});await p.evaluate(()=>MangoImageActions.run('undo'));assert.equal(await pixels(),initial);
   await p.evaluate(async()=>{await MangoCreativeV079.ready;MangoCreativeImageV079.insert('fonts','manrope','600','Rotation text');const h=MangoLayerImageV0712,s=h.state(),id=s.layers.find(l=>l.type==='text').id;h.apply('effects',[id],{rotation:45},s.stamp);});assert.equal((await state()).layers.find(l=>l.type==='text').rotation,45);
+  // Isolate the mask fixture: an alpha hole must not reveal earlier annotation pixels.
+  await p.goto(base+'editor.html?stored=rotation-fixture');await p.waitForFunction(()=>MangoImageActions.state().ready&&!!window.MangoCompositorUIV0714);
   // Import an asymmetric source and confirm inverse mask mapping and actual PNG output.
   const asset=await p.evaluate(()=>{const c=document.createElement('canvas');c.width=160;c.height=80;const q=c.getContext('2d');q.fillStyle='#ff0000';q.fillRect(0,0,80,80);q.fillStyle='#0000ff';q.fillRect(80,0,80,80);return c.toDataURL().split(',')[1];});
   await p.locator('#image-import-file').setInputFiles({name:'rotation-test.png',mimeType:'image/png',buffer:Buffer.from(asset,'base64')});await p.waitForFunction(()=>MangoLayerImageV0712.state().layers.some(l=>l.type==='image'));
   await p.evaluate(()=>{const h=MangoLayerImageV0712,s=h.state();h.apply('effects',[s.layers.find(l=>l.type==='image').id],{rotation:90},s.stamp);});
   const sample=()=>ink.evaluate(c=>Array.from(c.getContext('2d').getImageData(500,235,1,1).data));
   const top=await sample();assert.ok(top[0]>240&&top[2]<10&&top[3]===255,JSON.stringify(top));
-  await p.evaluate(()=>MangoToolGroupsV071.activate('mask-erase'));await drag([.5,235/600],[.5,235/600]);await p.waitForFunction(()=>document.getElementById('ink').getContext('2d').getImageData(500,235,1,1).data[3]<20);
+  await p.evaluate(()=>MangoToolGroupsV071.activate('mask-erase'));assert.equal(await p.evaluate(()=>MangoToolImageV0711.state().tool),'mask-erase');
+  const target=await ink.boundingBox(),sx=target.x+target.width*.5,sy=target.y+target.height*235/600;const hit=await p.evaluate(([x,y])=>document.elementFromPoint(x,y)?.id,[sx,sy]);assert.equal(hit,'ink','Mask target must be the annotation canvas.');
+  await p.mouse.move(sx,sy);await p.mouse.down();await p.mouse.move(sx+target.width*.005,sy,{steps:4});await p.mouse.up();assert.ok((await sample())[3]<20,JSON.stringify({sample:await sample(),selection:(await state()).selection,status:await p.locator('#status').textContent()}));
+  await p.screenshot({path:path.join(out,'02b-rotated-mask.png')});
   await p.evaluate(()=>MangoImageActions.run('undo'));assert.deepEqual(await sample(),top);
   const pngPromise=p.waitForEvent('download',{timeout:30000});await p.locator('#png').evaluate(b=>b.click());const png=await pngPromise,pngPath=await png.path();assert.ok(pngPath);
   const exported=await p.evaluate(async raw=>{const bitmap=await createImageBitmap(new Blob([Uint8Array.from(atob(raw),x=>x.charCodeAt(0))],{type:'image/png'}));const c=document.createElement('canvas');c.width=bitmap.width;c.height=bitmap.height;const q=c.getContext('2d');q.drawImage(bitmap,0,0);return Array.from(q.getImageData(500,235,1,1).data);},fs.readFileSync(pngPath).toString('base64'));assert.deepEqual(exported,top);

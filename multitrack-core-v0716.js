@@ -40,13 +40,14 @@
  function raster(frame,w,h,count){if(!finite(w,1,16384)||!finite(h,1,16384)||w*h>24000000)throw Error('Secondary source exceeds 24 megapixels.');const d=dimensions(w,h,count),c=root.document.createElement('canvas');c.width=d.w;c.height=d.h;c.getContext('2d').drawImage(frame,0,0,d.w,d.h);return c;}
  function createRuntime(asset){
   let cache=new Map(),key=null,pending=null,controller=null,failed=null;
-  const signature=m=>JSON.stringify([m,m.clips.map(c=>asset(c.assetId)?.url||null)]);
+  const signature=m=>root.MangoProfessionalTimelineV0717?.decodeSignature(m,asset,framesFor,gif)||JSON.stringify([m,m.clips.map(c=>asset(c.assetId)?.url||null)]);
   function dispose(map){for(const x of map.values())for(const f of x.frames||[])f.width=f.height=0;}
   function clear(){controller?.abort();controller=null;dispose(cache);cache=new Map();key=null;pending=null;failed=null;}
   const ready=m=>!m.clips.length||key===signature(m)&&!pending&&!failed;
   async function prepare(raw,length,notify=()=>{}){
    const m=check(raw,asset,length),wanted=signature(m);
-   if(key===wanted){if(failed)throw failed;if(pending)return pending;return m;}
+   for(const c of m.clips){const a=asset(c.assetId);if(!a||a.missing||!a.url||!a.blob)throw Error('Relink missing local asset: '+(a?.name||c.assetId));root.MangoCompositorV0714?.requireSupport(c.grade);}
+   if(key===wanted){if(failed)throw failed;if(pending){await pending;return m;}return m;}
    clear();key=wanted;if(!m.clips.length)return m;
    controller=new AbortController();const signal=controller.signal,local=new Map(),count=m.clips.reduce((n,c)=>n+(visual(c)?framesFor(c,asset(c.assetId)):0),0);
    pending=Promise.resolve().then(async()=>{let ac=null,totalAudio=0,progress=0;
@@ -74,8 +75,8 @@
       }else{const img=await root.createImageBitmap(a.blob);try{entry.frames.push(raster(img,img.width,img.height,count));}finally{img.close();}}
       if(signal.aborted)throw Error('Media preparation cancelled.');notify(++progress,m.clips.length);
      }
-     if(signal.aborted||key!==wanted)throw Error('Media preparation cancelled.');cache=local;return m;
-    }catch(e){dispose(local);if(key===wanted)failed=e;throw e;}finally{if(ac)void ac.close().catch(()=>{});if(key===wanted){pending=null;controller=null;}}
+     if(signal.aborted||key!==wanted||controller?.signal!==signal)throw Error('Media preparation cancelled.');cache=local;return m;
+    }catch(e){dispose(local);if(key===wanted&&controller?.signal===signal)failed=e;throw e;}finally{if(ac)void ac.close().catch(()=>{});if(key===wanted&&controller?.signal===signal){pending=null;controller=null;}}
    });return pending;
   }
   function paint(ctx,m,t,w,h){

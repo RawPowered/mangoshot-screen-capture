@@ -22,7 +22,7 @@
   const removed=end-start;
   return {segments:next,layers:root.MangoGraphics.ripple(graphics,start,end),
    markers:markers.flatMap(m=>m.time<start?[{...m}]:m.time>=end?[{...m,time:m.time-removed}]:[]),
-   playhead:Math.min(start,length(next)),removed};
+   playhead:Math.min(start,length(next)),removed,removedRanges:[{start,end}]};
  }
  function clip(parts,graphics,markers,index){
   validate(parts,graphics,markers);
@@ -36,7 +36,7 @@
    throw new Error('Choose a valid In/Out range before trimming.');
   const next=root.MangoEditOps.trim(parts,start,end);
   return {segments:next,layers:root.MangoGraphics.trim(graphics,start,end),
-   markers:markers.filter(m=>m.time>=start&&m.time<end).map(m=>({...m,time:m.time-start})),playhead:0};
+   markers:markers.filter(m=>m.time>=start&&m.time<end).map(m=>({...m,time:m.time-start})),playhead:0,removedRanges:[...(start>0?[{start:0,end:start}]:[]),...(end<duration?[{start:end,end:duration}]:[])]};
  }
  function edge(parts,graphics,markers,index,side,value,sourceDuration){
   validate(parts,graphics,markers);
@@ -49,7 +49,7 @@
   // Removing a trim region has the same ripple effect on graphics and markers as deleting it.
   return {segments:next,layers:root.MangoGraphics.ripple(graphics,cutStart,cutStart+changed),
    markers:markers.flatMap(m=>m.time<cutStart?[{...m}]:m.time>=cutStart+changed?[{...m,time:m.time-changed}]:[]),
-   playhead:Math.min(cutStart,length(next)),removed:changed};
+   playhead:Math.min(cutStart,length(next)),removed:changed,removedRanges:[{start:cutStart,end:cutStart+changed}]};
  }
  function bounds(parts,index){if(!Number.isInteger(index)||index<0||index>=parts.length)return null;
   const start=parts.slice(0,index).reduce((n,p)=>n+p.end-p.start,0);

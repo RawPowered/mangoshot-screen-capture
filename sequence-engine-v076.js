@@ -77,6 +77,7 @@
   }
   if(command==='clip.timeline.rippleDelete'){
    if(s.hasVoice)throw Error('Ripple edits with a recorded voiceover are not supported in sequence scripts');
+   if(s.secondary?.clips.length)throw Error('Use the interactive timeline for ripple edits with secondary media.');
    // Existing camera ripple can drop a return keyframe. Require cuts before camera animation.
    if(s.zoomFrames.length)throw Error('Perform ripple cuts before adding camera animation (or remove existing camera events)');
    if(a.end<=a.start||a.end>len)throw Error('Invalid ripple range');

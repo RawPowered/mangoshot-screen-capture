@@ -19,3 +19,6 @@ body.studio .pc-material-tile-v0715{display:flex;flex-direction:column;align-ite
 .pc-material-tile-v0715 canvas{display:block;width:100%;height:auto;aspect-ratio:2.4/1;background:var(--carbon-shell);border:1px solid var(--carbon-line)}
 .pc-material-tile-v0715[aria-pressed=true]{border-color:var(--carbon-accent-edge);color:var(--carbon-accent)}
 @media(max-width:760px){.pc-material-presets-v0715{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Transform handles must not intercept mask-brush strokes. */
+body.studio-image[data-mask-painting=true] #image-layer-selection-box :is(.image-resize-handle,.image-rotate-handle-v0715){visibility:hidden!important;pointer-events:none!important}

@@ -42,8 +42,10 @@
  function circlePath(ctx,points,radius,w,h){
   if(!points?.length)return;
   ctx.lineCap='round';ctx.lineJoin='round';ctx.lineWidth=Math.max(1,radius*Math.min(w,h)*2);
+  // A click or repeated stationary samples must paint a real disk.
+  ctx.beginPath();ctx.arc(points[0].x*w,points[0].y*h,ctx.lineWidth/2,0,Math.PI*2);ctx.fill();
+  if(points.length===1)return;
   ctx.beginPath();ctx.moveTo(points[0].x*w,points[0].y*h);
-  if(points.length===1){ctx.arc(points[0].x*w,points[0].y*h,ctx.lineWidth/2,0,Math.PI*2);ctx.fill();return;}
   for(const p of points.slice(1))ctx.lineTo(p.x*w,p.y*h);
   ctx.stroke();
  }

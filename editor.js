@@ -819,7 +819,7 @@ for(const button of document.querySelectorAll?.('[data-fx-preset]')||[]){
 
 function beginMaskTool(mode){
  if(!selectedImageStroke()){label('Select an imported image layer before masking.');switchInspectorTab('layers');return;}
- tool.value=mode;syncTool();switchInspectorTab('mask');
+ chooseImageTool(mode);switchInspectorTab('mask');
 }
 document.getElementById('image-mask-erase')?.addEventListener?.('click',()=>beginMaskTool('mask-erase'));
 document.getElementById('image-mask-restore')?.addEventListener?.('click',()=>beginMaskTool('mask-restore'));
@@ -1176,6 +1176,7 @@ const penDiagnostics=penInput?.createDiagnostic?.({
 });
 const toolButtons=[...(document.querySelectorAll?.('[data-studio-tool]')||[])];
 function syncTool(){
+ document.body.dataset.maskPainting=String(tool.value==='mask-erase'||tool.value==='mask-restore');
  for(const button of toolButtons){
   const selected=button.dataset.studioTool===tool.value;
   button.classList.toggle('is-active',selected);button.setAttribute('aria-pressed',String(selected));
@@ -1483,7 +1484,7 @@ ink.addEventListener('pointerdown',event=>{
  }
  if(type==='mask-erase'||type==='mask-restore'){
   const l=selectedImageStroke();
-  if(!l||l.locked||!layerCore){label('Select an unlocked imported image layer before masking.');return;}
+  if(!l||l.locked||l.visible===false||!layerCore){label('Select a visible, unlocked imported image layer before masking.');return;}
   const local=rotationLocal(l,p);if(!layerCore.hit(l,local.x,local.y,0))return;
   event.preventDefault();ink.setPointerCapture?.(event.pointerId);
   const brush=Number(document.getElementById('image-mask-brush')?.value||35);
@@ -1582,7 +1583,7 @@ ink.addEventListener('pointermove',event=>{
  if(maskDraw){
   const target=strokes[maskDraw.index];
   if(!target||target.locked||target.type!=='image')return;
-  const local=rotationLocal(target,p);maskDraw.path.points.push(layerCore.normalize(target,local.x,local.y));
+  const local=rotationLocal(target,p),next=layerCore.normalize(target,local.x,local.y),last=maskDraw.path.points.at(-1);if(!last||Math.hypot(next.x-last.x,next.y-last.y)>.000001)maskDraw.path.points.push(next);
   scheduleRedraw();event.preventDefault();return;
  }
  if(dragImage){
