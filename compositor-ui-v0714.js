@@ -83,8 +83,8 @@
   loadDraft();
  }
  function preview(){
-  scrubOut.textContent=(Number(scrub.value)/10).toFixed(1)+'%';
-  if(previewRaf)cancelAnimationFrame(previewRaf);
+  scrubOut.textContent=(Number(scrub.value)/10).toFixed(1)+'%';if(!dlg.open)return;
+  apply.disabled=true;if(previewRaf)cancelAnimationFrame(previewRaf);
   previewRaf=requestAnimationFrame(()=>{previewRaf=0;
    try{const selected=state.layers.filter(l=>ids().includes(l.id)),can=state.ready&&(mode==='grade'||selected.length>0&&selected.every(l=>!l.locked&&l.eligible));
     apply.disabled=!can;if(!can)throw Error('Choose an unlocked, eligible layer or load source media.');

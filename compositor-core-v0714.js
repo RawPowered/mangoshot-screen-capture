@@ -33,7 +33,7 @@
    if(!spec||!finite(x.value,spec.min,spec.max)||typeof x.enabled!=='boolean')throw Error('Invalid effect stack item.');
    return {kind:x.kind,value:x.value,enabled:x.enabled};});
  }
- const active=stack=>Array.isArray(stack)&&stack.some(x=>x.enabled&&specs[x.kind]&&x.value!==specs[x.kind].initial);
+ const active=stack=>Array.isArray(stack)&&stack.some(x=>x&&x.enabled&&Object.hasOwn(specs,x.kind)&&x.value!==specs[x.kind].initial);
  function filter(stack,scale=1){return checkStack(stack).filter(x=>x.enabled&&x.value!==specs[x.kind].initial).map(x=>specs[x.kind].fn(x.value,scale)).join(' ')||'none';}
  const easing=['linear','easeIn','easeOut','easeInOut','hold'];
  const neutral=()=>({t:0,x:0,y:0,scale:1,rotation:0,opacity:1,ease:'linear'});
