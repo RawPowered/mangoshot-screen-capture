@@ -20,6 +20,8 @@ const layerCore=globalThis.MangoImageLayersV0612;
 const typeEffects=globalThis.MangoImageTypeV0613;
 const vectorCore=globalThis.MangoImageVectorV0615;
 const penInput=globalThis.MangoPenInputV0616;
+const precisionBrush=globalThis.MangoBrushV0725;
+let brushPreference=precisionBrush?.read().profile||null;
 const layerOps=globalThis.MangoLayerOpsV0618;
 const selectedBox=document.getElementById('text-selection-box'),inline=document.getElementById('text-inline'),
  inlineInput=document.getElementById('text-inline-input'),contextMenu=document.getElementById('image-context-menu');
@@ -219,6 +221,7 @@ function drawStrokeRaw(stroke,pen=imageStrokeContext){
   if(!stroke||stroke.visible===false)return;
   if(stroke.type==='image'){layerCore?.paint(pen,stroke);return;}
   if(penInput?.paintEraser?.(pen,stroke))return;
+  if(precisionBrush?.paint(pen,stroke))return;
   if(vectorCore?.isVector?.(stroke)){vectorCore.paint(pen,stroke);return;}
   const [start,...rest]=stroke.points,finish=stroke.points.at(-1)||start;
   if(!start)return;
@@ -1560,6 +1563,7 @@ ink.addEventListener('pointerdown',event=>{
  }else{
   active={type,points:[p],size:Number(size.value)*(ink.width/ink.getBoundingClientRect().width),
    color:color.value,text:'',opacity:Number(document.getElementById('image-tool-opacity')?.value||100)/100};
+  if(brushPreference&&['pen','highlighter'].includes(type)&&base.width*base.height<=precisionBrush.MAX_PIXELS)active.brush=precisionBrush.copy(brushPreference);
  }
  drawing=true;scheduleRedraw();
 });
@@ -1965,6 +1969,33 @@ globalThis.MangoToolImageV0711=Object.freeze({state:()=>({selection:batchLayers(
 
 /* Raster Lab reads the exact currently exported composition, never unredacted source. */
 /* Portable project adapter. Validation and decoding precede document replacement. */
+/* Brush profiles are captured per stroke; preferences never rewrite existing artwork. */
+globalThis.MangoBrushImageV0725=Object.freeze({
+ state(){const s=globalThis.MangoLayerImageV0712.state(),l=s.selection.length===1?strokes.find(x=>x.id===s.selection[0]):null;
+  return {ready:s.ready,stamp:s.stamp,width:base.width,height:base.height,tool:tool.value,size:Number(size.value),color:color.value,opacity:Number(document.getElementById('image-tool-opacity')?.value||100)/100,preference:brushPreference?precisionBrush.copy(brushPreference):null,selected:l&&['pen','highlighter'].includes(l.type)&&!l.locked&&effectiveLayerVisible(l)?cloneStrokes([l])[0]:null};
+ },
+ validate(profile){if(profile==null)return null;if(base.width*base.height>precisionBrush.MAX_PIXELS)throw Error('Advanced brushes support up to 16 MP. Use the legacy pen for larger captures.');return precisionBrush.check(profile);},
+ setPreference(profile){const p=this.validate(profile);brushPreference=p;return p;},
+ applySelected(id,profile,stamp){
+  const s=this.state();if(!s.ready||s.stamp!==stamp||s.selected?.id!==id)throw Error('Selection changed, is locked or is busy. Reopen Brush Studio.');
+  const p=this.validate(profile),i=strokes.findIndex(l=>l.id===id),next={...strokes[i]};if(p)next.brush=p;else delete next.brush;
+  if(JSON.stringify(next)===JSON.stringify(strokes[i]))return false;
+  snapshot();strokes[i]=next;redraw();setReady(ready);syncLayerProperties();label('Brush profile updated · Ctrl+Z restores previous stroke.');return true;
+ },
+ preview(canvas,profile,mode,selected=null){
+  const q=canvas.getContext('2d');q.setTransform(1,0,0,1,0,0);q.clearRect(0,0,canvas.width,canvas.height);
+  if(mode==='selected'&&selected){
+   const l={...selected};if(profile)l.brush=profile;else delete l.brush;const b=rawLayerBounds(l,q),r=rotationCore?.aabb(b,rotationCore.rotation(l))||b;
+   if(!r||!r.width||!r.height)return;
+   const scale=Math.min(1,(canvas.width-24)/r.width,(canvas.height-24)/r.height);
+   q.save();try{q.translate((canvas.width-r.width*scale)/2,(canvas.height-r.height*scale)/2);q.scale(scale,scale);q.translate(-r.x,-r.y);paintCompositorStroke(q,l,scale);}finally{q.restore();}return;
+  }
+  const points=Array.from({length:101},(_,i)=>{const t=i/100;return {x:24+(canvas.width-48)*t,y:canvas.height*.5+Math.sin(t*Math.PI*2)*canvas.height*.18,p:.08+.92*Math.sin(t*Math.PI)};});
+  const l={type:tool.value==='highlighter'?'highlighter':'pen',size:Math.max(12,Math.min(40,Number(size.value)*1.4)),color:color.value,opacity:1,points};
+  if(l.type==='highlighter')l.size/=2.5;
+  if(profile)l.brush=profile;drawStrokeRaw(l,q);
+ }
+});
 globalThis.MangoAdvancedImageV0724=Object.freeze({
  state(){const s=globalThis.MangoLayerImageV0712.state();return {...s,width:base.width,height:base.height,composition:advancedComp.reconcile(composition,strokes),order:strokes.map(l=>l.id)};},
  resolve(order){if(!Array.isArray(order)||order.length!==strokes.length||new Set(order).size!==order.length)throw Error('Invalid layer order.');const by=new Map(strokes.map(l=>[l.id,l]));if(order.some(id=>!by.has(id)))throw Error('Stale layer order.');return order.map(id=>by.get(id));},
@@ -2003,8 +2034,8 @@ globalThis.MangoImageDocumentV0723=Object.freeze({
     const c=document.createElement('canvas');c.width=a.width;c.height=a.height;c.getContext('2d').drawImage(a.image,0,0);assets.push({id:l.assetId,name:a.name,width:a.width,height:a.height,png:c.toDataURL('image/png')});c.width=c.height=1;assetIds.add(l.assetId);}
    if(l.cutoutKey&&!matteIds.has(l.cutoutKey)){const m=registry.get(l.cutoutKey);if(!m)throw Error('Missing image matte.');mattes.push({id:l.cutoutKey,width:m.width,height:m.height,alpha:D.encode(m.data)});matteIds.add(l.cutoutKey);}
   }
-  const comp=advancedComp?.reconcile(composition,strokes),v2=advancedComp?.active(comp);
-  return D.check({format:'MangoShotImage',version:v2?2:1,name,width:base.width,height:base.height,base:base.toDataURL('image/png'),layers,assets,mattes,...(v2?{composition:comp}:{})},this.cores());
+  const comp=advancedComp?.reconcile(composition,strokes),v2=advancedComp?.active(comp),v3=layers.some(l=>l.brush);
+  return D.check({format:'MangoShotImage',version:v3?3:v2?2:1,name,width:base.width,height:base.height,base:base.toDataURL('image/png'),layers,assets,mattes,...(v2||v3?{composition:comp}:{})},this.cores());
  },
  async open(raw,stamp){
   const D=globalThis.MangoImageDocumentCoreV0723,initial=this.state();if(!initial.canOpen||initial.stamp!==stamp)throw Error('Image editor is busy.');

@@ -37,7 +37,7 @@
  function lineHit(s,p,radius){
   const points=s?.points||[];
   if(!points.length)return false;
-  const margin=radius+Math.max(1,Number(s.size)||3)*(s.type==='highlighter'?2.5:.5);
+  const margin=radius+(s.brush&&root.MangoBrushV0725?root.MangoBrushV0725.pad(s):Math.max(1,Number(s.size)||3)*(s.type==='highlighter'?2.5:.5));
   if(points.length===1)return Math.hypot(p.x-points[0].x,p.y-points[0].y)<=margin;
   for(let i=1;i<points.length;i++){
    if(pointSegmentDistance(p,points[i-1],points[i])<=margin)return true;

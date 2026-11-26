@@ -49,7 +49,7 @@
   const pts=stroke.points||[];if(!pts.length)return null;
   const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y);
   const x=Math.min(...xs),y=Math.min(...ys),w=Math.max(...xs)-x,h=Math.max(...ys)-y;
-  const d=Math.max(1,Number(stroke.size)||1)/2;
+  const d=stroke.brush&&root.MangoBrushV0725?root.MangoBrushV0725.pad(stroke):Math.max(1,Number(stroke.size)||1)/2;
   return{x:x-d,y:y-d,width:w+2*d,height:h+2*d};
  }
  function hit(stroke,x,y,penInput,vectorCore,layerCore,typeCore,pen){
