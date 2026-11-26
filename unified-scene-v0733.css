@@ -21,3 +21,7 @@
 
 .sp-presets-v0735{min-width:0}
 .sp-presets-v0735 input[type=text]{width:100%;min-width:0;min-height:26px;color:var(--carbon-text);background:var(--carbon-field);border:1px solid var(--carbon-line-strong)}
+
+/* Keyed mask and rigid-body controls use existing Carbon panels. */
+.um-studio-v0734 button[aria-pressed=true]{border-color:var(--carbon-accent);color:var(--carbon-accent)}
+.um-studio-v0734 .um-preview-v0734{cursor:crosshair}

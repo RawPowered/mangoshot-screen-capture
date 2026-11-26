@@ -18,7 +18,9 @@
  function rotate(q,p){const u=q.slice(0,3),v=cross(u,p);return S.add(p,S.mul(S.add(S.mul(v,q[3]),cross(u,v)),2));}
  function check(t){if(!exact(t,['pivot','rotation','translation']))throw Error('Invalid rigid transform.');return {pivot:pivot(t.pivot),rotation:quaternion(t.rotation),translation:translation(t.translation)};}
  function point(t,p){const v=check(t);return S.add(S.add(v.pivot,rotate(normalize(v.rotation),S.sub(p,v.pivot))),v.translation);}
- function mesh(m,raw){const t=check(raw),q=normalize(t.rotation),p=t.pivot,offset=S.sub(S.add(p,t.translation),rotate(q,p));for(let i=0;i<m.positions.length;i+=3){const a=S.add(rotate(q,[m.positions[i],m.positions[i+1],m.positions[i+2]]),offset),b=rotate(q,[m.normals[i],m.normals[i+1],m.normals[i+2]]);m.positions.set(a,i);m.normals.set(b,i);}return m;}
+ function mesh(m,raw){const t=check(raw),q=normalize(t.rotation),p=t.pivot,offset=S.sub(S.add(p,t.translation),rotate(q,p)),[x,y,z,w]=q,
+  a=1-2*(y*y+z*z),b=2*(x*y-z*w),c=2*(x*z+y*w),d=2*(x*y+z*w),e=1-2*(x*x+z*z),f=2*(y*z-x*w),g=2*(x*z-y*w),h=2*(y*z+x*w),j=1-2*(x*x+y*y);
+  for(let i=0;i<m.positions.length;i+=3){const X=m.positions[i],Y=m.positions[i+1],Z=m.positions[i+2],nx=m.normals[i],ny=m.normals[i+1],nz=m.normals[i+2];m.positions[i]=a*X+b*Y+c*Z+offset[0];m.positions[i+1]=d*X+e*Y+f*Z+offset[1];m.positions[i+2]=g*X+h*Y+j*Z+offset[2];m.normals[i]=a*nx+b*ny+c*nz;m.normals[i+1]=d*nx+e*ny+f*nz;m.normals[i+2]=g*nx+h*ny+j*nz;}return m;}
  function between(a,b,t){return {rotation:slerp(a.rotation,b.rotation,t),translation:translation(a.translation.map((x,i)=>x+(b.translation[i]-x)*t)),reveal:a.reveal+(b.reveal-a.reveal)*t};}
  const api=Object.freeze({MAX_TRANSLATION,identity,zero,quaternion,pivot,translation,multiply,axisAngle,fromEuler,toEuler,slerp,rotate,check,point,mesh,between});
  root.MangoRigidMotionV0736=api;if(typeof module==='object'&&module.exports)module.exports=api;
