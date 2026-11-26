@@ -603,7 +603,7 @@ function pasteCopiedStyle(){
  if(!styleClipboard||!layer||layer.locked||!layerOps?.mayStyle(layer))return false;
  const next={...layer,opacity:styleClipboard.opacity,layerFx:layerOps.copy(styleClipboard.layerFx)};
  if(styleClipboard.creativeFx)next.creativeFx=creativeEffects.copy(styleClipboard.creativeFx);else delete next.creativeFx;
- try{creativeEffects.requireBudget(strokes.map((l,i)=>i===index?next:l),ink.width,ink.height);}catch(e){label(e.message);return false;}
+ try{if(styleClipboard.creativeFx&&!creativeEffects)throw Error('Creative Effects Studio is unavailable.');creativeEffects?.requireBudget(strokes.map((l,i)=>i===index?next:l),ink.width,ink.height);}catch(e){label(e.message);return false;}
  snapshot();strokes[index]=next;
  redraw();setReady(true);syncLayerProperties();
  label('Layer style pasted · Ctrl+Z restores the original appearance.');return true;
