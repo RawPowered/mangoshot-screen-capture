@@ -22,7 +22,7 @@
    try{const n=now();if(!first)first=n;if(generator&&latest&&clockBase===null){clockBase=n;frameBase=latest.timestamp;}
     // Wait for the first actual capture frame before feeding the generator.
     // Subsequent static frames are repeated with monotonic timestamps.
-    if(generator&&clockBase===null)return;
+    if(generator&&clockBase===null){if(n-first>3000)throw Error('No source frames reached the recorder.');return;}
     draw(latest||undefined);
     if(generator){const stamp=Math.max(lastStamp+1,Math.round(frameBase+(n-clockBase)*1000));lastStamp=stamp;const frame=new root.VideoFrame(canvas,{timestamp:stamp,duration:33333});try{await writer.write(frame);}finally{frame.close();}}
     else output?.requestFrame?.();

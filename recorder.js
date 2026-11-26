@@ -520,7 +520,7 @@ start.addEventListener('click',async()=>{
   get('switch-source-v0710').disabled=false;updateMode();
   get('enable-scroll').title='Enable Interaction first. Native forwarding is available only for a captured browser tab.';
   startedAt=Date.now();session.startedAt=startedAt;pausedAt=0;pausedTotal=0;globalThis.MangoRecorderCursorV073?.begin?.();frameDriver?.start();light.className='record-dot active';
-  timer=setInterval(()=>{const now=pausedAt||Date.now();elapsed.textContent=clock(now-startedAt-pausedTotal);const stats=frameDriver?.stats();if(stats&&get('chunk-info'))get('chunk-info').textContent=session.chunks.length+' fragments · '+stats.frames+' submitted frames · '+stats.driver+(stats.lagMs>2000&&recorder?.state==='recording'?' · VIDEO STALLED — preserve recovery':'');},200);
+  timer=setInterval(()=>{const now=pausedAt||Date.now();elapsed.textContent=clock(now-startedAt-pausedTotal);const stats=frameDriver?.stats();if(stats&&get('chunk-info'))get('chunk-info').textContent=session.chunks.length+' fragments · '+stats.frames+' submitted frames · '+stats.driver+(stats.lagMs>2000&&recorder?.state==='recording'?' · VIDEO STALLED — preserve recovery':'');if(stats?.lagMs>5000&&recorder?.state==='recording'&&!session.stopped){warnings.push('Capture stopped because the encoder input stalled. Preserve recovery.');stopCapture('Encoder input stalled');}},200);
   label('Recording '+w+'×'+h+' · '+(captureSource||'display')+' · '+(audio?(inputs.length?'audio':'audio track reserved · no granted source audio yet'):'NO AUDIO TRACK — waveform unavailable')+
     (warnings.length?' · '+warnings.join(' '):''));
   if(controller?.setFocusBehavior)try{controller.setFocusBehavior('focus-capturing-application');}catch{}

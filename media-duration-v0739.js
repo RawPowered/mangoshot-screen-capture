@@ -9,7 +9,7 @@
   if(!live())throw Error('Source replaced.');
   if(video.error)throw Error('Video decoder reported an error.');
   let duration=video.duration;
-  if(!valid(duration)||mismatch(duration,hint)){
+  if(!valid(duration)||duration<1||mismatch(duration,hint)){
    // Early seekable.end() can represent only the first encoded frame.
    // Probe the actual end and wait for the decoder; never substitute wall time.
    await wait(video,['seeked','error'],7000,()=>{video.currentTime=1e9;},live);
