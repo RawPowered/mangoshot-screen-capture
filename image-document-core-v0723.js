@@ -28,6 +28,9 @@
  function layer(l,budget,cores){
   keys(l,common);if(!types.has(l.type)||!id(l.id))fail('Unsupported layer type or identity.');
   const n={...l,points:points(l.points,false,budget)};
+  if(l.type!=='image'&&['width','height'].some(k=>own(l,k)))fail('Image geometry requires an image layer.');
+  if(l.type!=='text'&&['fontSize','fontFamily','fontWeight','scaleX','scaleY','styleId'].some(k=>own(l,k)))fail('Text styling requires a text layer.');
+  if(own(l,'kind')&&!shapes.has(l.kind))fail('Unsupported shape.');
   for(const k of ['name','text'])checkOptional(l,k,v=>text(v,k==='name'?200:1000));
   for(const k of ['visible','locked','usePressure'])checkOptional(l,k,v=>typeof v==='boolean');
   for(const k of ['opacity','hardness'])checkOptional(l,k,v=>finite(v,0,1));
@@ -46,7 +49,7 @@
   }
   if(l.type==='text'){if(!text(l.text,1000)||!l.text.trim())fail('Invalid text layer.');
    checkOptional(l,'fontSize',v=>finite(v,.1,10000));for(const k of ['scaleX','scaleY'])checkOptional(l,k,v=>finite(v,.08,25));
-   checkOptional(l,'fontFamily',v=>text(v,80)&&/^[a-zA-Z0-9_-]+$/.test(v));checkOptional(l,'fontWeight',v=>['100','200','300','400','500','600','700','800','900'].includes(String(v)));
+   checkOptional(l,'fontFamily',v=>text(v,80)&&/^[a-zA-Z0-9_-]+$/.test(v));checkOptional(l,'fontWeight',v=>(typeof v==='string'||typeof v==='number')&&['100','200','300','400','500','600','700','800','900'].includes(String(v)));
    checkOptional(l,'styleId',v=>['plain','title','label','callout'].includes(v));
    if(l.effects!=null){const defaults=cores.text.initial();keys(l.effects,Object.keys(defaults));for(const [k,v] of Object.entries(l.effects)){keys(v,Object.keys(defaults[k]));for(const [f,val] of Object.entries(v)){const d=defaults[k][f];if(typeof d==='boolean'?typeof val!=='boolean':typeof d==='number'?!finite(val,-360,360):!rgb(val))fail('Invalid text effect.');}}n.effects=cores.text.merged(l.effects);}
   }else if(l.effects!=null)fail('Text effects require a text layer.');
