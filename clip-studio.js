@@ -258,7 +258,7 @@ async function exportClip(format){if(!original||!segments.length||exporting)retu
  let ctx=null,rec=null,exportStream=null,paintHandle=0,recorded=[],tempTracks=[],exportVideo=null,voiceExport=null;
  try{
   globalThis.MangoCreativeV079?.requireFonts(layers.map(l=>l.font));
-  compositor?.requireProject(layers,sourceGrade);
+  compositor?.requireProject(layers,sourceGrade,video.videoWidth,video.videoHeight);
   exportVideo=document.createElement('video');exportVideo.preload='auto';exportVideo.playsInline=true;exportVideo.src=originalUrl;
   exportVideo.style.cssText='position:fixed;left:-9999px;width:2px;height:2px;opacity:0;pointer-events:none';document.body.appendChild(exportVideo);
   await new Promise((resolve,reject)=>{exportVideo.onloadedmetadata=resolve;exportVideo.onerror=()=>reject(new Error('Could not decode export source.'));});
@@ -360,7 +360,7 @@ globalThis.MangoClipView={
   if(!engine||!actual.ready||!engine.equal(actual,expected))throw Error('Sequence review is stale');
   if(draft.source.size!==original.size||draft.source.format!==originalFormat||draft.source.duration!==duration||draft.hasVoice!==!!actual.voice)throw Error('Source identity mismatch');
   if(actual.voice&&JSON.stringify(draft.segments)!==JSON.stringify(segments))throw Error('Cannot change timeline timing while voiceover exists');
-  const checked=engine.validateDraft(draft);compositor?.requireProject(checked.layers,checked.sourceGrade||[]);const previous=snapshot(),beforeHistory=history.slice(),beforeRedo=redoHistory.slice(),at=sequencePreview?.current?.()??0;
+  const checked=engine.validateDraft(draft);compositor?.requireProject(checked.layers,checked.sourceGrade||[],video.videoWidth,video.videoHeight);const previous=snapshot(),beforeHistory=history.slice(),beforeRedo=redoHistory.slice(),at=sequencePreview?.current?.()??0;
   const next={...checked,selectedLayerId:null,selectedClipIndex:null,rangeSelected:false,selection:{start:0,end:MangoEditOps.length(checked.segments)}};
   try{
    remember();restore(next);
@@ -390,7 +390,7 @@ globalThis.MangoClipView={
   sourceGrade:()=>clone(sourceGrade),
   setSourceGrade(stack,expected){
    const s=this.automationCapture();if(!s.ready||s.stamp!==expected)throw Error('Source or editor changed. Reopen Compositor.');
-   compositor.requireSupport(stack);const next=compositor.checkStack(stack);if(JSON.stringify(next)===JSON.stringify(sourceGrade))return false;
+   compositor.requireProject(layers,stack,video.videoWidth,video.videoHeight);const next=compositor.checkStack(stack);if(JSON.stringify(next)===JSON.stringify(sourceGrade))return false;
    remember();sourceGrade=next;refreshed();label('Source color grade applied. Ctrl+Z to undo.');return true;
   },
   previewSourceGrade(canvas,stack,expected){
@@ -430,7 +430,7 @@ globalThis.MangoClipView={
   sourceFormat:()=>originalFormat,
  restoreLegacyProject(data,creative=null){
   if(!original||exporting)throw new Error('Load the matching source video before restoring a project.');
-  const validated=MangoProject.check(data,{size:original.size,format:originalFormat,duration});compositor?.requireProject(validated.layers,validated.sourceGrade||[]);
+  const validated=MangoProject.check(data,{size:original.size,format:originalFormat,duration});compositor?.requireProject(validated.layers,validated.sourceGrade||[],video.videoWidth,video.videoHeight);
   const savedDirector=creative?.cursorDirector?director().check(creative.cursorDirector,duration):null;
   const savedZoom=MangoCreativeZoom.check(creative?.zoomFrames||[]);
   if(savedZoom.some(e=>e.start>=MangoEditOps.length(validated.segments)))throw Error('Saved camera event outside sequence');
@@ -544,6 +544,7 @@ globalThis.MangoLayerClipV0712=Object.freeze({
   if(!r.changed)return {changed:false,selection:r.selection};
   const source={size:original.size,format:originalFormat,duration};
   MangoProject.check(MangoProject.pack(source,segments,r.layers,globalThis.MangoClipTimeline?.markers?.()||[],transitions),source);
+  compositor?.requireProject(r.layers,sourceGrade,video.videoWidth,video.videoHeight);
   remember();layers=r.layers;selectedLayerId=r.selection.at(-1)||null;selectedClipIndex=null;rangeSelected=false;refreshed();label('Layer Studio edit applied. Ctrl+Z to undo.');
   return {changed:true,selection:r.selection};
  },
@@ -588,7 +589,7 @@ byId('save-project').addEventListener('click',()=>{if(!original||exporting)retur
 byId('open-project').addEventListener('change',async event=>{if(!original||exporting)return;
  try{const file=event.target.files?.[0];if(!file||file.size>1000000)throw new Error('Select a project under 1 MB.');
   const data=JSON.parse(await file.text());const project=MangoProject.check(data,{size:original.size,format:originalFormat,duration});
-  compositor?.requireProject(project.layers,project.sourceGrade||[]);remember();segments=project.segments;layers=project.layers;sourceGrade=clone(project.sourceGrade||[]);transitions=reconcileTransitions(project.transitions||[],segments);cursorRegions=[];zoomEvents=[];selectedLayerId=null;selectedClipIndex=null;rangeSelected=false;
+  compositor?.requireProject(project.layers,project.sourceGrade||[],video.videoWidth,video.videoHeight);remember();segments=project.segments;layers=project.layers;sourceGrade=clone(project.sourceGrade||[]);transitions=reconcileTransitions(project.transitions||[],segments);cursorRegions=[];zoomEvents=[];selectedLayerId=null;selectedClipIndex=null;rangeSelected=false;
   byId('out').max=MangoEditOps.length(segments).toFixed(2);byId('in').max=byId('out').max;
   byId('in').value='0';byId('out').value=byId('out').max;refreshed();globalThis.MangoClipTimeline?.loadMarkers?.(project.markers);label('Project decisions restored. Original video unchanged.');
  }catch(error){label('Cannot open project: '+error.message);}finally{event.target.value='';}

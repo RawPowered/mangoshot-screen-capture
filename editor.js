@@ -200,10 +200,10 @@ function drawStroke(stroke){
  if(!stroke||stroke.visible===false)return;
  paintCompositorStroke(pen,stroke);
 }
-function paintCompositorStroke(target,stroke,previewScale=1){
+function paintCompositorStroke(pen,stroke,previewScale=1){
  const C=globalThis.MangoCompositorV0714;
- const paint=()=>C?.active(stroke.effectStack)&&layerOps.mayStyle(stroke)?C.paintStack(target,stroke.effectStack,p=>drawStrokeRaw(stroke,p),target.canvas.height/1080):drawStrokeRaw(stroke,target);
- if(layerOps?.apply)layerOps.apply(target,stroke,paint);else paint();
+ const paint=()=>C?.active(stroke.effectStack)&&layerOps.mayStyle(stroke)?C.paintStack(pen,stroke.effectStack,p=>drawStrokeRaw(stroke,p),pen.canvas.height/1080):drawStrokeRaw(stroke,pen);
+ if(layerOps?.apply)layerOps.apply(pen,stroke,paint);else paint();
 }
 const imageStrokeContext=pen;
 function drawStrokeRaw(stroke,pen=imageStrokeContext){
@@ -1894,6 +1894,7 @@ globalThis.MangoLayerImageV0712=Object.freeze({
   const s=this.state();if(!s.ready||s.stamp!==stamp)throw Error('Image changed or is busy. Reopen Layer Studio.');
   const r=MangoLayerStudioV0712.plan('image',strokes,ids,command,args,()=>crypto.randomUUID());
   if(!r.changed)return {changed:false,selection:r.selection};
+  globalThis.MangoCompositorV0714?.requireProject(r.layers,[],ink.width,ink.height);
   snapshot();strokes=r.layers;setBatch(r.selection);redraw();setReady(ready);syncSelectedText();syncLayerProperties();label('Layer Studio edit applied. Ctrl+Z to undo.');
   return {changed:true,selection:r.selection};
  },
