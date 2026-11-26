@@ -100,7 +100,7 @@
  }
  function open(event,requested){if(dlg.open||doc.querySelector('dialog[open]'))return;returnFocus=event?.currentTarget||doc.activeElement;if(['fonts','presets'].includes(requested)){mode=requested;chosen=requested==='fonts'?host.state().font:null;el('search').value='';el('filter').value='all';el('category').value='All';el('fonts').setAttribute('aria-pressed',String(mode==='fonts'));el('presets').setAttribute('aria-pressed',String(mode==='presets'));if(mode==='fonts')el('weight').value=host.state().weight||'600';}for(const menu of doc.querySelectorAll('.v06-menu[open]'))menu.open=false;
   dlg.showModal();categories();render();el('search').focus();C.ready.then(()=>{loaded=true;if(dlg.open)render();});}
- for(const id of ['creative-open-v079','creative-inspector-v079'])doc.getElementById(id)?.addEventListener('click',open);
+ for(const id of ['creative-open-v079','creative-inspector-v079'])doc.getElementById(id)?.addEventListener('click',event=>open(event,image&&id==='creative-inspector-v079'?'presets':undefined));
  el('close').addEventListener('click',()=>dlg.close());el('fonts').addEventListener('click',()=>switchMode('fonts'));el('presets').addEventListener('click',()=>switchMode('presets'));
  el('search').addEventListener('input',render);el('sample').addEventListener('input',refreshPaints);
  for(const k of ['category','filter'])el(k).addEventListener('change',render);el('weight').addEventListener('change',refreshPaints);

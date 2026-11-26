@@ -1,7 +1,7 @@
 /* Compact image typography inspector. All original controls keep their edit handlers. */
 (function(root){'use strict';const d=root.document,by=id=>d.getElementById(id),U=root.MangoCalloutMotionUIV0736,props=by('text-properties'),C=root.MangoCreativeV079,T=root.MangoImageTypeV0613;if(!props||!U||!C||!T)return;
  const make=(tag,cls,text)=>{const n=d.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n;},btn=(id,text,fn)=>{const b=make('button','',text);b.id=id;b.type='button';b.onclick=fn;return b;};
- const top=make('div','ty45-top'),fonts=btn('ty45-browse-fonts','Browse fonts',()=>root.MangoCreativeLibraryV079.open('fonts')),styles=by('creative-inspector-v079');styles.textContent='Browse styles';styles.onclick=event=>{event.stopImmediatePropagation();root.MangoCreativeLibraryV079.open('presets');};top.append(fonts,styles);
+ const top=make('div','ty45-top'),fonts=btn('ty45-browse-fonts','Browse fonts',()=>root.MangoCreativeLibraryV079.open('fonts')),styles=by('creative-inspector-v079');styles.textContent='Browse styles';top.append(fonts,styles);
  const tabs=make('div','ty45-tabs'),pages={},buttons={},names=[['character','Character'],['style','Styles'],['effects','Text FX']];tabs.setAttribute('role','group');tabs.setAttribute('aria-label','Typography controls');
  function activate(key){for(const [id] of names){pages[id].hidden=id!==key;buttons[id].setAttribute('aria-pressed',String(id===key));}props.dataset.ty45Tab=key;}
  for(const [key,name] of names){pages[key]=make('section','ty45-page');pages[key].id='ty45-'+key+'-panel';buttons[key]=btn('ty45-'+key+'-tab',name,()=>activate(key));tabs.append(buttons[key]);}
