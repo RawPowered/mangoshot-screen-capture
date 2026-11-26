@@ -1,6 +1,6 @@
 /* Local secondary-media compositing. V1 defines duration; V2/V3 overlay, A2 mixes. */
 (function(root){'use strict';
- const TRACKS=['V2','V3','A2'],FPS=15,MAX_FRAMES=150,MAX_RASTER=64*1024*1024,MAX_FILE=64*1024*1024,MAX_AUDIO=12000000;
+ const TRACKS=['V2','V3','A2'],FPS=15,MAX_FRAMES=150,MAX_RASTER=64*1024*1024,MAX_FILE=64*1024*1024,MAX_VIDEO_FILE=512*1024*1024,MAX_AUDIO=12000000;
  const copy=x=>JSON.parse(JSON.stringify(x)),finite=(x,a,b)=>typeof x==='number'&&Number.isFinite(x)&&x>=a&&x<=b;
  const defaults=()=>({clips:[],tracks:{V2:{visible:true,locked:false,opacity:1},V3:{visible:true,locked:false,opacity:1},A2:{muted:false,locked:false,volume:1}}});
  const gif=a=>a.kind==='image'&&(/\.gif$/i.test(a.name)||a.mime==='image/gif');
@@ -13,7 +13,7 @@
    else{if(typeof v.visible!=='boolean'||!finite(v.opacity,0,1))throw Error('Invalid visual track settings.');out.tracks[t]={visible:v.visible,locked:v.locked,opacity:v.opacity};}}
   for(const c of input.clips){
    if(!c||typeof c.id!=='string'||!/^[\w-]{1,90}$/.test(c.id)||ids.has(c.id)||!TRACKS.includes(c.track)||c.assetId==='source-primary')throw Error('Invalid secondary clip identity.');
-   const a=find(c.assetId);if(!a||!['image','video','audio'].includes(a.kind)||!finite(a.size,1,MAX_FILE))throw Error('Secondary asset missing or exceeds 64 MiB.');
+   const a=find(c.assetId);if(!a||!['image','video','audio'].includes(a.kind)||!finite(a.size,1,a.kind==='video'?MAX_VIDEO_FILE:MAX_FILE))throw Error('Secondary asset missing or exceeds file budget (512 MiB video; 64 MiB image/audio).');
    if((c.track==='A2')!==(a.kind==='audio'))throw Error('Audio uses A2; visual media uses V2 or V3.');
    if(!finite(c.start,0,length)||!finite(c.end,c.start+.09999,length+.00001)||!finite(c.sourceIn,0,864000)||!finite(c.sourceOut,c.sourceIn+.09999,864000)||Math.abs(c.end-c.start-(c.sourceOut-c.sourceIn))>.001)throw Error('Clip timing must fit the primary sequence and match source duration.');
    if(a.kind!=='image'&&(!finite(a.duration,.1,864000)||c.sourceOut>a.duration+.03))throw Error('Clip extends beyond source duration.');

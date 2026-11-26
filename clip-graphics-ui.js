@@ -89,6 +89,7 @@
    const h=document.createElement('span');h.className='graphic-clip-handle handle-'+edge;h.dataset.edge=edge;
    h.title='Drag to trim '+(edge==='start'?'In':'Out')+' point';chip.appendChild(h);
   }
+  globalThis.MangoProfessionalTimelineUIV0717?.attachKeys(chip,layer);
   chip.addEventListener('pointerdown',e=>startTimelineGesture(e,layer,chip));
   chip.addEventListener('pointermove',updateTimelineGesture);
   for(const type of ['pointerup','pointercancel','lostpointercapture'])chip.addEventListener(type,finishTimelineGesture);

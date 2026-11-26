@@ -1176,7 +1176,7 @@ const penDiagnostics=penInput?.createDiagnostic?.({
 });
 const toolButtons=[...(document.querySelectorAll?.('[data-studio-tool]')||[])];
 function syncTool(){
- document.body.dataset.maskPainting=String(tool.value==='mask-erase'||tool.value==='mask-restore');
+ if(document.body?.dataset)document.body.dataset.maskPainting=String(tool.value==='mask-erase'||tool.value==='mask-restore');
  for(const button of toolButtons){
   const selected=button.dataset.studioTool===tool.value;
   button.classList.toggle('is-active',selected);button.setAttribute('aria-pressed',String(selected));

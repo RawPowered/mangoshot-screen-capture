@@ -69,9 +69,9 @@
  root.MangoUnifiedV062={rejoin,refresh(){rejoin();root.MangoClipTimeline?.render?.();}};
  rejoin();
  const timelineTitle=q(timeline,':scope > .panel-heading span');
- if(timelineTitle)timelineTitle.textContent='TIMELINE · G3 / G2 / V1+A1 / CAM / A2';
+ if(timelineTitle)timelineTitle.textContent='TIMELINE · G3 / G2 / V3 / V2 / V1+A1 / CAM / A2';
  const timelineHint=q(timeline,':scope > .panel-heading .panel-muted');
- if(timelineHint)timelineHint.textContent='V1/A1 is one editable clip: thumbnails + waveform + Razor + Ripple Delete';
+ if(timelineHint)timelineHint.textContent='Drag clips or trim their edges · Alt bypasses snap · Enter opens clip controls';
  const scroll=el('timeline-scroll');scroll?.setAttribute('aria-label','Razor, select and trim directly on the combined V1 video/audio clips');
 
  // Rehome Project actions into File > Projects… with dedicated modal controls.

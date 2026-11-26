@@ -118,5 +118,5 @@
  dlg.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();dlg.close();}},true);
  dlg.addEventListener('close',()=>{stop();if(previewRaf)cancelAnimationFrame(previewRaf);previewRaf=0;if(returnFocus?.isConnected)(returnFocus.closest('.v06-menu')?.querySelector('summary')||returnFocus).focus({preventScroll:true});});
  for(const [id,mode] of [['compositor-open-v0714','effects'],['compositor-menu-v0714','effects'],['material-menu-v0715','material'],['compositor-key-menu-v0714','keys'],['compositor-grade-menu-v0714','grade']])doc.getElementById(id)?.addEventListener('click',event=>open(event,mode));
- root.MangoCompositorUIV0714=Object.freeze({open:(mode='effects')=>open(null,mode)});
+ root.MangoCompositorUIV0714=Object.freeze({open:(mode='effects')=>open(null,mode),openAtKeyframe(id,t){if(image||dlg.open||doc.querySelector('dialog[open]'))return;V.selectLayer(id);open(null,'keys');if(dlg.open){scrub.value=String(Math.round(Math.max(0,Math.min(1,t))*1000));preview();}}});
 })(typeof globalThis!=='undefined'?globalThis:this);
