@@ -54,6 +54,10 @@ jobs:
           node tests/multitrack-v0716.cjs
           node tests/professional-timeline-v0717.cjs
           node tests/streaming-media-v0718.cjs
+          node tests/independent-sequence-v0719.cjs
+          node --check independent-sequence-core-v0719.js
+          node --check independent-sequence-runtime-v0719.js
+          node --check professional-sequence-ui-v0719.js
           node --check streaming-media-v0718.js
           node --check professional-timeline-core-v0717.js
           node --check professional-timeline-ui-v0717.js
@@ -103,7 +107,7 @@ jobs:
           retention-days: 14
 
   studio-precision-preview:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.18-streaming-media-engine'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.19-professional-sequence'
     runs-on: ubuntu-latest
     needs: browser-extension-unit-tests
     steps:
@@ -154,30 +158,36 @@ jobs:
           ffmpeg -loglevel error -f lavfi -i color=c=red:s=320x180:r=24:d=9 -f lavfi -i color=c=blue:s=320x180:r=24:d=9 -filter_complex '[0:v][1:v]concat=n=2:v=1:a=0' -c:v libvpx-vp9 -pix_fmt yuv420p -an -y /tmp/mangoshot-stream-primary.webm
           ffmpeg -loglevel error -f lavfi -i color=c=lime:s=1280x720:r=24:d=4 -f lavfi -i color=c=yellow:s=1280x720:r=24:d=5 -f lavfi -i color=c=cyan:s=1280x720:r=24:d=5 -filter_complex '[0:v][1:v][2:v]concat=n=3:v=1:a=0' -c:v libvpx-vp9 -deadline realtime -cpu-used 5 -pix_fmt yuv420p -an -y /tmp/mangoshot-stream-secondary.webm
           timeout 200s node tests/streaming-media-v0718.browser.cjs /tmp/mangoshot-stream-primary.webm /tmp/mangoshot-stream-secondary.webm
+      - name: Qualify independent sequence with actual source video and audio
+        if: ${{ !cancelled() }}
+        run: |
+          ffmpeg -loglevel error -f lavfi -i color=c=red:s=320x180:r=24:d=3 -f lavfi -i sine=frequency=440:sample_rate=48000:duration=3 -c:v libvpx-vp9 -pix_fmt yuv420p -c:a libopus -shortest -y /tmp/mangoshot-seq-red.webm
+          ffmpeg -loglevel error -f lavfi -i color=c=blue:s=320x180:r=24:d=3 -f lavfi -i sine=frequency=880:sample_rate=48000:duration=3 -c:v libvpx-vp9 -pix_fmt yuv420p -c:a libopus -shortest -y /tmp/mangoshot-seq-blue.webm
+          timeout 180s node tests/independent-sequence-v0719.browser.cjs /tmp/mangoshot-seq-red.webm /tmp/mangoshot-seq-blue.webm /tmp/mangoshot-secondary-test.wav
       - name: Package development preview (not a release)
         run: |
-          python3 tools/package-extension.py --out dist --version v0.6.18-streaming-media-preview
-          unzip -t dist/MangoShot-v0.6.18-streaming-media-preview-Extension.zip
-          python3 -c "import json,zipfile; z=zipfile.ZipFile('dist/MangoShot-v0.6.18-streaming-media-preview-Extension.zip'); assert z.read('manifest.json')==open('manifest.json','rb').read(); assert 'nativeMessaging' in json.loads(z.read('manifest.json'))['permissions']"
-          unzip -l dist/MangoShot-v0.6.18-streaming-media-preview-Extension.zip | grep studio-precision-v072.css
-          unzip -l dist/MangoShot-v0.6.18-streaming-media-preview-Extension.zip | grep studio-layout-core-v072.js
-          unzip -l dist/MangoShot-v0.6.18-streaming-media-preview-Extension.zip | grep studio-overlays-v072.js
-          unzip -l dist/MangoShot-v0.6.18-streaming-media-preview-Extension.zip | grep cursor-effects-v073.js
-          unzip -l dist/MangoShot-v0.6.18-streaming-media-preview-Extension.zip | grep cursor-recorder-v073.js
-          unzip -l dist/MangoShot-v0.6.18-streaming-media-preview-Extension.zip | grep cursor-clip-v073.js
-          unzip -l dist/MangoShot-v0.6.18-streaming-media-preview-Extension.zip | grep cursor-director-core-v074.js
-          unzip -l dist/MangoShot-v0.6.18-streaming-media-preview-Extension.zip | grep cursor-director-ui-v074.js
-          for src in streaming-media-v0718.js professional-timeline-core-v0717.js professional-timeline-ui-v0717.js professional-timeline-v0717.css multitrack-core-v0716.js multitrack-ui-v0716.js multitrack-v0716.css transform-material-core-v0715.js transform-material-v0715.css compositor-core-v0714.js compositor-ui-v0714.js compositor-v0714.css cinematic-core-v0713.js cinematic-ui-v0713.js cinematic-v0713.css layer-studio-core-v0712.js layer-studio-ui-v0712.js layer-studio-v0712.css tool-studio-core-v0711.js tool-studio-ui-v0711.js tool-studio-v0711.css recorder-control-v0710.js recorder-controls-v0710.css theme-carbon-v078.css bridge-core-v077.js bridge-ui-v077.js bridge-v077.css sequence-engine-v076.js sequence-studio-v076.js sequence-studio-v076.css automation-core-v075.js automation-adapters-v075.js automation-ui-v075.js automation-v075.css; do unzip -l dist/MangoShot-v0.6.18-streaming-media-preview-Extension.zip | grep "$src"; done
+          python3 tools/package-extension.py --out dist --version v0.6.18-professional-sequence-preview
+          unzip -t dist/MangoShot-v0.6.18-professional-sequence-preview-Extension.zip
+          python3 -c "import json,zipfile; z=zipfile.ZipFile('dist/MangoShot-v0.6.18-professional-sequence-preview-Extension.zip'); assert z.read('manifest.json')==open('manifest.json','rb').read(); assert 'nativeMessaging' in json.loads(z.read('manifest.json'))['permissions']"
+          unzip -l dist/MangoShot-v0.6.18-professional-sequence-preview-Extension.zip | grep studio-precision-v072.css
+          unzip -l dist/MangoShot-v0.6.18-professional-sequence-preview-Extension.zip | grep studio-layout-core-v072.js
+          unzip -l dist/MangoShot-v0.6.18-professional-sequence-preview-Extension.zip | grep studio-overlays-v072.js
+          unzip -l dist/MangoShot-v0.6.18-professional-sequence-preview-Extension.zip | grep cursor-effects-v073.js
+          unzip -l dist/MangoShot-v0.6.18-professional-sequence-preview-Extension.zip | grep cursor-recorder-v073.js
+          unzip -l dist/MangoShot-v0.6.18-professional-sequence-preview-Extension.zip | grep cursor-clip-v073.js
+          unzip -l dist/MangoShot-v0.6.18-professional-sequence-preview-Extension.zip | grep cursor-director-core-v074.js
+          unzip -l dist/MangoShot-v0.6.18-professional-sequence-preview-Extension.zip | grep cursor-director-ui-v074.js
+          for src in professional-sequence.html professional-sequence-v0719.css professional-sequence-ui-v0719.js independent-sequence-core-v0719.js independent-sequence-runtime-v0719.js streaming-media-v0718.js professional-timeline-core-v0717.js professional-timeline-ui-v0717.js professional-timeline-v0717.css multitrack-core-v0716.js multitrack-ui-v0716.js multitrack-v0716.css transform-material-core-v0715.js transform-material-v0715.css compositor-core-v0714.js compositor-ui-v0714.js compositor-v0714.css cinematic-core-v0713.js cinematic-ui-v0713.js cinematic-v0713.css layer-studio-core-v0712.js layer-studio-ui-v0712.js layer-studio-v0712.css tool-studio-core-v0711.js tool-studio-ui-v0711.js tool-studio-v0711.css recorder-control-v0710.js recorder-controls-v0710.css theme-carbon-v078.css bridge-core-v077.js bridge-ui-v077.js bridge-v077.css sequence-engine-v076.js sequence-studio-v076.js sequence-studio-v076.css automation-core-v075.js automation-adapters-v075.js automation-ui-v075.js automation-v075.css; do unzip -l dist/MangoShot-v0.6.18-professional-sequence-preview-Extension.zip | grep "$src"; done
       - uses: actions/upload-artifact@v4
         with:
-          name: MangoShot-v0.7.18-Streaming-Media-Extension
-          path: dist/MangoShot-v0.6.18-streaming-media-preview-Extension.zip
+          name: MangoShot-v0.7.19-Professional-Sequence-Extension
+          path: dist/MangoShot-v0.6.18-professional-sequence-preview-Extension.zip
           retention-days: 14
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: MangoShot-v0.7.18-Streaming-Media-Screenshots
+          name: MangoShot-v0.7.19-Professional-Sequence-Screenshots
           path: |
             carbon-screenshots/
             creative-screenshots/
@@ -190,6 +200,7 @@ jobs:
             multitrack-screenshots/
             professional-timeline-screenshots/
             streaming-screenshots/
+            independent-sequence-screenshots/
           if-no-files-found: ignore
           retention-days: 14
 

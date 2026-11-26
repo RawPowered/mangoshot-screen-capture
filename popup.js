@@ -90,3 +90,5 @@ document.querySelector('#clip-studio').addEventListener('click',async()=>{
  try{await call(api.tabs.create.bind(api.tabs),{url:api.runtime.getURL('clip-studio.html')});window.close();}
  catch(error){status.textContent=error.message;}
 });
+
+document.getElementById("sequence-studio-v0719")?.addEventListener("click",async()=>{try{await call(api.tabs.create.bind(api.tabs),{url:api.runtime.getURL("professional-sequence.html")});window.close();}catch(error){status.textContent=error.message;}});
