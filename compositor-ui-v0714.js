@@ -1,6 +1,6 @@
 /* Shared professional compositor modal; all draft controls are local until Apply. */
 (function(root){'use strict';
- const C=root.MangoCompositorV0714,doc=root.document,image=doc.body.classList.contains('studio-image'),host=image?root.MangoLayerImageV0712:root.MangoLayerClipV0712,V=root.MangoClipView;if(!C||!host)return;
+ const C=root.MangoCompositorV0714,R=root.MangoTransformMaterialV0715,doc=root.document,image=doc.body.classList.contains('studio-image'),host=image?root.MangoLayerImageV0712:root.MangoLayerClipV0712,V=root.MangoClipView;if(!C||!host)return;
  const el=(tag,attrs={},text)=>{const n=doc.createElement(tag);for(const [k,v] of Object.entries(attrs))n.setAttribute(k,String(v));if(text!=null)n.textContent=text;return n;};
  const button=(id,text,fn)=>{const n=el('button',{type:'button'},text);if(id)n.id=id;n.addEventListener('click',fn);return n;};
  const row=(cls,...nodes)=>{const n=el('div',{class:cls});n.append(...nodes);return n;};
@@ -10,7 +10,8 @@
  const dlg=el('dialog',{id:'compositor-v0714',class:'pc-dialog-v0714','aria-labelledby':'pc-title-v0714'});
  const header=row('pc-head-v0714',row('pc-heading-v0714',el('small',{},image?'IMAGE STUDIO / COMPOSITOR':'CLIP STUDIO / COMPOSITOR'),el('h2',{id:'pc-title-v0714'},'Professional Compositor'),el('p',{},'Ordered layer effects · editable motion · local source grade')),button('pc-close-v0714','Close',()=>dlg.close()));
  const target=select('pc-target-v0714',[]),effectTab=button('pc-effects-tab-v0714','Effect stack',()=>switchMode('effects')),keyTab=button('pc-keyframes-tab-v0714','Keyframes',()=>switchMode('keys')),gradeTab=button('pc-grade-tab-v0714','Source color',()=>switchMode('grade'));
- const tabs=row('pc-tabs-v0714',effectTab);if(!image)tabs.append(keyTab,gradeTab);
+ const materialTab=button('pc-material-tab-v0715','Materials',()=>switchMode('material'));
+ const tabs=row('pc-tabs-v0714',effectTab,materialTab);if(!image)tabs.append(keyTab,gradeTab);
  const left=el('section',{class:'pc-left-v0714'}),right=el('section',{class:'pc-right-v0714'});
  const canvas=el('canvas',{id:'pc-preview-v0714',width:640,height:360,'aria-label':'Non-destructive draft preview'});
  const scrub=el('input',{id:'pc-scrub-v0714',type:'range',min:0,max:1000,step:1,value:500,'aria-label':'Preview layer progress'});
@@ -32,16 +33,29 @@
  stackPanel.append(el('h3',{},'Preset looks'),presets,el('h3',{},'Ordered effects'),el('p',{class:'pc-muted-v0714'},'Effects process top to bottom. Disable, reorder or remove each effect without changing the source.'),row('pc-actions-v0714',addKind,button('pc-add-effect-v0714','Add effect',()=>{try{if(stack.length>=C.MAX_STACK)throw Error('Maximum eight effects.');const k=addKind.value;stack.push({kind:k,value:C.specs[k].initial,enabled:true});renderStack();preview();}catch(e){message(e.message,true);}})),stackRows,el('h3',{},'Reusable stacks'),row('pc-actions-v0714',customName,button('pc-save-preset-v0714','Save',()=>{try{const name=customName.value.trim();if(!name||name.length>48)throw Error('Enter a preset name (1–48 characters).');const next=custom.filter(p=>p.name!==name);if(next.length>=20)throw Error('Maximum 20 saved stacks.');custom=[...next,{name,stack:C.checkStack(stack)}];saveCustom();renderCustom();message('Stack saved locally.');}catch(e){message(e.message,true);}})),row('pc-actions-v0714',customSelect,button('pc-load-preset-v0714','Load',()=>{if(customSelect.value==='')return;stack=C.copy(custom[Number(customSelect.value)].stack);renderStack();preview();}),button('pc-delete-preset-v0714','Delete saved',()=>{if(customSelect.value==='')return;try{custom.splice(Number(customSelect.value),1);saveCustom();renderCustom();message('Saved preset deleted.');}catch(e){message(e.message,true);}})));
  const keyRows=el('div',{id:'pc-keys-v0714',class:'pc-stack-v0714'}),keyHint=el('p',{class:'pc-muted-v0714'},'Keyframe times are a percentage of the graphic’s duration. X/Y are offsets in percent of the video frame; scale and opacity are multipliers. Easing controls the interval to the next keyframe.');
  keyPanel.append(el('h3',{},'Transform & opacity keyframes'),keyHint,row('pc-actions-v0714',button('pc-add-key-v0714','Add at playhead',()=>{try{const t=Number(scrub.value)/1000;if(keys.length>=C.MAX_KEYS)throw Error('Maximum 32 keyframes.');if(keys.some(k=>Math.abs(k.t-t)<.000001))throw Error('A keyframe already exists here.');keys=C.checkKeys([...keys,{...C.pose(keys,t),t,ease:'linear'}]);renderKeys();preview();}catch(e){message(e.message,true);}}),button('pc-key-default-v0714','Start / end',()=>{keys=[C.neutral(),{...C.neutral(),t:1}];renderKeys();preview();}),button('pc-clear-keys-v0714','Clear',()=>{keys=[];renderKeys();preview();})),keyRows);
- right.append(stackPanel,keyPanel);
+ const materialPanel=el('section',{id:'pc-material-panel-v0715',class:'pc-panel-v0714',hidden:''});
+ const materialTiles=row('pc-material-presets-v0715');
+ const materialKind=select('pc-material-kind-v0715',R.kinds.map(k=>[k,k[0].toUpperCase()+k.slice(1)])),primaryColor=el('input',{id:'pc-material-primary-v0715',type:'color',value:'#d5ab54'}),secondaryColor=el('input',{id:'pc-material-secondary-v0715',type:'color',value:'#604c30'}),strength=number('pc-material-strength-v0715',0,100,1,75),depth=number('pc-material-depth-v0715',0,16,.5,3),direction=number('pc-material-angle-v0715',-360,360,1,105);
+ for(const preset of R.presets){
+  const tile=button('pc-material-'+preset.id+'-v0715','',()=>{mat=C.copy(preset.material);renderMaterial();preview();});tile.className='pc-material-tile-v0715';tile.dataset.materialPreset=preset.id;
+  const c=el('canvas',{width:180,height:75,'aria-hidden':'true'}),p=c.getContext('2d');
+  p.fillStyle='#222832';p.fillRect(0,0,180,75);
+  R.materialPaint(p,preset.material,q=>{q.font='800 37px system-ui';q.textAlign='center';q.textBaseline='middle';q.fillStyle='#e5eaf0';q.fillText('Aa',90,36);},{x:42,y:14,width:96,height:48},.7);
+  tile.append(c,el('span',{},preset.name));materialTiles.append(tile);
+ }
+ function renderMaterial(){materialKind.value=mat.kind;primaryColor.value=mat.primary;secondaryColor.value=mat.secondary;strength.value=mat.strength*100;depth.value=mat.depth;direction.value=mat.angle;for(const b of materialTiles.children)b.setAttribute('aria-pressed',String(JSON.stringify(R.presets.find(p=>p.id===b.dataset.materialPreset)?.material)===JSON.stringify(mat)));}
+ for(const control of [materialKind,primaryColor,secondaryColor,strength,depth,direction])control.addEventListener('input',()=>{mat={kind:materialKind.value,primary:primaryColor.value,secondary:secondaryColor.value,strength:strength.valueAsNumber/100,depth:depth.valueAsNumber,angle:direction.valueAsNumber};for(const b of materialTiles.children)b.setAttribute('aria-pressed','false');preview();});
+ materialPanel.append(el('h3',{},'Material looks'),el('p',{class:'pc-muted-v0714'},'Materials tint the existing visible layer silhouette. Glass is a stylized sheen, not background refraction. Bevel and emboss use the alpha edges.'),materialTiles,el('h3',{},'Material controls'),row('pc-material-grid-v0715',label('Material',materialKind),label('Intensity %',strength),label('Highlight',primaryColor),label('Shade',secondaryColor),label('Edge depth',depth),label('Light angle °',direction)));
+ right.append(stackPanel,keyPanel,materialPanel);
  const status=el('span',{id:'pc-status-v0714',role:'status','aria-live':'polite'},'Ready');
  const apply=button('pc-apply-v0714','Apply',()=>{try{
    if(!fresh())throw Error('Editor changed. Reopen Compositor.');
    if(mode==='grade')V.setSourceGrade(C.checkStack(stack),capture.stamp);
-   else{const args=mode==='keys'?{keyframes:C.checkKeys(keys)}:{effectStack:C.checkStack(stack)};host.apply('effects',ids(),args,state.stamp);}
+   else{const args=mode==='keys'?{keyframes:C.checkKeys(keys)}:mode==='material'?{material:R.checkMaterial(mat)}:{effectStack:C.checkStack(stack)};host.apply('effects',ids(),args,state.stamp);}
    state=host.state();capture=V?.automationCapture?.();loadDraft();message('Applied · Ctrl+Z restores the prior state.');
   }catch(e){message(e.message,true);}});apply.className='primary';
  dlg.append(header,tabs,row('pc-body-v0714',left,right),row('pc-footer-v0714',status,button('pc-reset-v0714','Reset draft',()=>loadDraft()),apply));doc.body.append(dlg);
- let mode='effects',state=null,capture=null,stack=[],keys=[],raf=0,returnFocus=null,previewRaf=0;
+ let mode='effects',state=null,capture=null,stack=[],keys=[],mat=R.defaults(),raf=0,returnFocus=null,previewRaf=0;
  function ids(){if(target.value==='selection')return state.selection.filter(id=>state.layers.some(l=>l.id===id));return target.value&&target.value!=='source'?[target.value]:[];}
  function primary(){return state?.layers.find(l=>ids().includes(l.id));}
  function fresh(){const now=host.state();return state?.ready&&now.ready&&now.stamp===state.stamp&&(!V||capture?.stamp===V.automationCapture().stamp);}
@@ -73,12 +87,12 @@
  }
  function loadDraft(){
   stop();compare.checked=false;
-  if(mode==='grade')stack=C.copy(V.sourceGrade());else{stack=C.copy(primary()?.effectStack||[]);keys=C.copy(primary()?.keyframes||[]);}
-  renderStack();renderKeys();preview();
+  if(mode==='grade')stack=C.copy(V.sourceGrade());else{stack=C.copy(primary()?.effectStack||[]);keys=C.copy(primary()?.keyframes||[]);mat=C.copy(primary()?.material||R.defaults());}
+  renderStack();renderKeys();renderMaterial();preview();
  }
  function switchMode(next){
-  mode=next;targetOptions();effectTab.setAttribute('aria-pressed',String(next==='effects'));keyTab.setAttribute('aria-pressed',String(next==='keys'));gradeTab.setAttribute('aria-pressed',String(next==='grade'));
-  stackPanel.hidden=next==='keys';keyPanel.hidden=next!=='keys';scrub.hidden=play.hidden=scrubOut.hidden=image||next==='grade';target.disabled=next==='grade';
+  mode=next;targetOptions();effectTab.setAttribute('aria-pressed',String(next==='effects'));keyTab.setAttribute('aria-pressed',String(next==='keys'));gradeTab.setAttribute('aria-pressed',String(next==='grade'));materialTab.setAttribute('aria-pressed',String(next==='material'));
+  stackPanel.hidden=next==='keys'||next==='material';keyPanel.hidden=next!=='keys';materialPanel.hidden=next!=='material';scrub.hidden=play.hidden=scrubOut.hidden=image||next==='grade';target.disabled=next==='grade';
   previewNote.textContent=next==='grade'?'Current decoded source frame, without graphics. Grading affects the entire retained source, not overlay titles or cursor.':image?'Current image composition. Changes affect only eligible selected annotation layers.':'Selected graphics at the scrubbed layer time on a neutral background. Before shows the committed appearance.';
   loadDraft();
  }
@@ -90,7 +104,7 @@
     apply.disabled=!can;if(!can)throw Error('Choose an unlocked, eligible layer or load source media.');
     const t=Number(scrub.value)/1000;
     if(mode==='grade'){const draft=compare.checked?V.sourceGrade():C.checkStack(stack);V.previewSourceGrade(canvas,draft,capture.stamp);}
-    else {const args=compare.checked?{}:mode==='keys'?{keyframes:C.checkKeys(keys)}:{effectStack:C.checkStack(stack)};host.preview(canvas,ids(),args,state.stamp,t);}
+    else {const args=compare.checked?{}:mode==='keys'?{keyframes:C.checkKeys(keys)}:mode==='material'?{material:R.checkMaterial(mat)}:{effectStack:C.checkStack(stack)};host.preview(canvas,ids(),args,state.stamp,t);}
     message('Draft · Apply to commit.');
    }catch(e){apply.disabled=true;message(e.message,true);const ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height);}
   });
@@ -103,6 +117,6 @@
  target.addEventListener('change',loadDraft);scrub.addEventListener('input',()=>{stop();preview();});compare.addEventListener('change',preview);
  dlg.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();dlg.close();}},true);
  dlg.addEventListener('close',()=>{stop();if(previewRaf)cancelAnimationFrame(previewRaf);previewRaf=0;if(returnFocus?.isConnected)(returnFocus.closest('.v06-menu')?.querySelector('summary')||returnFocus).focus({preventScroll:true});});
- for(const [id,mode] of [['compositor-open-v0714','effects'],['compositor-menu-v0714','effects'],['compositor-key-menu-v0714','keys'],['compositor-grade-menu-v0714','grade']])doc.getElementById(id)?.addEventListener('click',event=>open(event,mode));
+ for(const [id,mode] of [['compositor-open-v0714','effects'],['compositor-menu-v0714','effects'],['material-menu-v0715','material'],['compositor-key-menu-v0714','keys'],['compositor-grade-menu-v0714','grade']])doc.getElementById(id)?.addEventListener('click',event=>open(event,mode));
  root.MangoCompositorUIV0714=Object.freeze({open:(mode='effects')=>open(null,mode)});
 })(typeof globalThis!=='undefined'?globalThis:this);

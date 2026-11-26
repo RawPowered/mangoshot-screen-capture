@@ -54,6 +54,7 @@
  }
  function hit(stroke,x,y,penInput,vectorCore,layerCore,typeCore,pen){
   if(!stroke||stroke.visible===false)return false;
+  const R=root.MangoTransformMaterialV0715;if(R?.rotation(stroke)){const b=vectorCore?.isVector?.(stroke)?vectorCore.bounds(stroke):bounds(stroke,layerCore,typeCore,pen),p=R.local({x,y},b,R.rotation(stroke));x=p.x;y=p.y;}
   if(stroke.type==='image')return !!layerCore?.hit?.(stroke,x,y,0);
   if(stroke.type==='text')return !!typeCore?.hit?.(pen,stroke,x,y,8);
   if(vectorCore?.isVector?.(stroke))return !!vectorCore.hit(stroke,x,y,8);

@@ -151,7 +151,7 @@
  }
  function render(ctx,layers,seconds,w,h){if(!ctx||!Number.isFinite(seconds))return;
   for(const layer of at(layers,seconds)){
-   const C=root.MangoCompositorV0714,paint=p=>C?.active(layer.effectStack)?C.paintStack(p,layer.effectStack,q=>paintOne(q,layer,w,h,seconds),h/1080):paintOne(p,layer,w,h,seconds);
+   const C=root.MangoCompositorV0714,R=root.MangoTransformMaterialV0715,raw=p=>paintOne(p,layer,w,h,seconds),material=p=>{if(R?.active(layer.material)){const b=animatedBounds(layer,w,h,p,seconds);R.materialPaint(p,layer.material,raw,{x:b.x,y:b.y,width:b.w,height:b.h},h/1080);}else raw(p);},paint=p=>C?.active(layer.effectStack)?C.paintStack(p,layer.effectStack,material,h/1080):material(p);
    if(layer.layerFx&&root.MangoLayerStudioV0712)root.MangoLayerStudioV0712.composite(ctx,layer,w,h,paint);
    else paint(ctx);
   }

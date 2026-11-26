@@ -27,6 +27,7 @@
  const path=field('ls-path-v0712','text','',{maxlength:'164',placeholder:'Brand / Intro / Titles','aria-label':'Folder path'});
  const name=field('ls-name-v0712','text','',{maxlength:'80',placeholder:'Layer or batch name','aria-label':'New layer name'});
  const actions=[];
+ const rotationAngle=field('ls-rotation-v0715','number','0',{min:'-360',max:'360',step:'.1'});
  function op(id,text,command,args,confirmDelete=false){
   const b=btn(id,text,()=>{if(confirmDelete&&!root.confirm('Delete '+chosen.size+' selected layer(s)? Undo is available.'))return;try{run(command,args());}catch(err){message(err.message,true);}});actions.push({b,command});return b;
  }
@@ -37,6 +38,7 @@
   line('ls-actions-v0712',op('ls-show-v0712','Show','visibility',()=>({value:true})),op('ls-hide-v0712','Hide','visibility',()=>({value:false})),op('ls-lock-v0712','Lock','lock',()=>({value:true})),op('ls-unlock-v0712','Unlock','lock',()=>({value:false}))),
   line('ls-actions-v0712',op('ls-front-v0712','Bring to front','stack',()=>({direction:'front'})),op('ls-back-v0712','Send to back','stack',()=>({direction:'back'}))),
   line('ls-actions-v0712',op('ls-duplicate-v0712','Duplicate','duplicate',()=>({})),op('ls-delete-v0712','Delete','delete',()=>({}),true)));
+ if(image)organize.append(e('h3',{},'Rotate selected objects'),label('Angle (degrees, around each object center)',rotationAngle),op('ls-rotate-v0715','Set rotation','effects',()=>({rotation:rotationAngle.valueAsNumber})));
  if(!image)organize.append(e('h3',{},'Graphic tracks'),line('ls-actions-v0712',op('ls-g2-v0712','Move to G2','track',()=>({track:2})),op('ls-g3-v0712','Move to G3','track',()=>({track:3}))));
  const fxPanel=e('section',{id:'ls-effects-v0712',class:'ls-panel-v0712',hidden:''});
  const [useOpacity,opacityLabel]=checkbox('ls-use-opacity-v0712','Apply opacity');
@@ -79,7 +81,7 @@
  }
  function updateButtons(){
   const selected=(state?.layers||[]).filter(l=>chosen.has(l.id)),locked=selected.some(l=>l.locked),can=!!state?.ready&&selected.length>0;
-  for(const {b,command} of actions)b.disabled=!can||(locked&&!['lock','visibility'].includes(command));
+  for(const {b,command} of actions)b.disabled=!can||(locked&&!['lock','visibility'].includes(command))||(command==='effects'&&selected.some(l=>!l.eligible));
   apply.disabled=!can||locked||selected.some(l=>!l.eligible)||!(useOpacity.checked||useFx.checked||(!image&&(useFade.checked||useOutline.checked||useMotion.checked)));
   locate.disabled=!can;
   selectedLabel.textContent=chosen.size+' selected / '+(state?.layers.length||0);
@@ -133,6 +135,7 @@
   useOpacity.checked=useFx.checked=useFade.checked=useOutline.checked=useMotion.checked=false;
   if(!image){const m=first?.motion||root.MangoMotion.defaults();enter.value=m.enter.type;exit.value=m.exit.type;enterDuration.value=m.enter.duration;exitDuration.value=m.exit.duration;enterEase.value=m.enter.ease;exitEase.value=m.exit.ease;scrub.value='50';}
   opacity.value=Math.round((first?.opacity??1)*100);loadFx(first?.fx||C.appearance(null));fadeIn.value=first?.fadeIn??0;fadeOut.value=first?.fadeOut??0;outline.value=first?.outline||'#000000';outlineWidth.value=first?.outlineWidth??0;
+  rotationAngle.value=first?.rotation||0;
   path.value=first?.group.join(' / ')||'';name.value=chosen.size===1?first?.name||'':'';
   updateButtons();preview();
  }

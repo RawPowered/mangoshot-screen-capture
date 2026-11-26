@@ -32,7 +32,7 @@
  const eligible=(studio,l)=>studio==='clip'?['text','callout'].includes(l.kind):!['redact','erase-brush','eraser','erase-stroke'].includes(l.type);
  function describe(studio,l){return {id:l.id,name:l.name||(l.type==='text'?String(l.text||'Text').slice(0,40):l.type)||l.kind,
   type:l.type||l.kind,group:l.layerGroup?checkGroup(l.layerGroup):[],track:l.track,start:l.start,end:l.end,visible:l.visible!==false,locked:!!l.locked,
-  opacity:l.opacity??1,fx:appearance(l),eligible:eligible(studio,l),fadeIn:l.fadeIn??0,fadeOut:l.fadeOut??0,outline:l.outline||'#000000',outlineWidth:l.outlineWidth??0,motion:studio==='clip'?root.MangoMotion?.checkLayer(l.motion):null,effectStack:root.MangoCompositorV0714?.checkStack(l.effectStack||[])||[],keyframes:root.MangoCompositorV0714?.checkKeys(l.keyframes||[])||[]};}
+  opacity:l.opacity??1,fx:appearance(l),eligible:eligible(studio,l),fadeIn:l.fadeIn??0,fadeOut:l.fadeOut??0,outline:l.outline||'#000000',outlineWidth:l.outlineWidth??0,motion:studio==='clip'?root.MangoMotion?.checkLayer(l.motion):null,effectStack:root.MangoCompositorV0714?.checkStack(l.effectStack||[])||[],keyframes:root.MangoCompositorV0714?.checkKeys(l.keyframes||[])||[],rotation:root.MangoTransformMaterialV0715?.rotation(l)||0,material:l.material?root.MangoTransformMaterialV0715?.checkMaterial(l.material):null};}
  function effects(studio,layer,args){
   if(!eligible(studio,layer))throw Error('Redaction and eraser layers cannot receive appearance effects.');
   const next={...layer};
@@ -54,6 +54,8 @@
    if(!draft||!draft.enter||!draft.exit)throw Error('Entry and exit settings are required.');
    next.motion=root.MangoMotion.checkLayer({enter:draft.enter,exit:draft.exit,numeric:prior.numeric});
   }
+  if(Object.hasOwn(args,'material')){const R=root.MangoTransformMaterialV0715;if(!R)throw Error('Material Studio unavailable.');next.material=R.checkMaterial(args.material);}
+  if(Object.hasOwn(args,'rotation')){const R=root.MangoTransformMaterialV0715;if(studio!=='image'||!R)throw Error('Rotation applies to Image Studio objects.');next.rotation=R.angle(args.rotation);}
   if(Object.hasOwn(args,'effectStack')){const C=root.MangoCompositorV0714;if(!C)throw Error('Compositor unavailable.');C.requireSupport(args.effectStack);next.effectStack=C.checkStack(args.effectStack);}
   if(Object.hasOwn(args,'keyframes')){const C=root.MangoCompositorV0714;if(studio!=='clip'||!C)throw Error('Animated keyframes require Clip Studio.');next.keyframes=C.checkKeys(args.keyframes);}
   return next;

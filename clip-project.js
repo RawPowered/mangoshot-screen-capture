@@ -34,6 +34,7 @@
     if(l.layerGroup!=null){if(!root.MangoLayerStudioV0712)fail('layer group schema unavailable');root.MangoLayerStudioV0712.checkGroup(l.layerGroup);}
     if(l.layerFx!=null){if(!root.MangoLayerStudioV0712)fail('layer effect schema unavailable');root.MangoLayerStudioV0712.checkFx(l.layerFx);}
     const normalized={...l};
+    if(l.material!=null){if(!root.MangoTransformMaterialV0715)fail('material schema unavailable');normalized.material=root.MangoTransformMaterialV0715.checkMaterial(l.material);}
     if(l.effectStack!=null){if(!root.MangoCompositorV0714)fail('effect stack schema unavailable');normalized.effectStack=root.MangoCompositorV0714.checkStack(l.effectStack);}
     if(l.keyframes!=null){if(!root.MangoCompositorV0714)fail('keyframe schema unavailable');normalized.keyframes=root.MangoCompositorV0714.checkKeys(l.keyframes);}
     return normalized;

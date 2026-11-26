@@ -1,0 +1,12 @@
+const assert=require('node:assert/strict'),R=require('../transform-material-core-v0715.js');
+const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-7,a+' != '+b);
+assert.equal(R.angle(450),90);assert.equal(R.angle(-270),90);assert.equal(R.angle(180),-180);assert.throws(()=>R.angle(NaN),/finite/);
+const b={x:10,y:20,width:120,height:60},c=R.center(b),p=R.rotate({x:10,y:20},c,90),q=R.local(p,b,90);near(q.x,10);near(q.y,20);
+const a=R.aabb(b,90);near(a.width,60);near(a.height,120);near(R.center(a).x,c.x);near(R.center(a).y,c.y);
+const resize=(r,corner,dx,dy)=>({...r,width:r.width+dx,height:r.height+dy});const next=R.resized(b,'se',0,30,90,false,resize);near(next.width,150);near(next.height,60);
+const oldAnchor=R.rotate({x:b.x,y:b.y},R.center(b),90),newAnchor=R.rotate({x:next.x,y:next.y},R.center(next),90);near(oldAnchor.x,newAnchor.x);near(oldAnchor.y,newAnchor.y);
+assert.equal(R.eligible({type:'redact'}),false);assert.equal(R.eligible({type:'erase-brush'}),false);assert.equal(R.eligible({type:'image'}),true);
+assert.equal(R.presets.length,10);for(const p of R.presets)assert.deepEqual(R.checkMaterial(p.material),p.material);
+assert.throws(()=>R.checkMaterial({...R.defaults(),depth:17}),/Invalid/);assert.throws(()=>R.checkMaterial({...R.defaults(),primary:'url(evil)'}),/Invalid/);
+assert.throws(()=>R.requireBudget([{material:R.presets[1].material}],5000,4000),/raster limit/);
+console.log('Rotation normalization, inverse points, rotated resize anchor, protection, material presets and raster limits passed');
