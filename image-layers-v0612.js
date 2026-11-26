@@ -127,5 +127,6 @@
  }
  function clearCutout(stroke){return {...stroke,cutoutKey:null};}
  root.MangoImageLayersV0612={assets,checkFile,importFile,asset,bounds,hit,normalize,paint,composite,quickCutout,clearCutout,
+  projectMattes:()=>new Map(masks),replaceProjectRegistry(nextAssets,nextMattes){assets.clear();for(const [key,value] of nextAssets)assets.set(key,value);masks.clear();for(const [key,value] of nextMattes)masks.set(key,value);},
   clamp};
 })(typeof globalThis!=='undefined'?globalThis:this);

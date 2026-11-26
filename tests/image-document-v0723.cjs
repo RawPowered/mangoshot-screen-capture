@@ -1,0 +1,9 @@
+const assert=require('node:assert/strict'),C=require('../image-document-core-v0723.js');
+const b=Buffer.alloc(33);Buffer.from([137,80,78,71,13,10,26,10,0,0,0,13,73,72,68,82]).copy(b);b.writeUInt32BE(4,16);b.writeUInt32BE(3,20);const png='data:image/png;base64,'+b.toString('base64');
+const cores={layer:{checkFx:x=>x,checkGroup:x=>x},compositor:{checkStack:x=>x,requireProject:()=>{}},material:{checkMaterial:x=>x},text:{initial:()=>({}),merged:x=>x}};
+const fixture={format:'MangoShotImage',version:1,name:'Test',width:4,height:3,base:png,layers:[{type:'pen',id:'a',points:[{x:1,y:2,p:.5}],size:3,color:'#ff0000'}],assets:[],mattes:[]};
+assert.deepEqual(C.check(fixture,cores),fixture);assert.throws(()=>C.check({...fixture,version:2},cores));assert.throws(()=>C.check({...fixture,width:99},cores));assert.throws(()=>C.check({...fixture,base:'https://example.com/image.png'},cores));assert.throws(()=>C.check({...fixture,layers:[fixture.layers[0],fixture.layers[0]]},cores));assert.throws(()=>C.check({...fixture,layers:[{...fixture.layers[0],points:[{x:Infinity,y:2}]}]},cores));assert.throws(()=>C.check({...fixture,layers:[{type:'image',id:'b',assetId:'missing',width:3,height:3,points:[{x:0,y:0}]}]},cores));
+const a=new Uint8Array([0,127,128,255]);assert.deepEqual(C.decode(C.encode(a)),a);
+const p={...fixture,layers:[{type:'image',id:'b',assetId:'asset1',width:4,height:3,points:[{x:0,y:0}],cutoutKey:'matte1',mask:{paths:[{mode:'erase',radius:.1,points:[{x:.5,y:.5}]}],feather:2}}],assets:[{id:'asset1',name:'photo',width:4,height:3,png}],mattes:[{id:'matte1',width:2,height:2,alpha:C.encode(a)}]};
+assert.deepEqual(C.check(p,cores),p);assert.throws(()=>C.check({...p,mattes:[]},cores));assert.throws(()=>C.check({...p,mattes:[{...p.mattes[0],alpha:'AAAA'}]},cores));assert.throws(()=>C.check({...p,assets:[...p.assets,{...p.assets[0],id:'unused'}]},cores));
+console.log('Image project bounds, schema, embedded PNG and matte/reference gates passed');

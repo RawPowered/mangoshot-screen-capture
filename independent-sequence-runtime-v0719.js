@@ -62,21 +62,22 @@
  }
  async function still(project,registry,canvas,t,signal){const p=P.check(project);validateSources(p,registry);const pool=createPool(p,registry,signal);try{await pool.prime(t);pool.draw(canvas,t);return pool.stats();}finally{pool.clear();}}
  const frame=signal=>new Promise((resolve,reject)=>{let id=0;const finish=()=>{signal?.removeEventListener('abort',cancel);root.document.removeEventListener('visibilitychange',hidden);};const cancel=()=>{root.cancelAnimationFrame(id);finish();reject(abortError());};const hidden=()=>{if(root.document.hidden){root.cancelAnimationFrame(id);finish();reject(Error('Keep Sequence Studio visible during playback/export.'));}};if(signal?.aborted){reject(abortError());return;}signal?.addEventListener('abort',cancel,{once:true});root.document.addEventListener('visibilitychange',hidden);id=root.requestAnimationFrame(()=>{finish();resolve();});});
- async function run({project,registry,canvas,from=0,signal,ctx,destination,recorder=null,onTime=()=>{}}){
+ async function run({project,registry,canvas,from=0,signal,ctx,destination,recorder=null,requestFrame=()=>{},onTime=()=>{}}){
   const p=await preflight(project,registry,signal);assertLive(signal);const pool=createPool(p,registry,signal,ctx,destination);let recorded=false,t=from;
   try{
-   for(const interval of P.intervals(p,from)){
+   const intervals=P.intervals(p,from);for(const [index,interval] of intervals.entries()){
     assertLive(signal);if(root.document.hidden)throw Error('Keep Sequence Studio visible during playback/export.');
     pool.pause();if(recorder?.state==='recording')await wait(recorder,'pause',()=>recorder.pause(),signal,5000);
     t=interval.start;await pool.prime(t);pool.draw(canvas,t);onTime(t,pool.stats());
     assertLive(signal);
     if(recorder){if(!recorded){recorder.start(800);recorded=true;}else if(recorder.state==='paused')await wait(recorder,'resume',()=>recorder.resume(),signal,5000);}
+    if(recorder){pool.draw(canvas,t);requestFrame();}
     await pool.start(t);const began=root.performance.now(),span=interval.end-interval.start;
     while(true){assertLive(signal);if(root.document.hidden)throw Error('Keep Sequence Studio visible during playback/export.');
      const elapsed=(root.performance.now()-began)/1000;if(elapsed>=span)break;
-     t=Math.min(interval.end-2*P.EPS,interval.start+elapsed);pool.draw(canvas,t,true);onTime(t,pool.stats());await frame(signal);
+     t=Math.min(interval.end-2*P.EPS,interval.start+elapsed);pool.draw(canvas,t,true);if(recorder)requestFrame();onTime(t,pool.stats());await frame(signal);
     }
-    pool.pause();if(recorder?.state==='recording')await wait(recorder,'pause',()=>recorder.pause(),signal,5000);
+    pool.pause();if(index<intervals.length-1&&recorder?.state==='recording')await wait(recorder,'pause',()=>recorder.pause(),signal,5000);
     t=interval.end;
    }
    onTime(p.settings.duration,pool.stats());return {recorded,stats:pool.stats()};

@@ -11,6 +11,7 @@ const call=(fn,...args)=>new Promise((resolve,reject)=>{
   try{fn(...args,value=>{const error=api.runtime.lastError;error?reject(new Error(error.message)):resolve(value);});}
   catch(error){reject(error);}
 });
+let documentLoadPending=true;
 let meta,frames=[],ready=false,drawing=false,active=null,strokes=[],renderPending=false,history=[],redoHistory=[];
 const editorCore=globalThis.MangoImageEditorCore;
 const layerCore=globalThis.MangoImageLayersV0612;
@@ -116,7 +117,7 @@ async function begin(){
     // Do not leave sensitive screenshot copies in the transfer database after
     // they have been successfully assembled in Image Studio.
     await globalThis.MangoCaptureStore.remove(stored).catch(()=>{});
-  }catch(error){label('Capture failed: '+error.message);}
+  }catch(error){label('Capture failed: '+error.message);}finally{documentLoadPending=false;globalThis.MangoImageDocumentUIV0723?.refresh();}
 }
 
 /* Explicit clipboard import: never read in the background or on page load.
@@ -940,7 +941,7 @@ function renderStrokeList(){
   row.className='stroke-entry image-layer-row'+(selectedAnyIndex()===i||batchIds.has(stroke.id)?' is-selected':'');
   if(ts)row.dataset.batch=String(batchIds.has(stroke.id));
   row.setAttribute('role','group');row.setAttribute('aria-label',(stroke.name||stroke.type)+' layer');
-  row.dataset.layerIndex=String(i);
+  row.dataset.layerIndex=String(i);row.dataset.layerId=stroke.id;
   const grip=document.createElement('button');grip.type='button';grip.className='image-layer-grip';
   grip.textContent='⠿';grip.title='Drag to reorder layer';grip.setAttribute('aria-label','Drag '+(stroke.name||stroke.type)+' to reorder');
   grip.draggable=true;
@@ -1937,6 +1938,53 @@ globalThis.MangoImageActions={
 globalThis.MangoToolImageV0711=Object.freeze({state:()=>({selection:batchLayers().map(l=>l.id),layers:strokes.map(l=>({id:l.id,name:l.name||l.type,type:l.type,locked:!!l.locked,visible:l.visible!==false,bounds:tsBounds(l)})),tool:tool.value})});
 
 /* Raster Lab reads the exact currently exported composition, never unredacted source. */
+/* Portable project adapter. Validation and decoding precede document replacement. */
+globalThis.MangoImageDocumentV0723=Object.freeze({
+ state(){const s=globalThis.MangoLayerImageV0712.state();return {ready:s.ready&&!documentLoadPending,canOpen:!documentLoadPending&&(!ready||s.ready),stamp:s.stamp,width:base.width,height:base.height,hasDocument:ready,layers:s.layers};},
+ cores(){return {layer:globalThis.MangoLayerStudioV0712,compositor:globalThis.MangoCompositorV0714,material:rotationCore,text:typeEffects};},
+ save(stamp,name){
+  const D=globalThis.MangoImageDocumentCoreV0723,s=this.state();if(!s.ready||s.stamp!==stamp)throw Error('Finish the current edit and reopen the project dialog.');
+  D.dimensions(base.width,base.height);ensureLayerIds();if(strokes.length>D.MAX_LAYERS)throw Error('Project exceeds the 500-layer limit.');
+  const layers=cloneStrokes(strokes),assets=[],mattes=[],assetIds=new Set(),matteIds=new Set(),registry=layerCore.projectMattes();
+  let total=base.width*base.height;
+  for(const l of layers)if(l.type==='image'){
+   if(!assetIds.has(l.assetId)){const a=layerCore.asset(l);if(!a)throw Error('Missing image asset.');D.dimensions(a.width,a.height);total+=a.width*a.height;if(total>D.MAX_TOTAL_PIXELS)throw Error('Project exceeds decoded asset budget.');
+    const c=document.createElement('canvas');c.width=a.width;c.height=a.height;c.getContext('2d').drawImage(a.image,0,0);assets.push({id:l.assetId,name:a.name,width:a.width,height:a.height,png:c.toDataURL('image/png')});c.width=c.height=1;assetIds.add(l.assetId);}
+   if(l.cutoutKey&&!matteIds.has(l.cutoutKey)){const m=registry.get(l.cutoutKey);if(!m)throw Error('Missing image matte.');mattes.push({id:l.cutoutKey,width:m.width,height:m.height,alpha:D.encode(m.data)});matteIds.add(l.cutoutKey);}
+  }
+  return D.check({format:'MangoShotImage',version:1,name,width:base.width,height:base.height,base:base.toDataURL('image/png'),layers,assets,mattes},this.cores());
+ },
+ async open(raw,stamp){
+  const D=globalThis.MangoImageDocumentCoreV0723,initial=this.state();if(!initial.canOpen||initial.stamp!==stamp)throw Error('Image editor is busy.');
+  const p=D.check(raw,this.cores()),source=await image(p.base),nextAssets=new Map(),nextMattes=new Map();
+  if(source.naturalWidth!==p.width||source.naturalHeight!==p.height)throw Error('Base image decode dimensions differ.');
+  for(const a of p.assets){const decoded=await image(a.png);if(decoded.naturalWidth!==a.width||decoded.naturalHeight!==a.height)throw Error('Asset decode dimensions differ.');nextAssets.set(a.id,{image:decoded,width:a.width,height:a.height,name:a.name,version:0});}
+  for(const m of p.mattes)nextMattes.set(m.id,{width:m.width,height:m.height,data:D.decode(m.alpha)});
+  const fontIds=p.layers.filter(l=>l.type==='text').map(l=>l.fontFamily||'sans').filter(id=>globalThis.MangoCreativeV079?.font(id));
+  await globalThis.MangoCreativeV079?.ready;globalThis.MangoCreativeV079?.requireFonts(fontIds);
+  const now=this.state();if(!now.canOpen||now.stamp!==stamp)throw Error('Image changed while opening the project.');
+  // Render staged content with its own registry. No document pixels/history are touched until successful.
+  const oldAssets=new Map(layerCore.assets),oldMattes=layerCore.projectMattes(),staged=document.createElement('canvas');staged.width=p.width;staged.height=p.height;
+  const g=staged.getContext('2d');try{layerCore.replaceProjectRegistry(nextAssets,nextMattes);for(const l of p.layers)paintCompositorStroke(g,l);}
+  catch(e){layerCore.replaceProjectRegistry(oldAssets,oldMattes);throw e;}
+  base.width=ink.width=p.width;base.height=ink.height=p.height;ctx.drawImage(source,0,0);pen.drawImage(staged,0,0);staged.width=staged.height=1;
+  clearBatch();strokes=p.layers;history=[];redoHistory=[];selectedText=selectedImage=selectedObject=-1;layerClipboard=styleClipboard=null;
+  meta={width:p.width,height:p.height,pageHeight:p.height,dpr:1,frames:1,full:false};frames=[];
+  const landing=document.getElementById('image-clipboard-landing');if(landing)landing.hidden=true;
+  tool.value='select';syncTool();switchInspectorTab('layers');document.getElementById('zoom').value='fit';
+  setReady(true);zoom();syncSelectedText();updateSelectionBox();updateImageSelectionBox();updateVectorSelectionBox();updateInkRotationBox();paintBatchOverlay();
+  const info=document.getElementById('image-meta');if(info)info.textContent=p.width+' × '+p.height+' px · editable project';
+  label('Project opened · '+p.layers.length+' editable layers');return {name:p.name,width:p.width,height:p.height,layers:p.layers.length};
+ },
+ thumbnail(id,canvas){
+  const l=strokes.find(x=>x.id===id);if(!l||l.visible===false||!layerOps.mayStyle(l))return false;
+  const g=canvas.getContext('2d'),b=rawLayerBounds(l,g);if(!b)return false;
+  const bounds=rotationCore?.aabb(b,rotationCore.rotation(l))||b;
+  if(![bounds.x,bounds.y,bounds.width,bounds.height].every(Number.isFinite))return false;
+  const w=canvas.width,h=canvas.height,pad=5,scale=Math.min(1,(w-2*pad)/Math.max(1,bounds.width),(h-2*pad)/Math.max(1,bounds.height));
+  g.clearRect(0,0,w,h);g.save();try{g.translate((w-bounds.width*scale)/2,(h-bounds.height*scale)/2);g.scale(scale,scale);g.translate(-bounds.x,-bounds.y);paintCompositorStroke(g,l,scale);}finally{g.restore();}return true;
+ }
+});
 globalThis.MangoRasterImageV0722=Object.freeze({
  state(){const s=globalThis.MangoLayerImageV0712.state();return {ready:s.ready,stamp:s.stamp,width:base.width,height:base.height};},
  capture(stamp,mode){

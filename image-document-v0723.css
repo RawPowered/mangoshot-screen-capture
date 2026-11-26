@@ -1,0 +1,18 @@
+/* Document workflow follows Carbon; shared theme sheet remains final. */
+body.studio-image .md-dialog-v0723{width:min(590px,calc(100vw - 24px));max-height:calc(100dvh - 24px);padding:0;overflow:auto;background:var(--carbon-panel);color:var(--carbon-text);border:1px solid var(--carbon-line-strong)}
+.md-dialog-v0723 header,.md-dialog-v0723 footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;background:var(--carbon-panel-alt);border-bottom:1px solid var(--carbon-line)}
+.md-dialog-v0723 footer{border-top:1px solid var(--carbon-line);border-bottom:0}
+.md-body-v0723{padding:14px;display:grid;gap:12px}
+.md-warning-v0723{border-left:3px solid var(--carbon-warning);padding:8px 10px;background:var(--carbon-field);color:var(--carbon-text);margin:0;font-size:12px;line-height:1.5}
+.md-muted-v0723,.md-status-v0723{color:var(--carbon-secondary);font-size:11px;line-height:1.5;margin:0}
+.md-body-v0723 section{display:grid;gap:7px}.md-body-v0723 section[hidden]{display:none!important}
+.md-body-v0723 label{font-size:12px;color:var(--carbon-secondary)}
+.md-body-v0723 input{min-width:0;width:100%;padding:7px;background:var(--carbon-field);color:var(--carbon-text);border:1px solid var(--carbon-line-strong)}
+body.studio-image .image-layer-row .md-thumb-v0723{width:38px;height:27px;flex:0 0 38px;border:1px solid var(--carbon-line);background:repeating-conic-gradient(#24282d 0 25%,#343c43 0 50%) 0 0/8px 8px}
+body.studio-image .image-layer-row .md-thumb-v0723:not([hidden])+svg{display:none}
+body.studio-image .image-layer-row .md-effects-v0723{grid-column:1/-1;margin:0 3px 2px;border-top:1px solid var(--carbon-line);min-width:0}
+body.studio-image .md-effects-v0723 summary{font-size:10px;color:var(--carbon-secondary);cursor:pointer;padding:4px 2px}
+body.studio-image .md-effect-items-v0723{display:grid;gap:4px;padding:3px 4px 5px;color:var(--carbon-secondary);font:10px/1.3 system-ui}
+body.studio-image .md-effect-items-v0723 span{white-space:normal;overflow-wrap:anywhere}
+body.studio-image #md-quick-open-v0723,body.studio-image #md-quick-save-v0723{white-space:nowrap;min-height:26px;padding:3px 5px!important;font-size:10px}
+@media(max-width:1120px){body.studio-image #md-quick-open-v0723,body.studio-image #md-quick-save-v0723{display:none}}
