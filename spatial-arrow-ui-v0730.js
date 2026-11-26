@@ -12,7 +12,7 @@
   let value=S.check(initial),camera=S.copy(value.camera),viewMode='output',selected=0,drag=null,frame=0,error=null;
   const locked=!!opts.locked,prefix=opts.prefix||'sa',wrap=el('section','sa-editor-v0730'),toolbar=el('div','sa-toolbar-v0730'),stage=el('canvas','sa-view-v0730'),controls=el('div','sa-controls-v0730'),status=el('p','sa-status-v0730'),nodeList=select(prefix+'-node',[]),mode=select(prefix+'-mode',[['node','Path point'],['object','Whole arrow']]);
   const reference=opts.reference||null,aspect=opts.aspect||((reference?.width||16)/(reference?.height||9));
-  stage.width=Math.max(1,Math.round(Math.min(780,420*aspect)));stage.height=Math.max(1,Math.round(stage.width/aspect));stage.style.maxWidth=stage.width+'px';stage.id=prefix+'-viewport';stage.tabIndex=0;stage.setAttribute('aria-label','Interactive 3D path viewport. Drag point or axis; Alt drag to orbit; wheel zooms.');
+  stage.width=Math.max(1,Math.round(Math.min(780,420*aspect)));stage.height=Math.max(1,Math.round(stage.width/aspect));stage.style.maxWidth=stage.width+'px';stage.id=prefix+'-viewport';stage.tabIndex=0;stage.setAttribute('aria-label','Interactive 3D path viewport. Drag point or axis; Alt drag to orbit; Shift drag to pan; wheel zooms.');
   const viewButtons=new Map();
   function setView(k){viewMode=k;camera=k==='output'?S.copy(value.camera):{...S.copy(value.camera),projection:'orthographic',azimuth:k==='right'?90:0,elevation:k==='top'?89.5:0};sync();}
   for(const [k,t] of [['output','Output camera'],['front','Front'],['top','Top'],['right','Right']]){const b=button(prefix+'-view-'+k,t,()=>setView(k));toolbar.append(b);viewButtons.set(k,b);}
@@ -23,33 +23,35 @@
   const remove=button(prefix+'-remove-node','Delete point',()=>{if(value.points.length<=2)return;edit(n=>{n.points.splice(selected,1);},Math.max(0,selected-1));});
   const reset=button(prefix+'-reset','Reset path',()=>{edit(n=>{n.points=S.defaults().points;},0);});
   const xyz=[];
-  for(let i=0;i<3;i++){const n=el('input');n.id=prefix+'-'+axes[i].name.toLowerCase();n.type='number';n.min=-S.LIMIT;n.max=S.LIMIT;n.step='.025';n.onchange=()=>edit(v=>{v.points[selected][i]=n.valueAsNumber;});xyz.push(n);const l=field(axes[i].name+' world',n);l.style.color=axes[i].c;fields.append(l);}
+  for(let i=0;i<3;i++){const n=el('input');n.id=prefix+'-'+axes[i].name.toLowerCase();n.type='number';n.min=-S.LIMIT;n.max=S.LIMIT;n.step='any';n.onchange=()=>edit(v=>{v.points[selected][i]=n.valueAsNumber;});xyz.push(n);const l=field(axes[i].name+' world',n);l.style.color=axes[i].c;fields.append(l);}
   const pointRow=el('div','sa-toolbar-v0730');pointRow.append(add,remove,reset);
   geometry.append(el('strong','','PATH / XYZ'),field('Manipulate',mode),field('Selected control point',nodeList),fields,pointRow);
   const rotations=el('div','sa-toolbar-v0730');
   for(let a=0;a<3;a++)for(const dir of [-1,1])rotations.append(button(prefix+'-rotate-'+axes[a].name.toLowerCase()+'-'+(dir<0?'minus':'plus'),axes[a].name+' '+(dir*15)+'°',()=>edit(v=>{v.points=S.rotatePoints(v.points,a,dir*15);})));
-  geometry.append(el('small','','Rotate entire path around its center'),rotations);
+  for(const factor of [.9,1.1])rotations.append(button(prefix+'-scale-'+(factor<1?'down':'up'),Math.round(factor*100)+'%',()=>edit(v=>{v.points=S.scalePoints(v.points,factor);v.radius*=factor;v.headRadius*=factor;v.headLength*=factor;})));
+  geometry.append(el('small','','Rotate or scale the entire path around its center'),rotations);
   const params=new Map();
   for(const [k,label,min,max,step] of [['radius','Tube radius',.025,.25,.005],['headRadius','Head radius',.05,.5,.005],['headLength','Head length',.12,1.2,.02],['light','Light angle',-180,180,1]]){
-   const n=el('input');n.id=prefix+'-'+k;n.type='number';n.min=min;n.max=max;n.step=step;n.onchange=()=>edit(v=>{v[k]=n.valueAsNumber;if(k==='radius')v.headRadius=Math.max(v.headRadius,v.radius*1.2);});params.set(k,n);pose.append(field(label,n));
+   const n=el('input');n.id=prefix+'-'+k;n.type='number';n.min=min;n.max=max;n.step='any';n.onchange=()=>edit(v=>{v[k]=n.valueAsNumber;if(k==='radius')v.headRadius=Math.max(v.headRadius,v.radius*1.2);});params.set(k,n);pose.append(field(label,n));
   }
   const color=el('input');color.type='color';color.id=prefix+'-color';color.oninput=()=>edit(v=>{v.color=color.value;});const material=select(prefix+'-material',[['matte','Matte'],['metal','Metallic'],['gloss','Gloss']]);material.onchange=()=>edit(v=>{v.material=material.value;});
   const smooth=el('input');smooth.type='checkbox';smooth.id=prefix+'-smooth';smooth.onchange=()=>edit(v=>{v.smooth=smooth.checked;});
   pose.append(field('Color',color),field('Surface',material),field('Smooth curve',smooth));surface.append(el('strong','','MESH / MATERIAL'),pose);
   const cameraInputs=new Map();
   for(const [k,label,min,max,step] of [['azimuth','Azimuth°',-180,180,1],['elevation','Elevation°',-89.5,89.5,.5],['distance','Camera distance',2,18,.1],['fov','Field of view°',15,90,1]]){
-   const n=el('input');n.type='number';n.id=prefix+'-camera-'+k;n.min=min;n.max=max;n.step=step;n.onchange=()=>changeCamera({...camera,[k]:n.valueAsNumber});cameraInputs.set(k,n);cameraFields.append(field(label,n));
+   const n=el('input');n.type='number';n.id=prefix+'-camera-'+k;n.min=min;n.max=max;n.step='any';n.onchange=()=>changeCamera({...camera,[k]:n.valueAsNumber});cameraInputs.set(k,n);cameraFields.append(field(label,n));
   }
-  const proj=select(prefix+'-projection',[['perspective','Perspective'],['orthographic','Orthographic']]);proj.onchange=()=>changeCamera({...camera,projection:proj.value});cameraFields.append(field('Projection',proj));cameraBox.append(el('strong','','CAMERA / VIEW'),cameraFields,el('small','','Alt-drag or right-drag to orbit; wheel to dolly. Inspection views do not change the output until applied.'));
-  controls.append(geometry,surface,cameraBox);status.id=prefix+'-status';status.setAttribute('role','status');wrap.append(el('strong','','SPATIAL 3D ARROW / REAL XYZ MESH'),toolbar,stage,controls,status);host.append(wrap);
-  const allInputs=[...xyz,...params.values(),color,material,smooth,...cameraInputs.values(),proj,mode,add,remove,reset,use,...rotations.querySelectorAll('button')];for(const n of allInputs)n.disabled=locked;
+  const targets=[];for(let i=0;i<3;i++){const n=el('input');n.type='number';n.id=prefix+'-target-'+axes[i].name.toLowerCase();n.min=-S.LIMIT;n.max=S.LIMIT;n.step='any';n.onchange=()=>{const t=camera.target.slice();t[i]=n.valueAsNumber;changeCamera({...camera,target:t});};targets.push(n);cameraFields.append(field('Target '+axes[i].name,n));}
+  const proj=select(prefix+'-projection',[['perspective','Perspective'],['orthographic','Orthographic']]);proj.onchange=()=>changeCamera({...camera,projection:proj.value});cameraFields.append(field('Projection',proj));cameraBox.append(el('strong','','CAMERA / VIEW'),cameraFields,el('small','','Alt-drag or right-drag to orbit; Shift-drag to pan; wheel to dolly. Inspection views do not change the output until applied.'));
+  controls.append(geometry,surface,cameraBox);status.id=prefix+'-status';status.setAttribute('role','status');wrap.append(el('strong','','SPATIAL 3D ARROW / REAL XYZ MESH'),toolbar,stage,el('p','sa-status-v0730','Reference frame is a local 2D compositing guide, not reconstructed scene depth.'),controls,status);host.append(wrap);
+  const allInputs=[...xyz,...params.values(),color,material,smooth,...cameraInputs.values(),...targets,proj,mode,add,remove,reset,use,...rotations.querySelectorAll('button')];for(const n of allInputs)n.disabled=locked;
   nodeList.onchange=()=>{selected=Number(nodeList.value);sync();};mode.onchange=schedule;
   function edit(fn,i=selected){if(locked)return;try{const next=S.copy(value);fn(next);value=S.check(next);selected=clamp(i,0,value.points.length-1);error=null;sync();}catch(e){error=e.message;sync();}}
   function changeCamera(c){if(locked)return;try{camera=S.checkCamera(c);if(viewMode==='output')value.camera=S.copy(camera);else viewMode='orbit';error=null;sync();}catch(e){error=e.message;sync();}}
   function sync(){
    const active=d.activeElement;nodeList.replaceChildren();value.points.forEach((p,i)=>{const o=el('option','',(i+1)+' · '+p.map(v=>v.toFixed(2)).join(', '));o.value=i;nodeList.append(o);});nodeList.value=selected;
    xyz.forEach((n,i)=>{if(active!==n)n.value=value.points[selected][i].toFixed(3);});for(const [k,n] of params)if(active!==n)n.value=value[k];color.value=value.color;material.value=value.material;smooth.checked=value.smooth;
-   for(const [k,n] of cameraInputs)if(active!==n)n.value=Number(camera[k]).toFixed(k==='distance'?2:1);proj.value=camera.projection;
+   for(const [k,n] of cameraInputs)if(active!==n)n.value=Number(camera[k]).toFixed(k==='distance'?2:1);proj.value=camera.projection;targets.forEach((n,i)=>{if(active!==n)n.value=camera.target[i].toFixed(3);});
    add.disabled=locked||value.points.length>=S.MAX_NODES;remove.disabled=locked||value.points.length<=2;use.disabled=locked||viewMode==='output';for(const [k,n] of viewButtons)n.setAttribute('aria-pressed',String(k===viewMode));schedule();
   }
   function schedule(){if(!frame)frame=requestAnimationFrame(()=>{frame=0;if(!wrap.isConnected)return;draw();});}
@@ -67,8 +69,8 @@
   stage.addEventListener('contextmenu',e=>e.preventDefault());
   stage.addEventListener('pointerdown',e=>{
    if(locked||drag||![0,2].includes(e.button))return;e.preventDefault();const p=local(e),w=stage.width,h=stage.height,origin=S.project(value.points[selected],camera,w,h);
-   let axis=null,kind='orbit',best=16;
-   if(e.button===0&&!e.altKey){
+   let axis=null,kind=e.shiftKey?'pan':'orbit',best=16;
+   if(e.button===0&&!e.altKey&&!e.shiftKey){
     if(origin)for(const a of axes){const b=S.project(S.add(value.points[selected],S.mul(a.v,.65)),camera,w,h);if(!b||Math.hypot(b.x-origin.x,b.y-origin.y)<10)continue;const dist=Math.hypot(p.x-b.x,p.y-b.y);if(dist<best){axis=a.v;best=dist;}}
     if(axis)kind='axis';
     else{let index=-1;value.points.forEach((v,i)=>{const b=S.project(v,camera,w,h);if(!b)return;const a=Math.hypot(p.x-b.x,p.y-b.y);if(a<best){index=i;best=a;}});if(index>=0){selected=index;kind='plane';}else return;}
@@ -77,6 +79,7 @@
   });
   stage.addEventListener('pointermove',e=>{
    if(!drag||drag.id!==e.pointerId)return;const p=local(e),dx=p.x-drag.start.x,dy=p.y-drag.start.y,w=stage.width,h=stage.height;
+   if(drag.kind==='pan'){const delta=S.viewDelta(drag.camera.target,drag.camera,w,h,-dx,-dy);changeCamera({...drag.camera,target:S.add(drag.camera.target,delta).map(v=>clamp(v,-S.LIMIT,S.LIMIT))});return;}
    if(drag.kind==='orbit'){changeCamera({...drag.camera,azimuth:wrapAngle(drag.camera.azimuth-dx*.5),elevation:clamp(drag.camera.elevation+dy*.4,-89.5,89.5)});return;}
    const origin=drag.original.points[drag.selected],delta=drag.kind==='axis'?S.axisDelta(origin,drag.camera,w,h,drag.axis,dx,dy):S.viewDelta(origin,drag.camera,w,h,dx,dy);
    if(!delta){error='Switch to a different inspection view to move along this axis.';schedule();return;}

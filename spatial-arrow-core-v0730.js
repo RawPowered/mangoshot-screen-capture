@@ -6,15 +6,15 @@
  const add=(a,b)=>a.map((x,i)=>x+b[i]),sub=(a,b)=>a.map((x,i)=>x-b[i]),mul=(a,s)=>a.map(x=>x*s),dot=(a,b)=>a.reduce((s,x,i)=>s+x*b[i],0),cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],length=a=>Math.hypot(...a),unit=a=>mul(a,1/Math.max(EPS,length(a))),lerp=(a,b,t)=>add(a,mul(sub(b,a),t)),rad=x=>x*Math.PI/180;
  const exact=(v,k)=>v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).length===k.length&&k.every(x=>Object.hasOwn(v,x));
  const vector=(v,b)=>Array.isArray(v)&&v.length===3&&v.every(x=>finite(x,-b,b));
- const defaultCamera=()=>({azimuth:12,elevation:15,distance:6.8,fov:39,projection:'perspective'});
+ const defaultCamera=()=>({azimuth:12,elevation:15,distance:6.8,fov:39,projection:'perspective',target:[0,0,0]});
  const defaults=()=>({mode:'spatial',shape:'arrow',points:[[-2,-.65,1.3],[-.8,.15,.7],[.2,.12,-.5],[1.5,.6,-1.3]],radius:.085,headRadius:.19,headLength:.48,color:'#f4b942',material:'metal',smooth:true,camera:defaultCamera(),light:-45});
- function checkCamera(c){if(!exact(c,['azimuth','elevation','distance','fov','projection'])||!finite(c.azimuth,-180,180)||!finite(c.elevation,-89.5,89.5)||!finite(c.distance,2,18)||!finite(c.fov,15,90)||!['perspective','orthographic'].includes(c.projection))throw Error('Invalid spatial camera.');return {...c};}
+ function checkCamera(c){if(!exact(c,['azimuth','elevation','distance','fov','projection','target'])||!finite(c.azimuth,-180,180)||!finite(c.elevation,-89.5,89.5)||!finite(c.distance,2,18)||!finite(c.fov,15,90)||!['perspective','orthographic'].includes(c.projection)||!vector(c.target,LIMIT))throw Error('Invalid spatial camera.');return {...c,target:c.target.slice()};}
  function check(v){
   if(!exact(v,Object.keys(defaults()))||v.mode!=='spatial'||v.shape!=='arrow'||!Array.isArray(v.points)||v.points.length<2||v.points.length>MAX_NODES||!v.points.every(p=>vector(p,LIMIT))||typeof v.smooth!=='boolean'||typeof v.color!=='string'||!/^#[0-9a-f]{6}$/i.test(v.color)||!['matte','metal','gloss'].includes(v.material)||!finite(v.radius,.025,.25)||!finite(v.headRadius,.05,.5)||v.headRadius<v.radius*1.2||!finite(v.headLength,.12,1.2)||!finite(v.light,-180,180))throw Error('Invalid spatial arrow geometry or material.');
   if(v.points.some((p,i)=>i&&length(sub(p,v.points[i-1]))<.045))throw Error('Adjacent path points must be at least 0.045 world units apart.');
   return {...v,color:v.color.toLowerCase(),points:v.points.map(p=>p.slice()),camera:checkCamera(v.camera)};
  }
- function camera(c,w,h){c=checkCamera(c);const a=rad(c.azimuth),e=rad(c.elevation),eye=[c.distance*Math.sin(a)*Math.cos(e),c.distance*Math.sin(e),c.distance*Math.cos(a)*Math.cos(e)],forward=unit(mul(eye,-1)),right=unit(cross(forward,[0,1,0])),up=cross(right,forward),t=Math.tan(rad(c.fov)/2);return {eye,forward,right,up,t,aspect:w/h,ortho:c.projection==='orthographic',distance:c.distance};}
+ function camera(c,w,h){c=checkCamera(c);const a=rad(c.azimuth),e=rad(c.elevation),offset=[c.distance*Math.sin(a)*Math.cos(e),c.distance*Math.sin(e),c.distance*Math.cos(a)*Math.cos(e)],eye=add(c.target,offset),forward=unit(mul(offset,-1)),right=unit(cross(forward,[0,1,0])),up=cross(right,forward),t=Math.tan(rad(c.fov)/2);return {eye,forward,right,up,t,aspect:w/h,ortho:c.projection==='orthographic',distance:c.distance};}
  function project(p,c,w,h){const v=camera(c,w,h),d=sub(p,v.eye),z=dot(d,v.forward);if(z<=NEAR||z>=FAR)return null;const s=v.t*(v.ortho?v.distance:z);return {x:w/2*(1+dot(d,v.right)/(s*v.aspect)),y:h/2*(1-dot(d,v.up)/s),z};}
  function viewDelta(p,c,w,h,dx,dy){const b=camera(c,w,h),z=dot(sub(p,b.eye),b.forward),factor=2*b.t*(b.ortho?b.distance:z)/h;return add(mul(b.right,dx*factor),mul(b.up,-dy*factor));}
  function axisDelta(p,c,w,h,axis,dx,dy){const a=project(p,c,w,h),b=project(add(p,mul(axis,.5)),c,w,h);if(!a||!b)return null;const x=b.x-a.x,y=b.y-a.y,d=x*x+y*y;if(d<36)return null;return mul(axis,.5*(dx*x+dy*y)/d);}
@@ -51,7 +51,8 @@
   }
   return {positions:new Float32Array(vertices),normals:new Float32Array(normals),samples,tip:tip.slice(),headBase:center,arcLength:total,triangles:vertices.length/9};
  }
+ function scalePoints(points,factor){const center=mul(points.reduce(add,[0,0,0]),1/points.length);return points.map(p=>add(center,mul(sub(p,center),factor)));}
  function rotatePoints(points,axis,degrees){const a=rad(degrees),s=Math.sin(a),c=Math.cos(a),center=mul(points.reduce(add,[0,0,0]),1/points.length),u=[0,0,0];u[axis]=1;return points.map(p=>{const v=sub(p,center);return add(center,add(add(mul(v,c),mul(cross(u,v),s)),mul(u,dot(u,v)*(1-c))));});}
- const api=Object.freeze({LIMIT,MAX_NODES,SIDES,NEAR,FAR,copy,defaults,defaultCamera,check,checkCamera,add,sub,mul,dot,length,camera,project,viewDelta,axisDelta,centerline,mesh,rotatePoints});
+ const api=Object.freeze({LIMIT,MAX_NODES,SIDES,NEAR,FAR,copy,defaults,defaultCamera,check,checkCamera,add,sub,mul,dot,length,camera,project,viewDelta,axisDelta,centerline,mesh,rotatePoints,scalePoints});
  root.MangoSpatialArrowV0730=api;if(typeof module==='object'&&module.exports)module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
