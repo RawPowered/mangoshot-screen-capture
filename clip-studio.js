@@ -381,7 +381,7 @@ if(requestedRecording){
 /* Read-only view model for the professional timeline. Mutations flow through
  * this editor's existing non-destructive edit decision list. */
 globalThis.MangoCreativeClipV079=Object.freeze({
- state(){const v=globalThis.MangoClipView,l=v?.layers().find(x=>x.id===v.selectedLayer());return {ready:v?.automationCapture().ready===true,selected:!!l&&!l.locked,font:l?.font||'sans',weight:l?.weight||'600'};},
+ state(){const v=globalThis.MangoClipView,l=v?.layers().find(x=>x.id===v.selectedLayer());return {ready:v?.automationCapture().ready===true,selected:!!l&&!l.locked&&l.kind!=='shape',font:l?.font||'sans',weight:l?.weight||'600',text:l?.kind==='shape'?'':l?.text||''};},
  apply(kind,id,w){const c=globalThis.MangoCreativeV079,v=globalThis.MangoClipView;if(!this.state().ready||!this.state().selected)throw Error('Select an unlocked graphic and pause the video.');
   const patch=kind==='fonts'?{font:id,weight:c.weight(id,w),preset:'none'}:c.videoPatch(id);c.requireFonts([patch.font]);v.updateLayer(v.selectedLayer(),patch);label('Creative style applied. Ctrl+Z to undo.');return true;},
  insert(kind,id,w,text){const c=globalThis.MangoCreativeV079,v=globalThis.MangoClipView;if(!this.state().ready)throw Error('Load and pause a video first.');

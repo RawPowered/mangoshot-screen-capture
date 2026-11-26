@@ -21,6 +21,7 @@
   sample.onclick=()=>{if(!root.MangoImageActions?.state().ready)return;set(!armed);};
   root.addEventListener('pointerdown',e=>{if(!armed)return;if(sample.contains(e.target))return;if(e.target!==ink){set(false);return;}e.preventDefault();e.stopImmediatePropagation();const b=ink.getBoundingClientRect();try{const value=root.MangoColorSampleV0740.use((e.clientX-b.left)*ink.width/b.width,(e.clientY-b.top)*ink.height/b.height);sample.style.setProperty('--ux40-sample',value);}catch(err){by('status').textContent=err.message;}finally{set(false);}},true);
   root.addEventListener('keydown',e=>{if(armed&&e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();set(false);}},true);
+  const typography=group('Typography and styles');typography.id='ux45-typography-group';activeTool(typography,'text','text','Text');proxy(typography,'creative-open-v079','text','Fonts','Browse typefaces',()=>root.MangoCreativeLibraryV079?.open('fonts'));const styleButton=proxy(typography,'creative-inspector-v079','gradient','Styles','Browse text styles',()=>root.MangoCreativeLibraryV079?.open('presets'));if(styleButton)styleButton.id='ux45-shelf-styles';
   const shapeGroup=group('Shape overlays');shapeGroup.id='ux42-shape-group';
  const retouch=group('Pixel painting and retouching');retouch.id='ux41-pixel-tools';
  const precision=group('Precision and pixel tools');
@@ -30,7 +31,7 @@
   real(precision,'rl-open-v0727','gradient','Filters','Editable Raster Filters');
   const fx=group('Effects and design');proxy(fx,'effects-studio-menu-v0712','fx','FX','Effects Studio for selected layers',()=>root.MangoLayerStudioUIV0712?.open('effects'));real(fx,'ce-open-v0726','gradient','Style','Creative gradients and layer styles');real(fx,'ac-open-v0724','layers','Composite','Compositing Studio');real(fx,'us-image-open','cube','3D','3D Scene Studio');
   const advanced=group('Additional creative tools');real(advanced,'sa-image-open','cube','Spatial','Spatial 3D object');real(advanced,'mc-image-open','cube','Extrude','Legacy 3D extrusions');real(advanced,'mr-open-v0722','wand','Raster','Raster Lab');
-  const old=d.querySelector('.ci-studios-v0720');if(old){for(const b of [...old.querySelectorAll('button')]){const text=b.textContent.trim(),name=b.title||text;decorate(b,({Layers:'layers',Effects:'fx',Material:'gradient',Type:'text'})[text]||'settings',text,name);if(text==='Effects'){b.hidden=true;continue;}advanced.append(b);}old.hidden=true;}
+  const old=d.querySelector('.ci-studios-v0720');if(old){for(const b of [...old.querySelectorAll('button')]){const text=b.textContent.trim(),name=b.title||text;decorate(b,({Layers:'layers',Effects:'fx',Material:'gradient',Type:'text'})[text]||'settings',text,name);if(text==='Effects'||text==='Type'){b.hidden=true;continue;}advanced.append(b);}old.hidden=true;}
   // Original quick-access buttons remain accessible; the ribbon owns the moved nodes.
   const layout=by('ci-workspace-v0720');if(layout)layout.title='Saved image workspace layouts';
   d.querySelectorAll('#image-vector-library [data-vector-kind]').forEach(b=>{const text=b.querySelector('small')?.textContent||b.dataset.vectorKind;b.replaceChildren(icon(b.dataset.vectorKind),el('small','',text));});

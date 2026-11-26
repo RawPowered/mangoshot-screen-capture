@@ -375,6 +375,7 @@ function syncSelectedText(){
   if(textContent)textContent.value=stroke.text||'';
   if(textFontSize)textFontSize.value=String(Math.round((stroke.fontSize||48)*(stroke.scaleY??1)));
   if(textFontFamily)textFontFamily.value=stroke.fontFamily||'sans';
+  const weightSelect=document.getElementById('text-font-weight'),c=globalThis.MangoCreativeV079;if(weightSelect){const family=stroke.fontFamily||'sans',font=c?.font(family);weightSelect.value=c?.weight(family,stroke.fontWeight||editorCore?.styles?.[stroke.styleId]?.weight||'600')||String(stroke.fontWeight||editorCore?.styles?.[stroke.styleId]?.weight||'600');for(const option of Array.from(weightSelect.options||[]))option.disabled=!!font&&(Number(option.value)<font.min||Number(option.value)>font.max);}
   textPreset=stroke.styleId||'plain';
   color.value=stroke.color||color.value;
   const textFill=document.getElementById('text-fill-color');if(textFill)textFill.value=color.value;
@@ -413,7 +414,8 @@ function updateEditorControls(){
   tool.value==='marquee'?'Drag a rectangle to select layers · Shift + drag adds to selection.':'Right-click the screenshot to copy all pixels and annotations.';
  if(textContent){textContent.disabled=!selected;textContent.placeholder=selected?'Edit selected text':'Click screenshot to create text';}
  if(textFontSize)textFontSize.disabled=!ready;
- if(textFontFamily)textFontFamily.disabled=!ready;
+ if(textFontFamily)textFontFamily.disabled=!ready||!!selected?.locked;
+ const weightSelect=document.getElementById('text-font-weight');if(weightSelect)weightSelect.disabled=!ready||!selected||!!selected.locked||!!textDraft;
  for(const button of document.querySelectorAll?.('[data-text-preset]')||[])button.disabled=!ready;
  const remove=document.querySelector?.('[data-image-action="delete"]');
  if(remove)remove.disabled=!selected;
@@ -1285,8 +1287,9 @@ textFontSize?.addEventListener?.('change',()=>{
  else if(selectedStroke())updateVisualFontSize(Number(textFontSize.value));
 });
 textFontFamily?.addEventListener?.('change',()=>{
- if(selectedStroke())updateSelectedText({fontFamily:textFontFamily.value});
+ const l=selectedStroke(),c=globalThis.MangoCreativeV079;if(l){const family=textFontFamily.value;if(c?.font(family)&&!c.loaded(family)){syncSelectedText();label('Font is not ready. Reload the complete extension.');return;}const current=l.fontWeight||editorCore?.styles?.[l.styleId]?.weight||'600';updateSelectedText({fontFamily:family,fontWeight:c?.weight(family,current)||String(current)});}
 });
+document.getElementById('text-font-weight')?.addEventListener?.('change',event=>{const l=selectedStroke(),c=globalThis.MangoCreativeV079;if(!l||l.locked||textDraft)return;const v=String(event.target.value);if(!/^[1-9]00$/.test(v))return;updateSelectedText({fontWeight:c?.weight(l.fontFamily,v)||v});});
 // The inspector editor is live. One continuous typing session = one Undo step.
 let textTyping=null;
 textContent?.addEventListener?.('focus',()=>{textTyping=null;});
@@ -2239,7 +2242,7 @@ globalThis.MangoLayerImageV0712=Object.freeze({
 });
 
 globalThis.MangoCreativeImageV079=Object.freeze({
- state(){const l=selectedStroke();return {ready:globalThis.MangoImageAutomationV075?.capture().ready===true,selected:!!l&&!l.locked,font:l?.fontFamily||'sans',weight:l?.fontWeight||'600'};},
+ state(){const l=selectedStroke();return {ready:globalThis.MangoImageAutomationV075?.capture().ready===true,selected:!!l&&!l.locked,font:l?.fontFamily||'sans',weight:l?.fontWeight||editorCore?.styles?.[l?.styleId]?.weight||'600',text:l?.text||''};},
  apply(kind,id,w){
   const c=globalThis.MangoCreativeV079,l=selectedStroke();if(!this.state().ready||!l||l.locked)throw Error('Select an unlocked text layer and finish the active gesture.');
   const p=kind==='fonts'?{fontFamily:id,fontWeight:c.weight(id,w)}:c.imagePatch(id);

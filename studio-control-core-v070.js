@@ -16,7 +16,7 @@
   highlighter:[field('tool','Tool'),field('color','Color'),field('size','Width'),field('image-tool-opacity','Opacity')],
   'erase-brush':[field('tool','Tool'),field('size','Diameter'),field('image-eraser-hardness','Hardness'),field('image-tool-opacity','Opacity')],
   'erase-stroke':[field('tool','Tool'),field('size','Diameter')],
-  text:[field('tool','Tool'),field('text-font-size','Size'),field('text-font-family','Font'),field('text-fill-color','Color')],
+  text:[field('tool','Tool'),field('text-font-size','Size'),field('text-font-family','Font'),field('text-font-weight','Weight'),field('text-fill-color','Color')],
   'mask-erase':[field('tool','Tool'),field('image-mask-brush','Brush'),field('image-mask-feather','Feather')],
   'mask-restore':[field('tool','Tool'),field('image-mask-brush','Brush'),field('image-mask-feather','Feather')],
   shape:[field('tool','Shape'),field('color','Outline'),field('size','Width'),field('image-shape-fill-enabled','Fill'),
@@ -58,7 +58,7 @@
   if(tool==='select'){
    const base=image.select.slice();
    const type=String(selectedType).toUpperCase();
-   if(type==='TEXT LAYER')base.push(field('text-font-size','Size'),field('text-font-family','Font'),field('text-fill-color','Color'));
+   if(type==='TEXT LAYER')base.push(field('text-font-size','Size'),field('text-font-family','Font'),field('text-font-weight','Weight'),field('text-fill-color','Color'));
    if(['IMAGE LAYER','TEXT LAYER','ANNOTATION','VECTOR LAYER'].includes(type))
     base.push(field('image-layer-opacity','Opacity'),field('image-layer-rotation-v0715','Rotation'),field('image-layer-x','X'),field('image-layer-y','Y'));
    if(['IMAGE LAYER','VECTOR LAYER','ANNOTATION'].includes(type))base.push(field('image-layer-width','W'),field('image-layer-height','H'));
