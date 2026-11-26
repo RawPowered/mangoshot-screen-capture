@@ -77,8 +77,26 @@
   }
   return {positions:new Float32Array(vertices),normals:new Float32Array(normals),samples,tip:tip.slice(),headBase:center,arcLength:total,triangles:vertices.length/9};
  }
+ function pivot(points){return mul(points.reduce(add,[0,0,0]),1/points.length);}
+ function rayAt(c,w,h,x,y){
+  const b=camera(c,w,h),u=(2*x/w-1)*b.t*b.aspect,v=(1-2*y/h)*b.t,plane=add(mul(b.right,u),mul(b.up,v));
+  return b.ortho?{origin:add(b.eye,mul(plane,b.distance)),direction:b.forward}:{origin:b.eye,direction:unit(add(b.forward,plane))};
+ }
+ function axisPlanePoint(p,c,w,h,axis,x,y){
+  const ray=rayAt(c,w,h,x,y),den=dot(ray.direction,axis);if(Math.abs(den)<.08)return null;
+  const distance=dot(sub(p,ray.origin),axis)/den;if(distance<=NEAR||distance>=FAR)return null;const v=sub(add(ray.origin,mul(ray.direction,distance)),p);return length(v)>.001?unit(v):null;
+ }
+ function rotationDelta(p,c,w,h,axis,start,end){
+  const a=axisPlanePoint(p,c,w,h,axis,start.x,start.y),b=axisPlanePoint(p,c,w,h,axis,end.x,end.y);if(!a||!b)return null;
+  return Math.atan2(dot(axis,cross(a,b)),clamp(dot(a,b),-1,1))*180/Math.PI;
+ }
+ function rotationRing(p,c,w,h,index,radius=.82){
+  const a=(index+1)%3,b=(index+2)%3;return Array.from({length:65},(_,i)=>{const t=i/64*Math.PI*2,v=p.slice();v[a]+=radius*Math.cos(t);v[b]+=radius*Math.sin(t);return project(v,c,w,h);});
+ }
+ function ringDistance(ring,p){let best=Infinity;for(let i=1;i<ring.length;i++){const a=ring[i-1],b=ring[i];if(!a||!b)continue;const dx=b.x-a.x,dy=b.y-a.y,d=dx*dx+dy*dy,t=d?clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/d,0,1):0;best=Math.min(best,Math.hypot(p.x-a.x-t*dx,p.y-a.y-t*dy));}return best;}
+ function scaledValue(v,factor){const n=copy(v);n.points=scalePoints(n.points,factor);if(n.shape!=='sphere'&&n.shape!=='cone')n.radius*=factor;if(n.shape==='arrow'||n.shape==='cone')n.headRadius*=factor;if(n.shape==='arrow')n.headLength*=factor;if(n.headRadius<n.radius*1.2)n.headRadius=n.radius*1.2;return check(n);}
  function scalePoints(points,factor){const center=mul(points.reduce(add,[0,0,0]),1/points.length);return points.map(p=>add(center,mul(sub(p,center),factor)));}
  function rotatePoints(points,axis,degrees){const a=rad(degrees),s=Math.sin(a),c=Math.cos(a),center=mul(points.reduce(add,[0,0,0]),1/points.length),u=[0,0,0];u[axis]=1;return points.map(p=>{const v=sub(p,center);return add(center,add(add(mul(v,c),mul(cross(u,v),s)),mul(u,dot(u,v)*(1-c))));});}
- const api=Object.freeze({LIMIT,MAX_NODES,SIDES,NEAR,FAR,SHAPES,isPath,shapePoints,copy,defaults,defaultCamera,check,checkCamera,checkOcclusion,add,sub,mul,dot,length,camera,project,viewDelta,axisDelta,centerline,revealSamples,mesh,rotatePoints,scalePoints});
+ const api=Object.freeze({LIMIT,MAX_NODES,SIDES,NEAR,FAR,SHAPES,isPath,shapePoints,copy,defaults,defaultCamera,check,checkCamera,checkOcclusion,add,sub,mul,dot,length,camera,project,viewDelta,axisDelta,centerline,revealSamples,mesh,rotatePoints,scalePoints,pivot,rayAt,axisPlanePoint,rotationDelta,rotationRing,ringDistance,scaledValue});
  root.MangoSpatialArrowV0730=api;if(typeof module==='object'&&module.exports)module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

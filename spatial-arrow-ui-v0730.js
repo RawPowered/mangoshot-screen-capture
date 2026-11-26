@@ -11,6 +11,7 @@
  function editor(host,initial,opts={}){
   let value=S.check(initial),camera=S.copy(value.camera),viewMode='output',selected=0,drag=null,frame=0,error=null,topologyLocked=false,maskDraft=null,maskEdit=false;
   const locked=!!opts.locked,prefix=opts.prefix||'sa',wrap=el('section','sa-editor-v0730'),toolbar=el('div','sa-toolbar-v0730'),stage=el('canvas','sa-view-v0730'),controls=el('div','sa-controls-v0730'),status=el('p','sa-status-v0730'),nodeList=select(prefix+'-node',[]),mode=select(prefix+'-mode',[['node','Control point'],['object','Whole object']]);
+  const gizmo=select(prefix+'-gizmo',[['move','Translate'],['rotate','Rotate XYZ'],['scale','Uniform scale']]);gizmo.onchange=()=>{if(gizmo.value!=='move')mode.value='object';schedule();};
   const reference=opts.reference||null,aspect=opts.aspect||((reference?.width||16)/(reference?.height||9));
   stage.width=Math.max(1,Math.round(Math.min(780,420*aspect)));stage.height=Math.max(1,Math.round(stage.width/aspect));stage.style.maxWidth=stage.width+'px';stage.id=prefix+'-viewport';stage.tabIndex=0;stage.setAttribute('aria-label','Interactive 3D path viewport. Drag point or axis; Alt drag to orbit; Shift drag to pan; wheel zooms.');
   const viewButtons=new Map();
@@ -28,7 +29,7 @@
   const xyz=[];
   for(let i=0;i<3;i++){const n=el('input');n.id=prefix+'-'+axes[i].name.toLowerCase();n.type='number';n.min=-S.LIMIT;n.max=S.LIMIT;n.step='any';n.onchange=()=>edit(v=>{v.points[selected][i]=n.valueAsNumber;});xyz.push(n);const l=field(axes[i].name+' world',n);l.style.color=axes[i].c;fields.append(l);}
   const pointRow=el('div','sa-toolbar-v0730');pointRow.append(add,remove,reset);
-  geometry.append(el('strong','','GEOMETRY / XYZ'),field('3D primitive',shapeType),field('Manipulate',mode),field('Selected control point',nodeList),fields,pointRow);
+  geometry.append(el('strong','','GEOMETRY / XYZ'),field('3D primitive',shapeType),field('Transform gizmo',gizmo),field('Manipulate',mode),field('Selected control point',nodeList),fields,pointRow);
   const rotations=el('div','sa-toolbar-v0730');
   for(let a=0;a<3;a++)for(const dir of [-1,1])rotations.append(button(prefix+'-rotate-'+axes[a].name.toLowerCase()+'-'+(dir<0?'minus':'plus'),axes[a].name+' '+(dir*15)+'°',()=>edit(v=>{v.points=S.rotatePoints(v.points,a,dir*15);})));
   for(const factor of [.9,1.1])rotations.append(button(prefix+'-scale-'+(factor<1?'down':'up'),Math.round(factor*100)+'%',()=>edit(v=>{v.points=S.scalePoints(v.points,factor);v.radius*=factor;v.headRadius*=factor;v.headLength*=factor;})));
@@ -48,8 +49,8 @@
   const proj=select(prefix+'-projection',[['perspective','Perspective'],['orthographic','Orthographic']]);proj.onchange=()=>changeCamera({...camera,projection:proj.value});cameraFields.append(field('Projection',proj));cameraBox.append(el('strong','','CAMERA / VIEW'),cameraFields,el('small','','Alt-drag or right-drag to orbit; Shift-drag to pan; wheel to dolly. Inspection views do not change the output until applied.'));
   controls.append(geometry,surface,cameraBox);status.id=prefix+'-status';status.setAttribute('role','status');wrap.append(el('strong','',opts.scene?'SELECTED OBJECT / XYZ MESH':'SPATIAL 3D / REAL XYZ MESH'),toolbar,stage,maskTools,el('p','sa-status-v0730','Reference frame is a local 2D compositing guide, not reconstructed scene depth.'),controls,status);host.append(wrap);
   const guides=el('input');guides.type='checkbox';guides.id=prefix+'-ground-grid';guides.checked=false;guides.onchange=schedule;toolbar.append(field('3D ground grid',guides));
-  const allInputs=[shapeType,...xyz,...params.values(),color,material,smooth,...cameraInputs.values(),...targets,proj,mode,add,remove,reset,use,...rotations.querySelectorAll('button')];for(const n of allInputs)n.disabled=locked;
-  nodeList.onchange=()=>{selected=Number(nodeList.value);sync();};mode.onchange=schedule;
+  const allInputs=[gizmo,shapeType,...xyz,...params.values(),color,material,smooth,...cameraInputs.values(),...targets,proj,mode,add,remove,reset,use,...rotations.querySelectorAll('button')];for(const n of allInputs)n.disabled=locked;
+  nodeList.onchange=()=>{selected=Number(nodeList.value);sync();};mode.onchange=()=>{if(mode.value==='node')gizmo.value='move';schedule();};
   function edit(fn,i=selected){if(locked)return;try{const next=S.copy(value);fn(next);value=S.check(next);selected=clamp(i,0,value.points.length-1);error=null;sync();}catch(e){error=e.message;sync();}}
   function changeCamera(c){if(locked)return;try{camera=S.checkCamera(c);if(viewMode==='output')value.camera=S.copy(camera);else viewMode='orbit';error=null;sync();}catch(e){error=e.message;sync();}}
   function sync(){
@@ -69,7 +70,12 @@
    opts.drawGuides?.(q,camera,w,h);
    const pp=p=>S.project(p,camera,w,h),samples=S.isPath(value.shape)?S.centerline(value):S.mesh(value).samples;q.strokeStyle='#e3e9f1';q.lineWidth=1;q.setLineDash([4,4]);q.beginPath();let begun=false;for(const p of samples){const a=pp(p);if(!a){begun=false;continue;}if(!begun){q.moveTo(a.x,a.y);begun=true;}else q.lineTo(a.x,a.y);}q.stroke();q.setLineDash([]);
    value.points.forEach((p,i)=>{const a=pp(p);if(!a)return;q.beginPath();q.arc(a.x,a.y,i===selected?6:4,0,Math.PI*2);q.fillStyle=i===selected?'#b9f75c':'#e3e9f1';q.fill();q.strokeStyle='#11161b';q.stroke();q.fillStyle='#fff';q.font='11px system-ui';q.fillText(String(i+1),a.x+8,a.y-8);});
-   const origin=pp(value.points[selected]);if(origin)for(const ax of axes){const b=pp(S.add(value.points[selected],S.mul(ax.v,.65)));if(!b)continue;q.strokeStyle=ax.c;q.fillStyle=ax.c;q.lineWidth=2;q.beginPath();q.moveTo(origin.x,origin.y);q.lineTo(b.x,b.y);q.stroke();q.fillRect(b.x-4,b.y-4,8,8);q.fillText(ax.name,b.x+6,b.y+3);}
+   const center=S.pivot(value.points);
+   if(gizmo.value==='rotate'){
+    q.save();try{for(let i=0;i<3;i++){const ax=axes[i],ring=S.rotationRing(center,camera,w,h,i);q.strokeStyle=ax.c;q.lineWidth=2;q.beginPath();let last=false;for(const p of ring){if(!p){last=false;continue;}if(last)q.lineTo(p.x,p.y);else q.moveTo(p.x,p.y);last=true;}q.stroke();}const o=pp(center);if(o){q.fillStyle='#e8eef5';q.fillRect(o.x-2,o.y-2,4,4);}}finally{q.restore();}
+   }else if(gizmo.value==='scale'){
+    const o=pp(center);if(o){q.save();try{q.strokeStyle='#b9f75c';q.fillStyle='#b9f75c';q.lineWidth=2;q.beginPath();q.arc(o.x,o.y,55,0,Math.PI*2);q.stroke();for(const a of [0,Math.PI/2,Math.PI,3*Math.PI/2])q.fillRect(o.x+55*Math.cos(a)-4,o.y+55*Math.sin(a)-4,8,8);q.fillText('SCALE',o.x-17,o.y-62);}finally{q.restore();}}
+   }else{const origin=pp(value.points[selected]);if(origin)for(const ax of axes){const b=pp(S.add(value.points[selected],S.mul(ax.v,.65)));if(!b)continue;q.strokeStyle=ax.c;q.fillStyle=ax.c;q.lineWidth=2;q.beginPath();q.moveTo(origin.x,origin.y);q.lineTo(b.x,b.y);q.stroke();q.fillRect(b.x-4,b.y-4,8,8);q.fillText(ax.name,b.x+6,b.y+3);}}
    if(viewMode==='output'){const polys=[...(value.occlusion||[]),...(maskDraft?[maskDraft]:[])];q.save();try{q.strokeStyle='#efc06a';q.fillStyle='#efc06a22';q.lineWidth=1.5;q.setLineDash([4,3]);for(const poly of polys){if(!poly.length)continue;q.beginPath();poly.forEach(([x,y],i)=>i?q.lineTo(x*w,y*h):q.moveTo(x*w,y*h));if(poly!==maskDraft){q.closePath();q.fill('evenodd');}q.stroke();for(const [x,y] of poly)q.fillRect(x*w-2,y*h-2,4,4);}}finally{q.restore();}}
    status.textContent=error||(maskEdit?'Drag a foreground polygon vertex in the output view':maskDraft?'Click around foreground object, then Close mask · '+maskDraft.length+' vertices':value.points.length+' XYZ points · '+S.mesh(value).triangles+' triangles · '+camera.projection+' · '+(viewMode==='output'?'output camera':'inspection view')+' · WebGL2 depth test · '+(value.occlusion||[]).length+' foreground masks');
   }
@@ -78,6 +84,11 @@
   stage.addEventListener('pointerdown',e=>{
    if(locked||drag||![0,2].includes(e.button))return;e.preventDefault();const p=local(e),w=stage.width,h=stage.height;if(maskEdit){if(e.button!==0)return;let hit=null,best=15;for(const [i,poly] of (value.occlusion||[]).entries())for(const [j,v] of poly.entries()){const dist=Math.hypot(p.x-v[0]*w,p.y-v[1]*h);if(dist<best){best=dist;hit={i,j};}}if(hit){drag={id:e.pointerId,kind:'mask',...hit,original:S.copy(value),camera:S.copy(camera)};stage.setPointerCapture(e.pointerId);}return;}if(maskDraft){if(e.button===0&&maskDraft.length<64){maskDraft.push([clamp(p.x/w,0,1),clamp(p.y/h,0,1)]);sync();}return;}const origin=S.project(value.points[selected],camera,w,h);
    let axis=null,kind=e.shiftKey?'pan':'orbit',best=16;
+   if(e.button===0&&!e.altKey&&!e.shiftKey&&gizmo.value!=='move'){
+    const pivot=S.pivot(value.points);if(gizmo.value==='rotate'){let index=-1,best=10;for(let i=0;i<3;i++){const ax=axes[i].v;if(!S.axisPlanePoint(pivot,camera,w,h,ax,p.x,p.y))continue;const dist=S.ringDistance(S.rotationRing(pivot,camera,w,h,i),p);if(dist<best){best=dist;index=i;}}if(index<0){opts.pickObject?.(p,camera,w,h);return;}drag={id:e.pointerId,kind:'rotate',axisIndex:index,pivot,start:p,camera:S.copy(camera),original:S.copy(value)};}
+    else{const o=S.project(pivot,camera,w,h);if(!o)return;const radius=Math.hypot(p.x-o.x,p.y-o.y);if(Math.abs(radius-55)>12){opts.pickObject?.(p,camera,w,h);return;}drag={id:e.pointerId,kind:'scale',origin:o,radius,start:p,camera:S.copy(camera),original:S.copy(value)};}
+    stage.setPointerCapture(e.pointerId);return;
+   }
    if(e.button===0&&!e.altKey&&!e.shiftKey){
     if(origin)for(const a of axes){const b=S.project(S.add(value.points[selected],S.mul(a.v,.65)),camera,w,h);if(!b||Math.hypot(b.x-origin.x,b.y-origin.y)<10)continue;const dist=Math.hypot(p.x-b.x,p.y-b.y);if(dist<best){axis=a.v;best=dist;}}
     if(axis)kind='axis';
@@ -87,6 +98,7 @@
   });
   stage.addEventListener('pointermove',e=>{
    if(!drag||drag.id!==e.pointerId)return;const p=local(e),w=stage.width,h=stage.height;if(drag.kind==='mask'){const v=S.copy(drag.original);v.occlusion[drag.i][drag.j]=[clamp(p.x/w,0,1),clamp(p.y/h,0,1)];try{value=S.check(v);error=null;}catch(e){error=e.message;}schedule();return;}const dx=p.x-drag.start.x,dy=p.y-drag.start.y;
+   if(drag.kind==='rotate'||drag.kind==='scale'){try{if(drag.kind==='rotate'){const degrees=S.rotationDelta(drag.pivot,drag.camera,w,h,axes[drag.axisIndex].v,drag.start,p);if(degrees==null)throw Error('Choose a view facing this rotation ring.');const v=S.copy(drag.original);v.points=S.rotatePoints(v.points,drag.axisIndex,e.shiftKey?Math.round(degrees/15)*15:degrees);value=S.check(v);}else{const factor=clamp(Math.hypot(p.x-drag.origin.x,p.y-drag.origin.y)/drag.radius,.2,3);value=S.scaledValue(drag.original,factor);}error=null;sync();}catch(e){error=e.message;schedule();}return;}
    if(drag.kind==='pan'){const delta=S.viewDelta(drag.camera.target,drag.camera,w,h,-dx,-dy);changeCamera({...drag.camera,target:S.add(drag.camera.target,delta).map(v=>clamp(v,-S.LIMIT,S.LIMIT))});return;}
    if(drag.kind==='orbit'){changeCamera({...drag.camera,azimuth:wrapAngle(drag.camera.azimuth-dx*.5),elevation:clamp(drag.camera.elevation+dy*.4,-89.5,89.5)});return;}
    const origin=drag.original.points[drag.selected],delta=drag.kind==='axis'?S.axisDelta(origin,drag.camera,w,h,drag.axis,dx,dy):S.viewDelta(origin,drag.camera,w,h,dx,dy);
