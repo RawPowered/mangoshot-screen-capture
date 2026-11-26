@@ -585,6 +585,7 @@ globalThis.MangoClipView={
  moveLayer(id,x,y){const l=layers.find(x=>x.id===id);if(!l||l.locked)return;l.x=x;l.y=y;paintPreview();},
  resizeLayer(id,width,fontSize,height=null){const l=layers.find(x=>x.id===id);if(!l||l.locked)return;
   l.width=Math.max(.1,Math.min(1-l.x,width));if(l.kind==='shape'&&Number.isFinite(height))l.shape={...l.shape,height:Math.max(.03,Math.min(1-l.y,height))};else l.fontSize=Math.max(12,Math.min(220,fontSize));paintPreview();},
+ moveShapeGeometry(id,patch){const l=layers.find(x=>x.id===id);if(!l||l.locked||l.kind!=='shape'||exporting)return;const S=globalThis.MangoClipShapesV0742,shape=S.check(patch.shape);for(const k of ['x','y','width'])if(Object.hasOwn(patch,k)&&(!Number.isFinite(patch[k])||patch[k]<0||patch[k]>1))return;Object.assign(l,patch,{shape});paintPreview();},
  endLayerMove(){refreshed();},
  setLayerHidden(id,value){const l=layers.find(x=>x.id===id);if(!l)return;remember();l.visible=!value;refreshed();},
  setLayerLocked(id,value){const l=layers.find(x=>x.id===id);if(!l)return;remember();l.locked=!!value;refreshed();},

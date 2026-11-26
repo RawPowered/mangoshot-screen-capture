@@ -172,7 +172,7 @@
  bar.append(identity,divider,options,actions);
  transport.insertAdjacentElement('afterend',bar);
  let fieldMap=new Map(),signature='';
- const dialReset={'size':4,'image-tool-opacity':100,'image-layer-opacity':100,'image-layer-rotation-v0715':0,'image-eraser-hardness':80,'image-mask-brush':35,'image-mask-feather':0,'image-shape-radius':18,'image-shape-points':5,'text-font-size':48,'graphic-size':48,'graphic-opacity':100,'graphic-width':70,'graphic-x':50,'graphic-y':50,'timeline-zoom':1};
+ const dialReset={'size':4,'image-tool-opacity':100,'image-layer-opacity':100,'image-layer-rotation-v0715':0,'image-eraser-hardness':80,'image-mask-brush':35,'image-mask-feather':0,'image-shape-radius':18,'image-shape-points':5,'text-font-size':48,'graphic-size':48,'graphic-opacity':100,'graphic-shape-height':25,'graphic-shape-rotation':0,'graphic-shape-fill-opacity':25,'graphic-outline-width':6,'graphic-width':70,'graphic-x':50,'graphic-y':50,'timeline-zoom':1};
  function makeProxy(spec){
   const source=byId(spec.id);
   if(!source||!['INPUT','SELECT','TEXTAREA'].includes(source.tagName))return null;
@@ -247,7 +247,7 @@
   const tool=currentTool(),graphic=studio==='clip'&&hasSelectedGraphic();
   active.textContent=studio==='image'?
    (byId('tool')?.selectedOptions?.[0]?.textContent||tool):
-   (graphic?'Selected graphic':{select:'Selection',razor:'Razor',range:'Range'}[tool]||'Timeline');
+   (graphic?(root.MangoClipView?.layers?.().find(l=>l.id===root.MangoClipView.selectedLayer())?.kind==='shape'?'Shape overlay':'Selected graphic'):{select:'Selection',razor:'Razor',range:'Range'}[tool]||'Timeline');
   const layerType=studio==='image'?(byId('image-inspector-state')?.textContent||''):(root.MangoClipView?.layers?.().find(l=>l.id===root.MangoClipView.selectedLayer())?.kind||'');
   const fields=core.fieldsFor(studio,tool,graphic,layerType).filter(spec=>!!byId(spec.id));
   const key=fields.map(v=>v.id).join('|')+'|'+studio+'|'+tool+'|'+graphic+'|'+layerType;

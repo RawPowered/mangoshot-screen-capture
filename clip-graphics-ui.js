@@ -18,6 +18,7 @@
   'graphic-shadow':['shadow',Number], 'graphic-tail-x':['tailX',v=>Number(v)/100],
   'graphic-tail-length':['tailLength',Number], 'graphic-in':['start',Number], 'graphic-out':['end',Number]
  };
+ const rootShape=()=>globalThis.MangoClipShapesV0742;
  const activeLayer=()=>{const st=current(),id=st?.selectedLayer?.();return st?.layers?.().find(l=>l.id===id)||null;};
  function button(text,title,action){const b=document.createElement('button');b.type='button';b.textContent=text;b.title=title;b.addEventListener('click',action);return b;}
  function fmt(s){s=Math.max(0,s);return `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}.${String(Math.round((s%1)*100)).padStart(2,'0')}`;}
@@ -142,6 +143,7 @@
     input.value=['x','y','width','opacity','tailX'].includes(field)?Math.round(value*100):value;
     input.disabled=layer.locked||st.exporting()||(layer.kind==='shape'&&['text','font','weight','fontSize','align','tailX','tailLength','color'].includes(field));
    }
+   for(const [id,value] of [['graphic-shape-height',layer.shape?.height*100],['graphic-shape-rotation',layer.shape?.rotation],['graphic-shape-fill-opacity',layer.kind==='shape'?rootShape().fillOpacity(layer.background):0]]){const n=el(id);if(n){n.disabled=layer.kind!=='shape'||layer.locked||st.exporting();n.value=Number.isFinite(value)?String(Math.round(value*100)/100):'0';}}
    el('graphic-preset').value=layer.preset;el('graphic-preset').disabled=layer.locked||st.exporting()||layer.kind==='shape';
    el('graphic-duplicate').disabled=st.exporting();el('graphic-delete').disabled=st.exporting()||layer.locked;
    el('graphic-duration').textContent=`G${layer.track} · In ${fmt(layer.start)} · Out ${fmt(layer.end)} · Duration ${fmt(layer.end-layer.start)}`;
@@ -153,8 +155,7 @@
  function selectionOutline(ctx,seconds,w,h){const selected=activeLayer();
   if(!selected||selected.locked||!selected.visible||seconds===null||seconds<selected.start||seconds>=selected.end)return;
   const r=MangoGraphics.animatedBounds?.(selected,w,h,ctx,seconds)||MangoGraphics.bounds(selected,w,h,ctx);ctx.save();ctx.globalAlpha=1;ctx.setLineDash([9,5]);
-  ctx.lineWidth=Math.max(2,h/450);ctx.strokeStyle='#aee3fa';ctx.strokeRect(r.x,r.y,r.w,r.h);
-  ctx.setLineDash([]);if(!selected.keyframes?.length){ctx.fillStyle='#aee3fa';ctx.fillRect(r.x+r.w-9,r.y+r.h-9,16,16);}ctx.restore();
+  ctx.lineWidth=Math.max(1.5,h/450);ctx.strokeStyle='#aee3fa';if(selected.kind==='shape'&&!selected.keyframes?.length){const g=rootShape().geometry(selected,w,h),size=Math.max(5,h/120);ctx.beginPath();for(const [i,p] of g.corners.entries())i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);ctx.closePath();ctx.stroke();ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(g.top.x,g.top.y);ctx.lineTo(g.rotate.x,g.rotate.y);ctx.stroke();ctx.fillStyle='#aee3fa';ctx.beginPath();ctx.arc(g.rotate.x,g.rotate.y,size,0,Math.PI*2);ctx.fill();ctx.fillRect(g.resize.x-size,g.resize.y-size,size*2,size*2);}else{ctx.strokeRect(r.x,r.y,r.w,r.h);ctx.setLineDash([]);if(!selected.keyframes?.length){ctx.fillStyle='#aee3fa';ctx.fillRect(r.x+r.w-9,r.y+r.h-9,16,16);}}ctx.restore();
  }
  function propertyChange(e){const layer=activeLayer(),st=current();if(!layer||!st||layer.locked)return;
   const [field,coerce]=fields[e.currentTarget.id],value=coerce(e.currentTarget.value);
@@ -178,6 +179,7 @@
   st.updateLayer(layer.id,['start','end','track'].includes(field)?{[field]:value}:{[field]:value,preset:'none'});
  }
  for(const id of Object.keys(fields))el(id).addEventListener('change',propertyChange);
+ for(const [id,key] of [['graphic-shape-height','height'],['graphic-shape-rotation','rotation'],['graphic-shape-fill-opacity','fillOpacity']])el(id)?.addEventListener('change',e=>{const st=current(),l=activeLayer(),v=e.currentTarget.valueAsNumber;if(!l||l.kind!=='shape'||l.locked||st.exporting()||!Number.isFinite(v))return;try{const S=rootShape();const patch=key==='fillOpacity'?{background:S.withFillOpacity(l.background,l.outline,v)}:{shape:S.check({...l.shape,[key]:key==='height'?v/100:v})};st.updateLayer(l.id,patch);}catch(err){st.message(err.message);render();}});
  el('graphic-preset').addEventListener('change',()=>{const l=activeLayer();if(l)current().styleLayer(l.id,el('graphic-preset').value);});
  el('add-text').addEventListener('click',()=>current()?.addLayer('text',el('create-preset').value));
  el('add-callout').addEventListener('click',()=>current()?.addLayer('callout',el('create-preset').value));
@@ -193,7 +195,8 @@
   if(!st||now===null)return;
   const p=canvasPoint(e),w=canvas.width,h=canvas.height;
   const visible=MangoGraphics.at(st.layers(),now).reverse();
-  const clicked=visible.find(l=>{if(l.locked)return false;const r=MangoGraphics.animatedBounds?.(l,w,h,canvas.getContext?.('2d'),now)||MangoGraphics.bounds(l,w,h,canvas.getContext?.('2d'));
+  const primary=activeLayer(),S=rootShape(),g=primary?.kind==='shape'&&!primary.keyframes?.length&&!primary.locked&&visible.some(l=>l.id===primary.id)?S.geometry(primary,w,h):null,px=p.x*w,py=p.y*h,near=q=>Math.hypot(px-q.x,py-q.y)<Math.max(10,h/65),handle=g?(near(g.rotate)?'rotate':near(g.resize)?'resize':null):null;
+  const clicked=handle?primary:visible.find(l=>{if(l.locked)return false;if(l.kind==='shape'&&!l.keyframes?.length)return S.hit(l,w,h,px,py,Math.max(4,h/140));const r=MangoGraphics.animatedBounds?.(l,w,h,canvas.getContext?.('2d'),now)||MangoGraphics.bounds(l,w,h,canvas.getContext?.('2d'));
    return p.x>=r.x/w-.018&&p.x<=(r.x+r.w)/w+.018&&p.y>=r.y/h-.025&&p.y<=(r.y+r.h)/h+.025;});
   if(!clicked){return;}e.preventDefault();canvas.setPointerCapture?.(e.pointerId);
   select(clicked.id,true);
@@ -201,11 +204,12 @@
   const box=MangoGraphics.bounds(clicked,w,h),size=20;
   const onHandle=st.selectedLayer()===clicked.id&&Math.abs(p.x*w-(box.x+box.w))<size&&Math.abs(p.y*h-(box.y+box.h))<size;
   movingCanvas={id:clicked.id,startX:p.x,startY:p.y,x:clicked.x,y:clicked.y,width:clicked.width,
-   size:clicked.fontSize,height:clicked.shape?.height,mode:onHandle?'resize':'move',moved:false};
+   size:clicked.fontSize,height:clicked.shape?.height,shape:clicked.kind==='shape'?MangoGraphics.clone(clicked):null,mode:handle||(onHandle?'resize':'move'),moved:false};
  });
  canvas.addEventListener('pointermove',e=>{if(!movingCanvas)return;
   const st=current(),l=st.layers().find(x=>x.id===movingCanvas.id);if(!l)return;
   const p=canvasPoint(e),dx=p.x-movingCanvas.startX,dy=p.y-movingCanvas.startY;
+  if(movingCanvas.shape&&['rotate','resize'].includes(movingCanvas.mode)){const o=movingCanvas.shape,w=canvas.width,h=canvas.height,S=rootShape(),next=movingCanvas.mode==='rotate'?{shape:{...o.shape,rotation:S.rotateTo(o,w,h,p.x*w,p.y*h,e.shiftKey)}}:S.resizeFrom(o,w,h,dx*w,dy*h,e.shiftKey);if(JSON.stringify({x:l.x,y:l.y,width:l.width,shape:l.shape})===JSON.stringify({x:next.x??l.x,y:next.y??l.y,width:next.width??l.width,shape:next.shape}))return;if(!movingCanvas.moved){st.beginLayerMove(l.id);movingCanvas.moved=true;}st.moveShapeGeometry(l.id,next);return;}
   if(movingCanvas.mode==='resize'){
    const width=Math.max(.1,Math.min(1-l.x,movingCanvas.width+dx));
    const fontSize=e.shiftKey?Math.max(12,Math.min(220,movingCanvas.size*(1+dy*2))):movingCanvas.size;
@@ -215,7 +219,7 @@
    st.resizeLayer(l.id,width,fontSize,height);
   }else{
    const x=Math.max(0,Math.min(1-l.width,movingCanvas.x+dx));
-   const y=Math.max(0,Math.min(.94,movingCanvas.y+dy));
+   const y=Math.max(0,Math.min(l.kind==='shape'?Math.max(0,1-l.shape.height):.94,movingCanvas.y+dy));
    if(Math.abs(x-l.x)+Math.abs(y-l.y)<.0005)return;
    if(!movingCanvas.moved){st.beginLayerMove(l.id);movingCanvas.moved=true;}
    st.moveLayer(l.id,x,y);

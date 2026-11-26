@@ -5,7 +5,7 @@
   size:'px','image-layer-x':'px','image-layer-y':'px','image-layer-width':'px','image-layer-height':'px',
   'image-layer-opacity':'%','image-layer-rotation-v0715':'°','image-tool-opacity':'%','image-eraser-hardness':'%','image-mask-brush':'px',
   'image-mask-feather':'px','image-shape-radius':'px','text-font-size':'px','graphic-size':'px',
-  'graphic-x':'%','graphic-y':'%','graphic-width':'%','graphic-opacity':'%','graphic-in':'s','graphic-out':'s',
+  'graphic-shape-height':'%','graphic-shape-rotation':'°','graphic-shape-fill-opacity':'%','graphic-outline-width':'px','graphic-x':'%','graphic-y':'%','graphic-width':'%','graphic-opacity':'%','graphic-in':'s','graphic-out':'s',
   in:'s',out:'s','timeline-zoom':'×'
  });
  const field=(id,label)=>Object.freeze({id,label,unit:units[id]||''});
@@ -54,7 +54,7 @@
   return preset?validateLayout({...current,...preset}):validateLayout(current);
  }
  function fieldsFor(studio,tool,selectedGraphic=false,selectedType=''){
-  if(studio==='clip')return selectedGraphic?[...(selectedType==='shape'?clip.graphic.filter(v=>!['graphic-font','graphic-size','graphic-color'].includes(v.id)):clip.graphic),...clip.timeline]:clip.timeline.slice();
+  if(studio==='clip')return selectedGraphic?(selectedType==='shape'?[field('graphic-opacity','Opacity'),field('graphic-shape-rotation','Rotation'),field('graphic-width','Width'),field('graphic-shape-height','Height'),field('graphic-shape-fill-opacity','Fill'),field('graphic-outline-width','Stroke'),field('graphic-outline','Color'),...clip.timeline]:[...clip.graphic,...clip.timeline]):clip.timeline.slice();
   if(tool==='select'){
    const base=image.select.slice();
    const type=String(selectedType).toUpperCase();
