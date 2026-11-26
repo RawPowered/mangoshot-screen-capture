@@ -4,7 +4,7 @@
  const copy=x=>JSON.parse(JSON.stringify(x)),finite=(x,a,b)=>typeof x==='number'&&Number.isFinite(x)&&x>=a&&x<=b;
  const defaults=()=>({clips:[],tracks:{V2:{visible:true,locked:false,opacity:1},V3:{visible:true,locked:false,opacity:1},A2:{muted:false,locked:false,volume:1}}});
  const gif=a=>a.kind==='image'&&(/\.gif$/i.test(a.name)||a.mime==='image/gif');
- const visual=c=>c.track!=='A2',framesFor=(c,a)=>a.kind==='video'||gif(a)?Math.max(2,Math.ceil((c.end-c.start)*FPS)):1;
+ const visual=c=>c.track!=='A2',framesFor=(c,a)=>a.kind==='video'&&root.MangoStreamingV0718?0:a.kind==='video'||gif(a)?Math.max(2,Math.ceil((c.end-c.start)*FPS)):1;
  function check(input,assets,length){
   if(!input||!Array.isArray(input.clips)||input.clips.length>16||!input.tracks||!finite(length,0,864000))throw Error('Invalid secondary sequence or 16 clip limit.');
   const out=defaults(),find=id=>Array.isArray(assets)?assets.find(a=>a.id===id):assets(id),ids=new Set();let samples=0;
@@ -23,13 +23,13 @@
    if(visual(c))samples+=framesFor(c,a);
    ids.add(c.id);out.clips.push({id:c.id,assetId:c.assetId,track:c.track,start:c.start,end:c.end,sourceIn:c.sourceIn,sourceOut:c.sourceOut,opacity:c.opacity,volume:c.volume,locked:c.locked,visible:c.visible,x:c.x,y:c.y,width:c.width,height:c.height,fit:c.fit,grade});
   }
-  if(samples>MAX_FRAMES)throw Error('Secondary frame limit exceeded (about 10 seconds total of moving overlays at 15 fps).');
+  if(samples>MAX_FRAMES)throw Error('Secondary still/GIF frame budget exceeded; shorten GIFs or convert them to local video.');
   out.clips.sort((a,b)=>TRACKS.indexOf(a.track)-TRACKS.indexOf(b.track)||a.start-b.start||a.id.localeCompare(b.id));
   for(let i=1;i<out.clips.length;i++){const a=out.clips[i-1],b=out.clips[i];if(a.track===b.track&&b.start<a.end-.00001)throw Error('Clips overlap on '+a.track+'. Change timing or track.');}
   return out;
  }
  function make(a,at,length,track=a.kind==='audio'?'A2':'V2'){
-  const span=Math.min(a.kind==='image'?3:a.duration||0,a.kind==='video'||gif(a)?4:120,length-at);if(span<.1)throw Error('Move playhead earlier or wait for metadata.');
+  const span=Math.min(a.kind==='image'?3:a.duration||0,a.kind==='video'&&root.MangoStreamingV0718?length:a.kind==='video'||gif(a)?4:120,length-at);if(span<.1)throw Error('Move playhead earlier or wait for metadata.');
   return {id:root.crypto?.randomUUID?.()||'media-'+Date.now()+'-'+Math.random().toString(36).slice(2),assetId:a.id,track,start:at,end:at+span,sourceIn:0,sourceOut:span,opacity:1,volume:1,locked:false,visible:true,x:0,y:0,width:1,height:1,fit:'contain',grade:[]};
  }
  const active=(m,t)=>m.clips.filter(c=>c.start<=t&&t<c.end&&c.visible&&(visual(c)?m.tracks[c.track].visible&&m.tracks[c.track].opacity*c.opacity>0:!m.tracks.A2.muted&&m.tracks.A2.volume*c.volume>0));
@@ -40,17 +40,18 @@
  function raster(frame,w,h,count){if(!finite(w,1,16384)||!finite(h,1,16384)||w*h>24000000)throw Error('Secondary source exceeds 24 megapixels.');const d=dimensions(w,h,count),c=root.document.createElement('canvas');c.width=d.w;c.height=d.h;c.getContext('2d').drawImage(frame,0,0,d.w,d.h);return c;}
  function createRuntime(asset){
   let cache=new Map(),key=null,pending=null,controller=null,failed=null;
+  const S=root.MangoStreamingV0718,streams=S?.pool(asset);
   const signature=m=>root.MangoProfessionalTimelineV0717?.decodeSignature(m,asset,framesFor,gif)||JSON.stringify([m,m.clips.map(c=>asset(c.assetId)?.url||null)]);
   function dispose(map){for(const x of map.values())for(const f of x.frames||[])f.width=f.height=0;}
-  function clear(){controller?.abort();controller=null;dispose(cache);cache=new Map();key=null;pending=null;failed=null;}
+  function clear(){controller?.abort();controller=null;streams?.clear();dispose(cache);cache=new Map();key=null;pending=null;failed=null;}
   const ready=m=>!m.clips.length||key===signature(m)&&!pending&&!failed;
   async function prepare(raw,length,notify=()=>{}){
    const m=check(raw,asset,length),wanted=signature(m);
    for(const c of m.clips){const a=asset(c.assetId);if(!a||a.missing||!a.url||!a.blob)throw Error('Relink missing local asset: '+(a?.name||c.assetId));root.MangoCompositorV0714?.requireSupport(c.grade);}
-   if(key===wanted){if(failed)throw failed;if(pending)await pending;for(const c of m.clips){if(!visual(c)&&c.sourceOut>(cache.get(c.id)?.audio?.duration??0)+.03)throw Error('Audio trim exceeds the prepared source duration.');}return m;}
+   if(key===wanted){if(failed)throw failed;if(pending)await pending;for(const c of m.clips){const e=cache.get(c.id);if(!visual(c)&&c.sourceOut>(e?.audio?.duration??0)+.03)throw Error('Audio trim exceeds the prepared source duration.');if(e?.videoMeta&&c.sourceOut>e.videoMeta.duration+.03)throw Error('Video trim exceeds decoded source duration.');}return m;}
    clear();key=wanted;if(!m.clips.length)return m;
    controller=new AbortController();const signal=controller.signal,local=new Map(),count=m.clips.reduce((n,c)=>n+(visual(c)?framesFor(c,asset(c.assetId)):0),0);
-   pending=Promise.resolve().then(async()=>{let ac=null,totalAudio=0,progress=0;
+   pending=Promise.resolve().then(async()=>{let ac=null,totalAudio=0,progress=0;const probes=new Map();
     try{
      for(const c of m.clips){
       const a=asset(c.assetId);if(!a||a.missing||!a.url||!a.blob)throw Error('Relink missing local asset: '+(a?.name||c.assetId));
@@ -58,6 +59,8 @@
       if(a.kind==='audio'){
        const AC=root.AudioContext||root.webkitAudioContext;if(!AC)throw Error('Web Audio unavailable.');ac||=new AC();entry.audio=await ac.decodeAudioData(await a.blob.arrayBuffer());totalAudio+=entry.audio.length*entry.audio.numberOfChannels;
        if(totalAudio>MAX_AUDIO||c.sourceOut>entry.audio.duration+.03)throw Error('Decoded audio exceeds memory budget or source duration.');
+      }else if(a.kind==='video'&&S){
+       let meta=probes.get(a.url);if(!meta){meta=await S.probe(a,signal);probes.set(a.url,meta);}if(c.sourceOut>meta.duration+.03)throw Error('Secondary clip exceeds decoded video duration.');entry.videoMeta=meta;
       }else if(a.kind==='video'){
        const v=root.document.createElement('video');v.muted=true;v.playsInline=true;v.preload='auto';
        try{await wait(v,'loadeddata',()=>{v.src=a.url;v.load();},signal);if(!finite(v.duration,.1,864000)||c.sourceOut>v.duration+.03)throw Error('Decoded video duration differs.');
@@ -79,9 +82,10 @@
     }catch(e){dispose(local);if(key===wanted&&controller?.signal===signal)failed=e;throw e;}finally{if(ac)void ac.close().catch(()=>{});if(key===wanted&&controller?.signal===signal){pending=null;controller=null;}}
    });return pending;
   }
-  function paint(ctx,m,t,w,h){
+  function paint(ctx,m,t,w,h,running=false,pool=streams){
    if(!m.clips.length)return true;if(!ready(m))return false;
-   for(const c of active(m,t).filter(visual)){const f=cache.get(c.id)?.frames;if(!f?.length)throw Error('Prepared visual media missing.');const frame=f[Math.min(f.length-1,Math.floor((t-c.start)/(c.end-c.start)*f.length))],dw=c.width*w,dh=c.height*h,r=fitRect(frame.width,frame.height,dw,dh,c.fit);
+   const sources=[];for(const c of active(m,t).filter(visual)){const e=cache.get(c.id);let frame;if(e?.videoMeta){frame=pool?.frame(c,t,running);if(!frame)return false;}else{const f=e?.frames;if(!f?.length)throw Error('Prepared visual media missing.');frame=f[Math.min(f.length-1,Math.floor((t-c.start)/(c.end-c.start)*f.length))];}sources.push([c,frame]);}
+   for(const [c,frame] of sources){const dw=c.width*w,dh=c.height*h,r=fitRect(frame.videoWidth||frame.width,frame.videoHeight||frame.height,dw,dh,c.fit);
     ctx.save();try{ctx.translate(c.x*w,c.y*h);ctx.beginPath();ctx.rect(0,0,dw,dh);ctx.clip();ctx.globalAlpha*=c.opacity*m.tracks[c.track].opacity;ctx.filter=root.MangoCompositorV0714?.filter(c.grade,h/1080)||'none';ctx.drawImage(frame,r.x,r.y,r.w,r.h);}finally{ctx.restore();}}
    return true;
   }
@@ -93,7 +97,15 @@
     node.buffer=buffer;gain.gain.value=c.volume*m.tracks.A2.volume;node.connect(gain);gain.connect(dest);node.start(0,target,remain);current={id:c.id,node,gain,offset:target,started:now};}
    return {sync,stop};
   }
-  return {prepare,ready,paint,mixer,clear};
+  const hasStreams=m=>!!S?.has(m,asset);
+  const primeStreams=(m,t)=>streams?.prime(m,t)||Promise.resolve();
+  const startStreams=(m,t)=>streams?.start(m,t)||Promise.resolve();
+  const pauseStreams=()=>streams?.pause();
+  async function paintExact(ctx,m,t,w,h){if(!ready(m))throw Error('Secondary project not prepared.');const isolated=S?.pool(asset);
+   try{if(isolated)await isolated.prime(m,t);if(!paint(ctx,m,t,w,h,false,isolated))throw Error('Exact secondary frame unavailable.');}finally{isolated?.clear();}
+  }
+  const stats=()=>({...(streams?.stats()||{}),cachedVideoFrames:[...cache.values()].filter(e=>e.videoMeta).reduce((n,e)=>n+e.frames.length,0),cachedVisualFrames:[...cache.values()].reduce((n,e)=>n+e.frames.length,0)});
+  return {prepare,ready,paint,mixer,clear,hasStreams,primeStreams,startStreams,pauseStreams,paintExact,stats,streamsReadyAt:(m,t,run=false)=>!streams||streams.readyAt(m,t,run)};
  }
  const api=Object.freeze({TRACKS,FPS,MAX_FRAMES,MAX_RASTER,MAX_FILE,defaults,copy,check,make,gif,visual,active,hasAudio,framesFor,dimensions,fitRect,createRuntime});
  root.MangoMultitrackV0716=api;if(typeof module==='object'&&module.exports)module.exports=api;

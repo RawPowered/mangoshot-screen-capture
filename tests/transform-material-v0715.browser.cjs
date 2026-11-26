@@ -22,8 +22,9 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   await p.locator('#pc-material-gold-v0715').click();await p.locator('#pc-apply-v0714').click();assert.equal((await state()).layers[0].material.kind,'metal');assert.notEqual(await pixels(),initial);await p.screenshot({path:path.join(out,'02-image-material.png')});
   await p.keyboard.press('Escape');await dlg.waitFor({state:'hidden'});await p.evaluate(()=>MangoImageActions.run('undo'));assert.equal(await pixels(),initial);
   await p.evaluate(async()=>{await MangoCreativeV079.ready;MangoCreativeImageV079.insert('fonts','manrope','600','Rotation text');const h=MangoLayerImageV0712,s=h.state(),id=s.layers.find(l=>l.type==='text').id;h.apply('effects',[id],{rotation:45},s.stamp);});assert.equal((await state()).layers.find(l=>l.type==='text').rotation,45);
-  // Isolate the mask fixture: an alpha hole must not reveal earlier annotation pixels.
-  await p.goto(base+'editor.html?stored=rotation-fixture');await p.waitForFunction(()=>MangoImageActions.state().ready&&!!window.MangoCompositorUIV0714);
+  // Captures are consumed on first load. Seed a fresh, independent mask fixture.
+  await p.evaluate(async()=>{const c=document.createElement('canvas');c.width=1000;c.height=600;const g=c.getContext('2d');g.fillStyle='#28323c';g.fillRect(0,0,1000,600);await MangoCaptureStore.save('rotation-mask-fixture',{width:1000,height:600,pageHeight:600,dpr:1,frames:1,full:false},[{index:0,scrollY:0,dataUrl:c.toDataURL()}]);});
+  await p.goto(base+'editor.html?stored=rotation-mask-fixture');await p.waitForFunction(()=>MangoImageActions.state().ready&&!!window.MangoCompositorUIV0714);
   // Import an asymmetric source and confirm inverse mask mapping and actual PNG output.
   const asset=await p.evaluate(()=>{const c=document.createElement('canvas');c.width=160;c.height=80;const q=c.getContext('2d');q.fillStyle='#ff0000';q.fillRect(0,0,80,80);q.fillStyle='#0000ff';q.fillRect(80,0,80,80);return c.toDataURL().split(',')[1];});
   await p.locator('#image-import-file').setInputFiles({name:'rotation-test.png',mimeType:'image/png',buffer:Buffer.from(asset,'base64')});await p.waitForFunction(()=>MangoLayerImageV0712.state().layers.some(l=>l.type==='image'));
