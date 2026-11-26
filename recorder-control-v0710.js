@@ -19,8 +19,8 @@
  function inFrame(p,f){if(!p||!f)return null;const x=(p.x-f.x)/f.w,y=(p.y-f.y)/f.h;return x>=0&&x<=1&&y>=0&&y<=1?{x,y}:null;}
  function outFrame(p,f){return p?{x:f.x+p.x*f.w,y:f.y+p.y*f.h}:null;}
  function drawSource(ctx,media,camera,w,h){
-  const sw=media.videoWidth||w,sh=media.videoHeight||h,f=fitFrame(sw,sh,w,h);
-  if(media.readyState>=2){const c=root.MangoCamera.crop(camera,sw,sh);ctx.drawImage(media,c.sx,c.sy,c.sw,c.sh,f.x*w,f.y*h,f.w*w,f.h*h);}
+  const sw=media.videoWidth||media.displayWidth||w,sh=media.videoHeight||media.displayHeight||h,f=fitFrame(sw,sh,w,h);
+  if(media.readyState>=2||media.displayWidth>0&&media.displayHeight>0){const c=root.MangoCamera.crop(camera,sw,sh);ctx.drawImage(media,c.sx,c.sy,c.sw,c.sh,f.x*w,f.y*h,f.w*w,f.h*h);}
   return f;
  }
  const api=Object.freeze({HOLD,spotlight,key,backtick,editable,fitFrame,inFrame,outFrame,drawSource});

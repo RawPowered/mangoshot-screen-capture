@@ -1,8 +1,8 @@
 /* Local, non-destructive editing affordances. Media is NEVER modified by these controls. */
 (() => {
  const ui=id=>document.getElementById(id);
- const format=seconds=>{const sec=Math.max(0,seconds||0),mins=Math.floor(sec/60);
-   return String(Math.floor(mins/60)).padStart(2,'0')+':'+String(mins%60).padStart(2,'0')+':'+String(Math.floor(sec%60)).padStart(2,'0');};
+ const format=(seconds,precise=false)=>{const sec=Math.max(0,seconds||0),mins=Math.floor(sec/60);
+   return String(Math.floor(mins/60)).padStart(2,'0')+':'+String(mins%60).padStart(2,'0')+':'+String(Math.floor(sec%60)).padStart(2,'0')+(precise?'.'+String(Math.min(99,Math.floor((sec%1)*100+.00001))).padStart(2,'0'):'');};
  let markers=[],generation=0,tool='select',draggingPlayhead=false,draggingRange=false,rangeAnchor=0;
  // Caches are keyed by SOURCE time. Every render reprojects them into
  // sequence time, so edited gaps never appear in the A1 or thumbnail strips.
@@ -70,7 +70,7 @@
    const d=st.outputDuration();const video=st.video();
    const point=st.sequencePosition?.()??st.outputAt(video.currentTime);
    ui('timeline-playhead').style.left=(d>0&&point!==null?Math.min(100,Math.max(0,point/d*100)):0)+'%';
-   ui('current-time').textContent=format(point===null?video.currentTime:point);
+   ui('current-time').textContent=format(point===null?video.currentTime:point,true);
    const slider=ui('timeline-playhead');slider.setAttribute?.('aria-valuemin','0');
    slider.setAttribute?.('aria-valuemax',String(Math.max(0,d)));
    slider.setAttribute?.('aria-valuenow',String(Math.max(0,point??0)));
@@ -80,9 +80,9 @@
   const duration=st.outputDuration(),zoom=Number(ui('timeline-zoom').value)||1;
   ui('timeline-inner').style.width=(100*zoom)+'%';ui('timeline-mode').textContent=zoom===1?'Fit sequence':zoom.toFixed(1)+'× horizontal zoom';
   const ruler=ui('timeline-ruler');ruler.replaceChildren();
-  if(duration>0){const count=Math.min(18,Math.max(4,Math.round(10*zoom)));
+  if(duration>0){const count=Math.min(18,Math.max(4,Math.round(10*zoom)),Math.max(1,Math.ceil(duration/.01)));
    for(let i=0;i<=count;i++){
-    const tick=document.createElement('span');tick.className='ruler-tick';tick.style.left=(i/count*100)+'%';tick.textContent=format(i/count*duration);ruler.appendChild(tick);
+    const tick=document.createElement('span');tick.className='ruler-tick';tick.style.left=(i/count*100)+'%';tick.textContent=format(i/count*duration,duration/count<1);ruler.appendChild(tick);
    }
   }
   const layer=ui('marker-layer'),list=ui('marker-list');layer.replaceChildren();list.replaceChildren();

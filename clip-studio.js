@@ -31,9 +31,9 @@ const time=t=>`${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}.$
 const mp4Types=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4'];
 const webmTypes=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
 function supported(types){if(typeof MediaRecorder==='undefined')return null;return types.find(t=>MediaRecorder.isTypeSupported(t))||null;}
-function setControls(){const loaded=!!original,busy=exporting||multiPreparing;
+function setControls(){const loaded=!!original&&automationLoadReadyV075&&duration>0,busy=exporting||multiPreparing;
  byId('file').disabled=busy;byId('open-last').disabled=busy;byId('forget-last').disabled=busy;
- byId('save-original').disabled=!loaded||busy;byId('save-project').disabled=!loaded||busy;byId('open-project').disabled=!loaded||busy;
+ byId('save-original').disabled=!original||busy;byId('save-project').disabled=!loaded||busy;byId('open-project').disabled=!loaded||busy;
  for(const id of ['in','out','mark-in','mark-out','trim','cut','split','ripple-delete','range-tool','add-marker','make-thumbnails','analyze-audio','timeline-zoom','reset','play-edited','export-webm','export-mp4'])byId(id).disabled=!loaded||busy;
  byId('undo').disabled=!loaded||!history.length||busy;byId('redo').disabled=!loaded||!redoHistory.length||busy;
  byId('clear-range').disabled=!loaded||busy||(!rangeSelected&&selectedClipIndex===null);
@@ -56,7 +56,7 @@ function setControls(){const loaded=!!original,busy=exporting||multiPreparing;
    'MP4 encoding unavailable in this browser; edited MP4 export is disabled. Save original (instant) does not convert the file.';
 }
 function render(){globalThis.MangoCursorDirectorV074?.refresh?.();const durationOut=MangoTimeline.outputDuration(segments);
- byId('duration').textContent=original?'Sequence '+time(durationOut)+' · Source '+time(duration):'No video loaded';
+ byId('duration').textContent=original?(duration>0?'Sequence '+time(durationOut)+' · Source '+time(duration):'Source duration unverified'):'No video loaded';
  byId('timeline').replaceChildren();
  for(const [i,s] of segments.entries()){
   const node=document.createElement('button');node.className='clip-segment';node.type='button';
@@ -91,25 +91,20 @@ function waitVideoEvent(type,timeout=8000){return new Promise((resolve,reject)=>
  const done=()=>{clear();resolve();};const failed=()=>{clear();reject(video.error||new Error('Video decoding failed.'));};
  video.addEventListener(type,done,{once:true});video.addEventListener('error',failed,{once:true});
  });}
-async function load(blob,attachedCursorTrace=null){if(exporting||multiPreparing)throw new Error('Finish the current export first.');
+async function load(blob,attachedCursorTrace=null,capture=null){if(exporting||multiPreparing)throw new Error('Finish the current export first.');
  globalThis.MangoBridgeV077?.disconnect?.('Source changed');automationLoadReadyV075=false;automationRevisionV075++;const request=++loadVersion;cursorTrace=null;cursorRegions=[];globalThis.MangoCursorClipV073?.refresh?.();
  if(!(blob instanceof Blob)||!blob.size)throw new Error('Select a nonempty video.');
  sequencePlaying=false;sequencePreview?.stop();video.pause();stopMultiPreview();multiRuntime?.clear();multiRequest=null;secondary=MT?.defaults()||{clips:[]};cinematic?.clear();cinematicRequest=null;if(originalUrl)URL.revokeObjectURL(originalUrl);
- globalThis.MangoCreativeUI?.voice?.dispose?.();zoomEvents=[];
-  original=blob;originalFormat=await MangoFormat.detect(blob);originalUrl=URL.createObjectURL(blob);video.src=originalUrl;
+ globalThis.MangoCreativeUI?.voice?.dispose?.();zoomEvents=[];duration=0;segments=[];layers=[];selectedLayerId=null;selectedClipIndex=null;history=[];redoHistory=[];
+  const format=await MangoFormat.detect(blob);if(request!==loadVersion)return;original=blob;originalFormat=format;originalUrl=URL.createObjectURL(blob);const metadata=waitVideoEvent('loadedmetadata');video.src=originalUrl;const gate=globalThis.MangoMediaDurationV0739;const expected=gate?.expected(capture,attachedCursorTrace)||0;const notice=byId('media-check-v0739');if(notice){notice.hidden=false;notice.dataset.state='checking';byId('media-check-message-v0739').textContent='Checking source duration'+(expected?' against '+expected.toFixed(1)+'s of capture evidence':'')+'…';}setControls();
  byId('source-format').textContent='Source container: '+(originalFormat?.toUpperCase()||'UNKNOWN')+' · '+(blob.size/1048576).toFixed(1)+' MiB';
- await waitVideoEvent('loadedmetadata');if(request!==loadVersion)return;duration=video.duration;
- if(!Number.isFinite(duration)||duration<=0){
-   // WebM files from MediaRecorder sometimes omit explicit duration metadata.
-   if(video.seekable.length){const t=video.seekable.end(video.seekable.length-1);if(Number.isFinite(t)&&t>0)duration=t;}
-   if(!Number.isFinite(duration)||duration<=0){
-     const recovered=new Promise(resolve=>{const done=()=>{video.removeEventListener('seeked',done);resolve();};
-       video.addEventListener('seeked',done,{once:true});setTimeout(done,3000);});
-     try{video.currentTime=1e9;await recovered;duration=Number.isFinite(video.duration)?video.duration:video.currentTime;}catch{}
-   }
-   try{video.currentTime=0;}catch{}
- }
- if(!Number.isFinite(duration)||duration<=0||duration>86400)throw new Error('The browser could not determine video duration. Try importing a finalized MP4/WebM file.');
+ try{await metadata;if(request!==loadVersion)return;
+  if(gate)duration=await gate.resolve(video,expected,()=>request===loadVersion);
+  else duration=video.duration;
+  if(request!==loadVersion)return;
+  if(!Number.isFinite(duration)||duration<=0||duration>86400)throw Error('The browser could not determine a valid source duration.');
+  if(notice){notice.hidden=true;notice.dataset.state='verified';}
+ }catch(error){if(request!==loadVersion)return;duration=0;segments=[];render();if(notice){notice.hidden=false;notice.dataset.state='error';byId('media-check-message-v0739').textContent=error.message+' Original bytes retained. Save original or try a finalized/remuxed file.';}label('Source not qualified: '+error.message);return;}
  if(attachedCursorTrace&&globalThis.MangoCursorCoreV073){try{cursorTrace=globalThis.MangoCursorCoreV073.trace(attachedCursorTrace);}catch{cursorTrace=null;}}
  segments=[{start:0,end:duration}];layers=[];zoomEvents=[];transitions=[];sourceGrade=[];selectedLayerId=null;selectedClipIndex=null;rangeSelected=false;history=[];redoHistory=[];byId('in').value='0';byId('out').value=duration.toFixed(2);
  byId('in').max=byId('out').max=duration.toFixed(2);
@@ -268,7 +263,7 @@ byId('reset').onclick=()=>{if(!original||exporting||multiPreparing)return;rememb
  selectedClipIndex=null;rangeSelected=false;byId('in').value='0';byId('out').value=duration.toFixed(2);
  globalThis.MangoClipTimeline?.loadMarkers?.([]);refreshed();label('Source, graphics and markers reset.');};
 byId('file').addEventListener('change',event=>{if(event.target.files?.[0])load(event.target.files[0]).catch(e=>label('Open failed: '+e.message));});
-byId('open-last').onclick=async()=>{try{const record=await MangoClips.load();if(!record?.blob)throw new Error('No stored recording found.');await load(record.blob,record.cursorTrace||null);}catch(e){label('Cannot open last recording: '+e.message);}};
+byId('open-last').onclick=async()=>{try{const record=await MangoClips.load();if(!record?.blob)throw new Error('No stored recording found.');await load(record.blob,record.cursorTrace||null,record.capture||null);}catch(e){label('Cannot open last recording: '+e.message);}};
 byId('forget-last').onclick=async()=>{try{await MangoClips.clear();label('Last locally stored recording deleted.');}catch(e){label('Cannot remove stored video: '+e.message);}};
 async function seek(timepoint,v=video){v.pause();if(Math.abs(v.currentTime-timepoint)<.025)return;
  const ready=new Promise((resolve,reject)=>{const timer=setTimeout(()=>{v.removeEventListener('seeked',done);reject(new Error('Seeking timed out.'));},8000);
@@ -376,10 +371,10 @@ if(requestedRecording){
  MangoClips.load(requestedRecording).then(record=>{
   if(loadVersion>0)return; // user already imported a different file
   if(!record?.blob)throw new Error('This recording is no longer in the local clip library. Use Import video to open its downloaded file.');
-  return load(record.blob,record.cursorTrace||null);
+  return load(record.blob,record.cursorTrace||null,record.capture||null);
  }).catch(error=>label('Recording handoff failed: '+error.message));
 }else{
- MangoClips.load().then(record=>{if(record?.blob&&loadVersion===0)return load(record.blob,record.cursorTrace||null);})
+ MangoClips.load().then(record=>{if(record?.blob&&loadVersion===0)return load(record.blob,record.cursorTrace||null,record.capture||null);})
    .catch(error=>label('Could not auto-open latest video: '+error.message));
 }
 
