@@ -23,8 +23,8 @@
  function requireRenderer(){if(!state)state=make();if(state.gl.isContextLost())throw Error('3D graphics context lost. Restore browser graphics before editing or exporting.');return state;}
  function drop(k){const e=cache.get(k);if(!e)return;cache.delete(k);cachedPixels-=e.pixels;e.canvas.width=e.canvas.height=1;}
  function dimensions(w,h){if(!Number.isFinite(w)||!Number.isFinite(h)||w<=0||h<=0)throw Error('Invalid spatial viewport.');const s=Math.min(1,MAX_SIDE/w,MAX_SIDE/h,Math.sqrt(MAX_PIXELS/(w*h)));return [Math.max(1,Math.round(w*s)),Math.max(1,Math.round(h*s))];}
- function render(value,width,height,progress=1,transient=false,reveals=null){
-  const scene=value?.mode==='scene',Q=root.MangoUnifiedSceneV0733,v=scene?Q.check(value):S.check(value),[w,h]=dimensions(width,height);if(typeof progress!=='number'||!Number.isFinite(progress)||progress<0||progress>1)throw Error('Invalid path reveal.');if(reveals!==null&&(!scene||typeof reveals!=='object'||Array.isArray(reveals)||Object.keys(reveals).some(id=>!v.objects.some(o=>o.id===id)||typeof reveals[id]!=='number'||!Number.isFinite(reveals[id])||reveals[id]<0||reveals[id]>1)))throw Error('Invalid per-object reveal map.');const key=JSON.stringify([v,w,h,progress,reveals]);
+ function render(value,width,height,progress=1,transient=false,reveals=null,transforms=null){
+  const scene=value?.mode==='scene',Q=root.MangoUnifiedSceneV0733,v=scene?Q.check(value):S.check(value),[w,h]=dimensions(width,height);if(typeof progress!=='number'||!Number.isFinite(progress)||progress<0||progress>1)throw Error('Invalid path reveal.');if(reveals!==null&&(!scene||typeof reveals!=='object'||Array.isArray(reveals)||Object.keys(reveals).some(id=>!v.objects.some(o=>o.id===id)||typeof reveals[id]!=='number'||!Number.isFinite(reveals[id])||reveals[id]<0||reveals[id]>1)))throw Error('Invalid per-object reveal map.');const rigid=root.MangoRigidMotionV0736;if(transforms!==null&&(!scene||!rigid||typeof transforms!=='object'||Array.isArray(transforms)||Object.keys(transforms).some(id=>!v.objects.some(o=>o.id===id))))throw Error('Invalid scene transform map.');if(transforms)for(const t of Object.values(transforms))rigid.check(t);const key=JSON.stringify([v,w,h,progress,reveals,transforms]);
   const old=transient?null:cache.get(key);if(old){cache.delete(key);cache.set(key,old);hits++;return old.canvas;}
   const {canvas:c,gl,program,vao,buffers,uniforms:u}=requireRenderer(),objects=scene?Q.entries(v):[{id:null,value:v}],b=S.camera(v.camera,w,h);
   if(c.width!==w||c.height!==h){c.width=w;c.height=h;}
@@ -34,7 +34,7 @@
   vec('eye',b.eye);vec('rightAxis',b.right);vec('upAxis',b.up);vec('forwardAxis',b.forward);f('tanHalf',b.t);f('aspect',b.aspect);f('nearZ',S.NEAR);f('farZ',S.FAR);f('orthoScale',b.ortho?b.distance*b.t:0);
   // Do not clear the depth attachment between objects. Independent materials,
   // world-space vertices and a single shared camera produce actual occlusion.
-  for(const entry of objects){const o=entry.value,p=reveals&&Object.hasOwn(reveals,entry.id)?reveals[entry.id]:progress,m=S.mesh(o,p);
+  for(const entry of objects){const o=entry.value,p=reveals&&Object.hasOwn(reveals,entry.id)?reveals[entry.id]:progress,m=S.mesh(o,p);if(transforms&&Object.hasOwn(transforms,entry.id))rigid.mesh(m,transforms[entry.id]);
    for(const [i,data] of [m.positions,m.normals].entries()){gl.bindBuffer(gl.ARRAY_BUFFER,buffers[i]);gl.bufferData(gl.ARRAY_BUFFER,data,gl.DYNAMIC_DRAW);}
    vec('baseColor',[1,3,5].map(i=>parseInt(o.color.slice(i,i+2),16)/255));const a=o.light*Math.PI/180;vec('light',S.add(S.add(S.mul(b.right,Math.cos(a)),S.mul(b.up,-Math.sin(a))),S.mul(b.forward,-.85)));f('gloss',o.material==='matte'?.06:o.material==='metal'?.72:.95);
    gl.drawArrays(gl.TRIANGLES,0,m.positions.length/3);
@@ -45,12 +45,12 @@
   while(cache.size&&(cache.size>=6||cachedPixels+w*h>CACHE_PIXELS))drop(cache.keys().next().value);
   cache.set(key,{canvas:out,pixels:w*h});cachedPixels+=w*h;return out;
  }
- function paint(q,value,b,opacity=1,progress=1,transient=false,reveals=null){
+ function paint(q,value,b,opacity=1,progress=1,transient=false,reveals=null,transforms=null){
   if(!b||![b.x,b.y,b.width,b.height].every(Number.isFinite)||b.width<=0||b.height<=0)return false;
   const m=q.getTransform?.(),sx=m?Math.hypot(m.a,m.b):1,sy=m?Math.hypot(m.c,m.d):1;
   // Use the larger device scale in both dimensions so nonuniform 2D transforms
   // do not alter the camera's aspect or geometry.
-  const scale=Math.max(.05,sx,sy),c=render(value,b.width*scale,b.height*scale,progress,transient,reveals);
+  const scale=Math.max(.05,sx,sy),c=render(value,b.width*scale,b.height*scale,progress,transient,reveals,transforms);
   q.save();try{q.globalAlpha*=Math.max(0,Math.min(1,opacity));q.drawImage(c,b.x,b.y,b.width,b.height);}finally{q.restore();if(transient)c.width=c.height=1;}return true;
  }
  function hit(value,b,x,y,pad=6){if(!b||b.width<=0||b.height<=0||x<b.x-pad||y<b.y-pad||x>b.x+b.width+pad||y>b.y+b.height+pad)return false;
