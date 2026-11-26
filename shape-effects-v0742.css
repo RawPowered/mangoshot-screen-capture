@@ -21,3 +21,23 @@
 
 /* Main geometry controls are compact, not a second inspector tree. */
 .ux42-shape-body .ux42-left{position:sticky;top:0}.ux42-shape-dialog .ux42-preview{margin:auto}.zs42-advanced:not([open]){padding-bottom:2px}.zs38-controls .zs38-knobs{gap:5px}.zs38-controls .zs38-knob{padding:6px 3px}.zs38-controls .zs38-knob .co36-dial{width:46px;height:46px}.zs38-controls .zs38-knob .co36-dial-face{width:36px;height:36px}.zs38-controls .zs38-knob .co36-dial-needle{height:23px}
+
+/* v0.7.43: actual preview takes the unused left area; keep the commit visible. */
+body.studio .ls-dialog-v0712.fx43-active .ls-work-v0712{grid-template-columns:minmax(280px,1.1fr) minmax(300px,1fr)}
+body.studio .ls-dialog-v0712 .fx42-preview-box[hidden],body.studio .ls-dialog-v0712 .ls-footer-v0712 [hidden]{display:none!important}
+body.studio .ls-dialog-v0712 .fx42-preview-box{flex:0 0 auto;gap:5px;padding:8px;border:1px solid var(--carbon-line);background:var(--carbon-shell)}
+body.studio .ls-dialog-v0712 .fx42-preview-box canvas{max-width:none;width:100%;height:auto;max-height:31vh;aspect-ratio:auto;object-fit:contain}
+.fx43-preview-head{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:10px}
+.fx43-reference{display:grid;grid-template-columns:minmax(0,1fr) 55px;gap:6px;align-items:center;font-size:11px;font-variant-numeric:tabular-nums}
+.fx43-reference input{width:100%;min-width:0}
+body.studio .ls-dialog-v0712 .fx42-tabs{position:sticky;top:0;background:var(--carbon-panel);padding:0 0 6px;z-index:3}
+body.studio .ls-dialog-v0712 .fx42-tabs button{padding:5px;min-width:0;font-size:11px}
+body.studio .ls-dialog-v0712 .fx42-tabs button[aria-pressed=true]{color:var(--carbon-accent);border-color:var(--carbon-accent-edge);background:var(--carbon-accent-wash)}
+body.studio .ls-dialog-v0712 .fx42-tabs button[aria-pressed=false]:not(:hover){color:var(--carbon-text);border-color:var(--carbon-line);background:var(--carbon-panel)}
+body.studio .ls-dialog-v0712 .ls-footer-v0712{gap:10px;flex-wrap:wrap;justify-content:flex-end}
+body.studio .ls-dialog-v0712 .ls-footer-v0712 #ls-status-v0712{flex:1 1 140px}
+body.studio .ls-dialog-v0712 .ls-footer-v0712 .ls-actions-v0712{flex:0 0 auto;display:flex;gap:6px}
+body.studio .ls-dialog-v0712 .fx42-appearance{gap:7px}
+body.studio .ls-dialog-v0712 .fx42-appearance .ls-presets-v0712{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:800px){body.studio .ls-dialog-v0712.fx43-active .ls-work-v0712{grid-template-columns:minmax(190px,.85fr) minmax(0,1.15fr)}body.studio .ls-dialog-v0712 .fx42-preview-box canvas{max-height:23vh}.fx42-tabs{flex-wrap:wrap}.fx42-tabs button{flex:1 1 40%}}
+@media(max-width:480px){body.studio .ls-dialog-v0712.fx43-active .ls-work-v0712{grid-template-columns:1fr;grid-template-rows:minmax(110px,.8fr) minmax(0,1.2fr)}body.studio .ls-dialog-v0712 .fx42-preview-box canvas{max-height:16vh}}

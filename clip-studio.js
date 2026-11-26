@@ -627,12 +627,22 @@ globalThis.MangoLayerClipV0712=Object.freeze({
   remember();layers=r.layers;selectedLayerId=r.selection.at(-1)||null;selectedClipIndex=null;rangeSelected=false;refreshed();label('Layer Studio edit applied. Ctrl+Z to undo.');
   return {changed:true,selection:r.selection};
  },
+ applyCombined(ids,args,grade,expected){
+  const s=globalThis.MangoClipView.automationCapture();if(!s.ready||s.identity!==expected?.identity||s.stamp!==expected?.stamp)throw Error('Clip or selection changed. Reopen Effects Studio.');
+  const hasLayer=Object.keys(args).length>0,plan=hasLayer?MangoLayerStudioV0712.plan('clip',layers,ids,'effects',args):{layers,selection:ids,changed:false};
+  const nextGrade=grade===null?sourceGrade:compositor.checkStack(grade);
+  if(!plan.changed&&JSON.stringify(nextGrade)===JSON.stringify(sourceGrade))return {changed:false,selection:ids};
+  const source={size:original.size,format:originalFormat,duration};
+  MangoProject.check(MangoProject.pack(source,segments,plan.layers,globalThis.MangoClipTimeline?.markers?.()||[],transitions,nextGrade),source);
+  compositor.requireProject(plan.layers,nextGrade,video.videoWidth,video.videoHeight);
+  remember();layers=plan.layers;sourceGrade=nextGrade;if(hasLayer){selectedLayerId=plan.selection.at(-1)||null;selectedClipIndex=null;rangeSelected=false;}refreshed();label('Effects Studio applied. Ctrl+Z restores layer and footage changes.');
+  return {changed:true,selection:plan.selection};
+ },
  select(ids){if(!this.state().ready)throw Error('Clip editor is not ready.');globalThis.MangoClipView.selectLayer(ids.at(-1)||null);},
- preview(canvas,ids,args,stamp,progress=.5){
+ preview(canvas,ids,args,stamp,progress=.5,options=null){
   const s=this.state();if(!s.ready||s.stamp!==stamp)throw Error('Clip changed or is busy. Reopen Layer Studio.');
   let draft=layers;if(ids.length&&Object.keys(args).length)draft=MangoLayerStudioV0712.plan('clip',layers,ids,'effects',args).layers;
-  const selected=draft.filter(l=>ids.includes(l.id)),aspect=video.videoWidth&&video.videoHeight?video.videoWidth/video.videoHeight:16/9,w=Math.max(1,Math.round(Math.min(720,400*aspect))),h=Math.max(1,Math.round(w/aspect));if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}const ctx=canvas.getContext('2d');ctx.fillStyle='#202630';ctx.fillRect(0,0,w,h);if(video.readyState>=2){const at=globalThis.MangoClipView.sequencePosition()??0;MangoCreativeZoom.draw(ctx,video,zoomEvents,at,w,h);if(compositor?.active(sourceGrade))compositor.gradeFrame(ctx,sourceGrade);}
-  if(selected.length){const first=selected[0],at=first.start+(first.end-first.start)*Math.min(.999999,Math.max(0,progress));MangoGraphics.render(ctx,draft,at,w,h);}
+  const selected=draft.filter(l=>ids.includes(l.id)),aspect=video.videoWidth&&video.videoHeight?video.videoWidth/video.videoHeight:16/9,w=Math.max(1,Math.round(Math.min(720,400*aspect))),h=Math.max(1,Math.round(w/aspect));if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}const ctx=canvas.getContext('2d'),reference=MangoSequenceMedia.atSource(segments,video.currentTime)?.output??globalThis.MangoClipView.sequencePosition()??0,grade=options?.grade??sourceGrade;ctx.fillStyle='#202630';ctx.fillRect(0,0,w,h);if(video.readyState>=2){MangoCreativeZoom.draw(ctx,video,zoomEvents,reference,w,h);if(compositor?.active(grade))compositor.gradeFrame(ctx,grade);}const first=selected[0],at=options?.follow||!first?reference:first.start+(first.end-first.start)*Math.min(.999999,Math.max(0,progress));MangoGraphics.render(ctx,draft,at,w,h);
  }
 });
 
