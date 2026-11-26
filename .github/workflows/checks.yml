@@ -81,6 +81,8 @@ jobs:
           node --check clip-ux-v0739.js
           node --check creative-workspace-v0740.js
           node tests/pixel-tools-v0741.cjs
+          node tests/clip-shapes-v0742.cjs
+          node --check shape-effects-ui-v0742.js
           node --check pixel-tools-ui-v0741.js
           node --check media-duration-v0739.js
           node --check zoom-studio-v0738.js
@@ -172,7 +174,7 @@ jobs:
           retention-days: 14
 
   zoom-recovery-packaged-preview:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.41-pixel-tools'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.42-shapes-zoom-effects'
     runs-on: ubuntu-latest
     needs: browser-extension-unit-tests
     steps:
@@ -193,7 +195,7 @@ jobs:
           unzip -t dist/MangoShot-v0.6.18-mango-engine-raster-preview-Extension.zip
           mkdir -p /tmp/mango-zoom-recovery
           unzip -q dist/MangoShot-v0.6.18-mango-engine-raster-preview-Extension.zip -d /tmp/mango-zoom-recovery
-          python3 -c "import json; m=json.load(open('/tmp/mango-zoom-recovery/manifest.json')); assert m['version_name']=='0.7.41 Pixel Tools preview'"
+          python3 -c "import json; m=json.load(open('/tmp/mango-zoom-recovery/manifest.json')); assert m['version_name']=='0.7.42 Shapes Zoom Effects preview'"
       - name: Install browser test tooling
         run: |
           npm install --no-save --no-package-lock playwright
@@ -211,6 +213,10 @@ jobs:
         env:
           MANGO_EXTENSION_ROOT: /tmp/mango-zoom-recovery
         run: timeout 150s node tests/pixel-tools-v0741.browser.cjs
+      - name: Qualify shape layers and connected effects from installed ZIP
+        env:
+          MANGO_EXTENSION_ROOT: /tmp/mango-zoom-recovery
+        run: timeout 150s node tests/shape-effects-v0742.browser.cjs
       - name: Qualify long capture and editor handoff without animation frames
         env:
           MANGO_EXTENSION_ROOT: /tmp/mango-zoom-recovery
@@ -227,17 +233,18 @@ jobs:
           timeout 180s node tests/callout-motion-v0736.browser.cjs
           timeout 180s node tests/smart-focus-v0737.browser.cjs
       - name: Label the verified ZIP with its actual preview version
-        run: cp dist/MangoShot-v0.6.18-mango-engine-raster-preview-Extension.zip dist/MangoShot-v0.7.41-Pixel-Tools-Extension.zip
+        run: cp dist/MangoShot-v0.6.18-mango-engine-raster-preview-Extension.zip dist/MangoShot-v0.7.42-Shapes-Zoom-Effects-Extension.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: MangoShot-v0.7.41-Packaged-Pixel-Tools-Preview
-          path: dist/MangoShot-v0.7.41-Pixel-Tools-Extension.zip
+          name: MangoShot-v0.7.42-Packaged-Shapes-Zoom-Effects-Preview
+          path: dist/MangoShot-v0.7.42-Shapes-Zoom-Effects-Extension.zip
           retention-days: 14
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: MangoShot-v0.7.41-Packaged-Pixel-Tools-Evidence
+          name: MangoShot-v0.7.42-Packaged-Shapes-Zoom-Effects-Evidence
           path: |
+            /tmp/mango-zoom-recovery/shape-effects-screenshots/
             /tmp/mango-zoom-recovery/pixel-tools-screenshots/
             /tmp/mango-zoom-recovery/creative-workspace-screenshots/
             /tmp/mango-zoom-recovery/recording-integrity-screenshots/
@@ -248,7 +255,7 @@ jobs:
           retention-days: 14
 
   studio-precision-preview:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.41-pixel-tools'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.42-shapes-zoom-effects'
     runs-on: ubuntu-latest
     needs: browser-extension-unit-tests
     steps:
@@ -379,6 +386,9 @@ jobs:
       - name: Qualify native image pixel tools and project round trip
         if: ${{ !cancelled() }}
         run: timeout 150s node tests/pixel-tools-v0741.browser.cjs
+      - name: Qualify shape layers and connected effects
+        if: ${{ !cancelled() }}
+        run: timeout 150s node tests/shape-effects-v0742.browser.cjs
       - name: Qualify long capture, primary timeline visibility and source duration handoff
         if: ${{ !cancelled() }}
         run: timeout 150s node tests/recording-integrity-v0739.browser.cjs
@@ -386,7 +396,7 @@ jobs:
         run: |
           python3 tools/package-extension.py --out dist --version v0.6.18-mango-engine-raster-preview
           unzip -t dist/MangoShot-v0.6.18-mango-engine-raster-preview-Extension.zip
-          for src in callout-core-v0735.js callout-designer-v0735.js callout-designer-v0735.css callout-motion-core-v0736.js callout-motion-ui-v0736.js callout-motion-v0736.css smart-focus-core-v0737.js smart-focus-ui-v0737.js smart-focus-v0737.css zoom-studio-v0738.js zoom-studio-v0738.css studio-build-v0738.js recording-frames-v0739.js recording-frame-clock-v0739.js media-duration-v0739.js clip-ux-v0739.js recording-integrity-v0739.css creative-workspace-v0740.js creative-workspace-v0740.css pixel-tools-core-v0741.js pixel-tools-ui-v0741.js pixel-tools-v0741.css; do unzip -l dist/MangoShot-v0.6.18-mango-engine-raster-preview-Extension.zip | grep "$src"; done
+          for src in callout-core-v0735.js callout-designer-v0735.js callout-designer-v0735.css callout-motion-core-v0736.js callout-motion-ui-v0736.js callout-motion-v0736.css smart-focus-core-v0737.js smart-focus-ui-v0737.js smart-focus-v0737.css zoom-studio-v0738.js zoom-studio-v0738.css studio-build-v0738.js recording-frames-v0739.js recording-frame-clock-v0739.js media-duration-v0739.js clip-ux-v0739.js recording-integrity-v0739.css creative-workspace-v0740.js creative-workspace-v0740.css pixel-tools-core-v0741.js pixel-tools-ui-v0741.js pixel-tools-v0741.css clip-shapes-v0742.js shape-effects-ui-v0742.js shape-effects-v0742.css; do unzip -l dist/MangoShot-v0.6.18-mango-engine-raster-preview-Extension.zip | grep "$src"; done
           unzip -l dist/MangoShot-v0.6.18-mango-engine-raster-preview-Extension.zip | grep mango-engine-v0722.wasm
           unzip -l dist/MangoShot-v0.6.18-mango-engine-raster-preview-Extension.zip | grep image-document-core-v0723.js
           unzip -l dist/MangoShot-v0.6.18-mango-engine-raster-preview-Extension.zip | grep image-document-ui-v0723.js
@@ -421,17 +431,17 @@ jobs:
           unzip -l dist/MangoShot-v0.6.18-mango-engine-raster-preview-Extension.zip | grep cursor-director-ui-v074.js
           for src in professional-sequence.html professional-sequence-v0719.css professional-sequence-ui-v0719.js independent-sequence-core-v0719.js independent-sequence-runtime-v0719.js streaming-media-v0718.js professional-timeline-core-v0717.js professional-timeline-ui-v0717.js professional-timeline-v0717.css multitrack-core-v0716.js multitrack-ui-v0716.js multitrack-v0716.css transform-material-core-v0715.js transform-material-v0715.css compositor-core-v0714.js compositor-ui-v0714.js compositor-v0714.css cinematic-core-v0713.js cinematic-ui-v0713.js cinematic-v0713.css layer-studio-core-v0712.js layer-studio-ui-v0712.js layer-studio-v0712.css tool-studio-core-v0711.js tool-studio-ui-v0711.js tool-studio-v0711.css recorder-control-v0710.js recorder-controls-v0710.css theme-carbon-v078.css bridge-core-v077.js bridge-ui-v077.js bridge-v077.css sequence-engine-v076.js sequence-studio-v076.js sequence-studio-v076.css automation-core-v075.js automation-adapters-v075.js automation-ui-v075.js automation-v075.css; do unzip -l dist/MangoShot-v0.6.18-mango-engine-raster-preview-Extension.zip | grep "$src"; done
       - name: Label the verified ZIP with its actual preview version
-        run: cp dist/MangoShot-v0.6.18-mango-engine-raster-preview-Extension.zip dist/MangoShot-v0.7.41-Pixel-Tools-Extension.zip
+        run: cp dist/MangoShot-v0.6.18-mango-engine-raster-preview-Extension.zip dist/MangoShot-v0.7.42-Shapes-Zoom-Effects-Extension.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: MangoShot-v0.7.41-Pixel-Tools-Extension
-          path: dist/MangoShot-v0.7.41-Pixel-Tools-Extension.zip
+          name: MangoShot-v0.7.42-Shapes-Zoom-Effects-Extension
+          path: dist/MangoShot-v0.7.42-Shapes-Zoom-Effects-Extension.zip
           retention-days: 14
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: MangoShot-v0.7.41-Pixel-Tools-Screenshots
+          name: MangoShot-v0.7.42-Shapes-Zoom-Effects-Screenshots
           path: |
             carbon-screenshots/
             creative-screenshots/
@@ -464,6 +474,7 @@ jobs:
             callout-motion-screenshots/
             smart-focus-screenshots/
             zoom-recovery-screenshots/
+            shape-effects-screenshots/
             pixel-tools-screenshots/
             creative-workspace-screenshots/
             recording-integrity-screenshots/
@@ -514,7 +525,7 @@ jobs:
           retention-days: 14
 
   mango-engine-experiment:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.41-pixel-tools'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/v0.7.42-shapes-zoom-effects'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

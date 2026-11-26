@@ -15,7 +15,7 @@
  const header=line('ls-header-v0712',line('ls-title-v0712',e('small',{},image?'IMAGE STUDIO / COMPOSITION':'CLIP STUDIO / GRAPHICS'),title,e('p',{},'Organize your layers and edit appearance without changing the source media.')),btn('ls-close-v0712','Close',()=>dlg.close()));
  const layerTab=btn('ls-layer-tab-v0712','Layers',()=>mode('layers')),fxTab=btn('ls-fx-tab-v0712','Effects',()=>mode('effects'));
  const search=field('ls-search-v0712','search','',{placeholder:'Search names, folders, types…','aria-label':'Search layers'});
- const type=select('ls-type-v0712',[['all','All types'],...(image?[['image','Image'],['text','Text'],['vector','Shapes / ink']]:[['text','Title'],['callout','Callout']])]);type.setAttribute('aria-label','Filter layer types');
+ const type=select('ls-type-v0712',[['all','All types'],...(image?[['image','Image'],['text','Text'],['vector','Shapes / ink']]:[['text','Title'],['callout','Callout'],['shape','Shape']])]);type.setAttribute('aria-label','Filter layer types');
  const filter=select('ls-filter-v0712',[['all','All states'],['visible','Visible'],['hidden','Hidden'],['locked','Locked'],['unlocked','Unlocked']]);filter.setAttribute('aria-label','Filter layer state');
  const left=e('section',{class:'ls-left-v0712','aria-label':'Layer organization'}),tree=e('div',{id:'ls-tree-v0712',class:'ls-tree-v0712','aria-label':'Layer folders and layers'});
  const selectedLabel=e('span',{class:'ls-muted-v0712',id:'ls-selected-v0712'},'0 selected');
