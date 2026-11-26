@@ -15,12 +15,12 @@
   for(let i=1;i<a.points.length;i++){const d=S.sub(a.points[i],a.points[i-1]),e=S.sub(b.points[i],b.points[i-1]),v=S.sub(e,d),den=S.dot(v,v),t=den?clamp(-S.dot(d,v)/den,0,1):0;if(S.length(S.add(d,S.mul(v,t)))<MIN_SEPARATION-1e-10)throw Error('Adjacent path points would collide between keys. Add an intermediate pose or change the path.');}
  }
  function check(v,base){
-  if(!exact(v,['keys'])||!Array.isArray(v.keys)||v.keys.length<2||v.keys.length>MAX_KEYS)throw Error('Use 2–12 motion keys.');
-  const keys=v.keys.map((k,i)=>{if(!exact(k,['at','pose','reveal','ease'])||!finite(k.at,0,1)||!finite(k.reveal,0,1)||!['linear','smooth','hold'].includes(k.ease)||i&&k.at-v.keys[i-1].at<.009999999||Object.hasOwn(k.pose||{},'occlusion'))throw Error('Invalid motion key. Times must be at least 1% apart.');return {...k,pose:pose(k.pose)};});
+  const keyed=v?.maskMode==='keyed';if(!exact(v,keyed?['keys','maskMode']:['keys'])||!Array.isArray(v.keys)||v.keys.length<2||v.keys.length>MAX_KEYS)throw Error('Use 2–12 motion keys.');
+  const keys=v.keys.map((k,i)=>{if(!exact(k,keyed?['at','pose','reveal','ease','masks']:['at','pose','reveal','ease'])||!finite(k.at,0,1)||!finite(k.reveal,0,1)||!['linear','smooth','hold'].includes(k.ease)||i&&k.at-v.keys[i-1].at<.009999999||Object.hasOwn(k.pose||{},'occlusion'))throw Error('Invalid motion key. Times must be at least 1% apart.');return {...k,pose:pose(k.pose),...(keyed?{masks:S.checkOcclusion(k.masks)}:{})};});
   if(keys[0].at!==0||keys.at(-1).at!==1)throw Error('Motion needs keys at 0% and 100%.');
-  if(base&&JSON.stringify(pose(base))!==JSON.stringify(keys[0].pose))throw Error('Base arrow must match its first pose.');
+  if(base&&JSON.stringify(pose(base))!==JSON.stringify(keys[0].pose))throw Error('Base arrow must match its first pose.');if(keyed&&base&&JSON.stringify(base.occlusion||[])!==JSON.stringify(keys[0].masks))throw Error('Base foreground polygons must match the first key.');
   for(let i=1;i<keys.length;i++){if(keys[i].pose.shape!==keys[0].pose.shape||keys[i].pose.points.length!==keys[0].pose.points.length)throw Error('Motion keys must share path topology.');if(keys[i-1].ease!=='hold')checkSegment(keys[i-1].pose,keys[i].pose);}
-  return {keys};
+  return {keys,...(keyed?{maskMode:'keyed'}:{})};
  }
  function defaults(base,grow=false){const p=pose(base);return {keys:[{at:0,pose:copy(p),reveal:grow?0:1,ease:'smooth'},{at:1,pose:copy(p),reveal:1,ease:'linear'}]};}
  function interpolate(a,b,t){if(t<=0)return copy(a);if(t>=1)return copy(b);
@@ -31,13 +31,14 @@
   c.camera.azimuth=angle(a.camera.azimuth,b.camera.azimuth,t);if(a.camera.roll||b.camera.roll)c.camera.roll=angle(a.camera.roll||0,b.camera.roll||0,t);c.camera.target=vector(a.camera.target,b.camera.target,t);
   return S.check(c);
  }
+ function masksBetween(a,b,t){if(t>=1)return copy(b);if(t<=0||a.length!==b.length||a.some((p,i)=>p.length!==b[i].length))return copy(a);try{return S.checkOcclusion(a.map((poly,i)=>poly.map((p,j)=>vector(p,b[i][j],t))));}catch{return copy(a);}}
  function evaluate(motion,u,base){
   if(!motion)return {value:base,reveal:1};
   const a=motion.keys;u=clamp(u,0,1);let i=1;while(i<a.length-1&&u>a[i].at)i++;
   const p=a[i-1],q=a[i],raw=clamp((u-p.at)/(q.at-p.at),0,1),t=raw>=1?1:p.ease==='hold'?0:p.ease==='smooth'?raw*raw*(3-2*raw):raw;
-  const value=interpolate(p.pose,q.pose,t);if(base.occlusion?.length)value.occlusion=copy(base.occlusion);
+  const value=interpolate(p.pose,q.pose,t),masks=motion.maskMode==='keyed'?masksBetween(p.masks,q.masks,t):base.occlusion;if(masks?.length)value.occlusion=copy(masks);
   return {value,reveal:lerp(p.reveal,q.reveal,t)};
  }
- const api=Object.freeze({MAX_KEYS,copy,pose,check,defaults,interpolate,evaluate,checkSegment});
+ const api=Object.freeze({MAX_KEYS,copy,pose,check,defaults,interpolate,evaluate,checkSegment,masksBetween});
  root.MangoSpatialMotionV0731=api;if(typeof module==='object'&&module.exports)module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

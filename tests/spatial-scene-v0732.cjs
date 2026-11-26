@@ -1,0 +1,11 @@
+const assert=require('node:assert/strict');require('../media-assets.js');require('../compositor-core-v0714.js');require('../speed-ramp-core-v0729.js');const S=require('../spatial-arrow-core-v0730.js');require('../dimensional-callout-core-v0729.js');const M=require('../spatial-motion-core-v0731.js'),P=require('../independent-sequence-core-v0719.js');
+for(const shape of S.SHAPES){const v=S.check({...S.defaults(),shape,points:S.shapePoints(shape)});for(const t of [0,.01,.5,1]){const m=S.mesh(v,t);assert.equal(m.positions.length,m.normals.length);assert.ok([...m.positions,...m.normals].every(Number.isFinite));if(t)assert.ok(m.triangles>0&&m.triangles<7000);else assert.equal(m.triangles,0);}const m=S.mesh(v);assert.ok(Math.max(...m.positions.filter((_,i)=>i%3===2))-Math.min(...m.positions.filter((_,i)=>i%3===2))>.01);}
+const ring={...S.defaults(),shape:'ring',points:S.shapePoints('ring')};assert.ok(Math.abs(S.mesh(ring,.5).arcLength/S.mesh(ring).arcLength-.5)<1e-9);
+assert.throws(()=>S.check({...ring,points:S.defaults().points}));
+const c={...S.defaults().camera,azimuth:0,elevation:0},p=S.project([1,0,0],c,800,450),q=S.project([1,0,0],{...c,roll:90},800,450);assert.ok(p.x>400&&Math.abs(q.x-400)<1e-9&&q.y>225);
+const a=[[[.1,.1],[.3,.1],[.3,.9],[.1,.9]]],b=[[[.5,.1],[.7,.1],[.7,.9],[.5,.9]]],v={...ring,occlusion:a},m=M.defaults(v);m.maskMode='keyed';m.keys[0].masks=a;m.keys[1].masks=b;m.keys[1].pose.camera.roll=40;
+const checked=M.check(m,v),mid=M.evaluate(checked,.5,v);assert.ok(Math.abs(mid.value.occlusion[0][0][0]-.3)<1e-9);assert.equal(mid.value.camera.roll,20);assert.deepEqual(M.masksBetween(a,[],.5),a);assert.deepEqual(M.masksBetween(a,[],1),[]);
+const bad=M.copy(m);bad.keys[1].pose.shape='sphere';assert.throws(()=>M.check(bad,v),/topology/);
+let seq=P.addCallout(P.empty({duration:4,width:320,height:180}),0,v);assert.equal(seq.version,7);seq=P.change(seq,seq.clips[0].id,{spatialMotion:checked});assert.deepEqual(P.check(JSON.parse(JSON.stringify(seq))),seq);assert.throws(()=>P.check({...seq,version:6,schema:P.SCHEMA6}),/v7/);
+let old=P.addCallout(P.empty({duration:4}),0,S.defaults());assert.equal(old.version,5);old=P.change(old,old.clips[0].id,{spatialMotion:M.defaults(old.clips[0].callout3d)});assert.equal(old.version,6);
+console.log('Spatial primitive meshes, camera roll, mask vertex interpolation and v7 persistence passed');

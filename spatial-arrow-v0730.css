@@ -20,3 +20,5 @@ body.studio-image .mc-dialog-v0729:has(.sa-editor-v0730),body.studio-sequence #s
 .sm-studio-v0731 .sm-preview-v0731{display:block;width:min(100%,480px);height:auto;margin:auto;border:1px solid var(--carbon-line);background:var(--carbon-shell)}
 .sm-studio-v0731 input[type=range]{width:100%;accent-color:var(--carbon-accent)}
 .sm-studio-v0731 output{color:var(--carbon-text);font:11px ui-monospace,monospace}
+
+.sa-editor-v0730 button[aria-pressed=true]{border-color:var(--carbon-accent);color:var(--carbon-accent)}
