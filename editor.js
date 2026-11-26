@@ -202,9 +202,9 @@ function drawStroke(stroke){
  paintCompositorStroke(pen,stroke);
 }
 function rawLayerBounds(l,ctx=pen){return vectorCore?.isVector?.(l)?vectorCore.bounds(l):layerOps?.bounds?.(l,layerCore,typeEffects,ctx);}
-function rotationLocal(l,p){return rotationCore?.local(p,rawLayerBounds(l),rotationCore.rotation(l))||p;}
+function rotationLocal(l,p){const a=rotationCore?.rotation(l)||0;return a?rotationCore.local(p,rawLayerBounds(l),a):p;}
 function paintCompositorStroke(pen,stroke,previewScale=1){
- const C=globalThis.MangoCompositorV0714,R=rotationCore,can=R?.eligible(stroke),b=can?rawLayerBounds(stroke,pen):null;
+ const C=globalThis.MangoCompositorV0714,R=rotationCore,can=R?.eligible(stroke),b=can&&(R.rotation(stroke)||R.active(stroke.material))?rawLayerBounds(stroke,pen):null;
  const raw=ctx=>can?R.paintRotated(ctx,stroke,b,p=>drawStrokeRaw(stroke,p)):drawStrokeRaw(stroke,ctx);
  const material=ctx=>can&&R.active(stroke.material)?R.materialPaint(ctx,stroke.material,raw,R.aabb(b,R.rotation(stroke)),ctx.canvas.height/1080):raw(ctx);
  const paint=()=>C?.active(stroke.effectStack)&&layerOps.mayStyle(stroke)?C.paintStack(pen,stroke.effectStack,material,pen.canvas.height/1080):material(pen);
