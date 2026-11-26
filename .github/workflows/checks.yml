@@ -190,6 +190,11 @@ jobs:
         run: |
           npm install --no-save --no-package-lock playwright
           npx playwright install --with-deps chromium
+      - name: Install FFmpeg for encoded-media qualification
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          ffmpeg -version
       - name: Exercise real installation, Clip Studio, Zoom Studio and encoded camera
         env:
           MANGO_EXTENSION_ROOT: /tmp/mango-zoom-recovery
