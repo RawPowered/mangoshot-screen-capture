@@ -3,7 +3,7 @@
 (function(root){'use strict';
  const units=Object.freeze({
   size:'px','image-layer-x':'px','image-layer-y':'px','image-layer-width':'px','image-layer-height':'px',
-  'image-layer-opacity':'%','image-tool-opacity':'%','image-eraser-hardness':'%','image-mask-brush':'px',
+  'image-layer-opacity':'%','image-layer-rotation-v0715':'°','image-tool-opacity':'%','image-eraser-hardness':'%','image-mask-brush':'px',
   'image-mask-feather':'px','image-shape-radius':'px','text-font-size':'px','graphic-size':'px',
   'graphic-x':'%','graphic-y':'%','graphic-width':'%','graphic-opacity':'%','graphic-in':'s','graphic-out':'s',
   in:'s',out:'s','timeline-zoom':'×'
@@ -54,13 +54,13 @@
   return preset?validateLayout({...current,...preset}):validateLayout(current);
  }
  function fieldsFor(studio,tool,selectedGraphic=false,selectedType=''){
-  if(studio==='clip')return selectedGraphic?[...clip.timeline,...clip.graphic]:clip.timeline.slice();
+  if(studio==='clip')return selectedGraphic?[...clip.graphic,...clip.timeline]:clip.timeline.slice();
   if(tool==='select'){
    const base=image.select.slice();
    const type=String(selectedType).toUpperCase();
    if(type==='TEXT LAYER')base.push(field('text-font-size','Size'),field('text-font-family','Font'),field('text-fill-color','Color'));
    if(['IMAGE LAYER','TEXT LAYER','ANNOTATION','VECTOR LAYER'].includes(type))
-    base.push(field('image-layer-x','X'),field('image-layer-y','Y'),field('image-layer-opacity','Opacity'));
+    base.push(field('image-layer-opacity','Opacity'),field('image-layer-rotation-v0715','Rotation'),field('image-layer-x','X'),field('image-layer-y','Y'));
    if(['IMAGE LAYER','VECTOR LAYER','ANNOTATION'].includes(type))base.push(field('image-layer-width','W'),field('image-layer-height','H'));
    return base;
   }

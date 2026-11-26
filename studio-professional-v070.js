@@ -172,6 +172,7 @@
  bar.append(identity,divider,options,actions);
  transport.insertAdjacentElement('afterend',bar);
  let fieldMap=new Map(),signature='';
+ const dialReset={'size':4,'image-tool-opacity':100,'image-layer-opacity':100,'image-layer-rotation-v0715':0,'image-eraser-hardness':80,'image-mask-brush':35,'image-mask-feather':0,'image-shape-radius':18,'image-shape-points':5,'text-font-size':48,'graphic-size':48,'graphic-opacity':100,'graphic-width':70,'graphic-x':50,'graphic-y':50,'timeline-zoom':1};
  function makeProxy(spec){
   const source=byId(spec.id);
   if(!source||!['INPUT','SELECT','TEXTAREA'].includes(source.tagName))return null;
@@ -192,23 +193,39 @@
   };
   input.addEventListener('input',()=>relay('input'));
   input.addEventListener('change',()=>relay('change'));
-  label.append(input);
-  const readout=create('output','v070-readout');
-  if(['range','number'].includes(input.type)){label.append(readout);}
-  return {label,input,readout,source,spec};
+  const readout=create('output','v070-readout'),U=root.MangoCalloutMotionUIV0736,min=Number(source.min),max=Number(source.max),step=Number(source.step)||1;
+  let precision=null;
+  if(U&&Object.hasOwn(dialReset,spec.id)&&['number','range'].includes(source.type)&&source.min!==''&&source.max!==''&&Number.isFinite(min)&&Number.isFinite(max)&&max>min){
+   // The original proxy remains the exact-value field; both controls have one authoritative source.
+   input.type='number';input.step='any';label.classList.add('ux40-option-dial');let draft=null,held=false;
+   const get=()=>draft??(Number.isFinite(source.valueAsNumber)?source.valueAsNumber:dialReset[spec.id]);
+   const apply=v=>{if(source.disabled)return;const n=Math.max(min,Math.min(max,Math.round(v*10000)/10000));input.value=String(n);source.value=input.value;
+    source.dispatchEvent(new Event('input',{bubbles:true}));source.dispatchEvent(new Event('change',{bubbles:true}));schedule();};
+   const commit=()=>{if(draft===null)return;const v=draft;draft=null;apply(v);};
+   const dial=U.dial(spec.label,min,max,step,get,v=>{if(source.disabled)return;if(held){draft=v;input.value=String(Math.round(v*100)/100);}else apply(v);},()=>dialReset[spec.id],false);
+   dial.element.dataset.ux40Source=spec.id;
+   dial.element.addEventListener('pointerdown',e=>{if(source.disabled){e.stopImmediatePropagation();return;}if(e.button===0)held=true;},true);
+   dial.element.addEventListener('pointerup',()=>{held=false;commit();dial.refresh();});
+   for(const k of ['pointercancel','lostpointercapture'])dial.element.addEventListener(k,()=>{if(held){held=false;draft=null;input.value=source.value;dial.refresh();}});
+   dial.element.addEventListener('keydown',e=>{if(source.disabled)e.stopImmediatePropagation();},true);
+   const field=create('span','ux40-exact');field.append(input,readout);label.append(dial.element,field);
+   precision={refresh(){dial.element.setAttribute('aria-disabled',String(!!source.disabled));dial.element.tabIndex=source.disabled?-1:0;if(!held){input.value=source.value;dial.refresh();}},held:()=>held};
+  }else{label.append(input);if(['range','number'].includes(input.type))label.append(readout);}
+  return {label,input,readout,source,spec,precision};
  }
  function syncProxy(pair){
-  const {input,readout,source,spec}=pair;
+  const {input,readout,source,spec,precision}=pair;
   input.disabled=!!source.disabled;
   if(input.type==='checkbox')input.checked=!!source.checked;
-  else if(input.value!==source.value)input.value=source.value;
+  else if(!precision?.held()&&input.value!==source.value)input.value=source.value;
   for(const key of ['min','max','step']){
-   if(source.hasAttribute(key))input.setAttribute(key,source.getAttribute(key));
+   if(source.hasAttribute(key)&&!(precision&&key==='step'))input.setAttribute(key,source.getAttribute(key));
   }
   if(readout&&['range','number'].includes(input.type)){
    readout.value=input.type==='number'?(spec.unit||''):core.formatValue(spec.id,source.value);
    readout.textContent=readout.value;
   }
+  precision?.refresh();
  }
  function hasSelectedGraphic(){
   const st=root.MangoClipView;

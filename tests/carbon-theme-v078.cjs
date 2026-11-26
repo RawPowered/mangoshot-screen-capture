@@ -9,7 +9,7 @@ for(const page of ['editor.html','clip-studio.html','recorder.html','popup.html'
 }
 const declarations=theme.replace(/\/\*[\s\S]*?\*\//g,'');
 assert.ok(!/(?:^|[;{])\s*(?:z-index|position|display|overflow|pointer-events|filter|mix-blend-mode)\s*:/.test(declarations),'Carbon must not change overlay/layout/media behavior');
-const manifest=JSON.parse(read('manifest.json'));assert.equal(manifest.version_name,'0.7.39 Recording Integrity preview');assert.deepEqual(manifest.permissions,['activeTab','scripting','clipboardWrite','nativeMessaging']);
+const manifest=JSON.parse(read('manifest.json'));assert.equal(manifest.version_name,'0.7.40 Unified Creative Workspace preview');assert.deepEqual(manifest.permissions,['activeTab','scripting','clipboardWrite','nativeMessaging']);
 assert.ok(!manifest.host_permissions&&!manifest.externally_connectable);
 assert.match(read('image-studio-v0613.css'),/data-fx-preset=neon[^{}]*\{[^{}]*#adfb6c/,'Preserve content-facing neon style example');
 console.log('Carbon token resolution, stylesheet order, unchanged permission surface, overlay contract and preset retention passed');

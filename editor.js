@@ -1765,6 +1765,18 @@ function flatten(includeInk=true){
  if(includeInk)merged.drawImage(ink,0,0);
  return canvas;
 }
+/* One-click canvas color sampler: exact composed pixel, no layer mutation or history entry. */
+globalThis.MangoColorSampleV0740=Object.freeze({
+ sample(x,y){
+  if(!ready||!Number.isFinite(x)||!Number.isFinite(y)||x<0||y<0||x>=base.width||y>=base.height)throw Error('Pick a pixel inside the image.');
+  if(drawing||active||textDraft||rotationDrag||appearanceGesture)throw Error('Finish the current edit before sampling.');
+  const c=document.createElement('canvas');c.width=c.height=1;const q=c.getContext('2d',{willReadFrequently:true}),px=Math.floor(x),py=Math.floor(y);
+  q.drawImage(composedSource(),px,py,1,1,0,0,1,1);q.drawImage(ink,px,py,1,1,0,0,1,1);
+  const p=q.getImageData(0,0,1,1).data;if(p[3]===0)throw Error('This pixel is transparent.');
+  return '#'+Array.from(p.slice(0,3),v=>v.toString(16).padStart(2,'0')).join('');
+ },
+ use(x,y){const value=this.sample(x,y);color.value=value;globalThis.MangoProfessionalUIV070?.refresh?.();label('Sampled '+value.toUpperCase()+' · drawing color set');return value;}
+});
 function toPng(canvas){
  if(editorCore?.toPng)return editorCore.toPng(canvas);
  return new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):

@@ -1,0 +1,46 @@
+/* Single icon shelf and contextual precision rail. Carbon theme remains authoritative. */
+body.ux40-workspace .v070-options-bar{display:grid!important;grid-template-columns:minmax(75px,auto) minmax(0,1fr) auto;grid-template-rows:minmax(44px,auto) 38px;align-items:center;min-height:86px!important;max-height:none!important;gap:2px 9px!important;padding:4px 10px 3px!important;overflow:visible!important}
+body.ux40-workspace .v070-options-bar>.v070-divider{display:none}
+body.ux40-workspace .v070-tool-identity{grid-column:1;grid-row:1;max-width:115px}
+body.ux40-workspace .v070-fields{grid-column:2;grid-row:1;min-height:44px;align-items:center;gap:9px;scrollbar-width:thin;scrollbar-color:var(--carbon-line-strong) transparent}
+body.ux40-workspace .v070-quick-actions{grid-column:3;grid-row:1;min-width:0}
+body.ux40-workspace .v070-option.ux40-option-dial{display:grid;grid-template-columns:34px minmax(46px,68px);grid-template-rows:13px 24px;gap:1px 6px;align-items:center;flex:0 0 auto;min-width:86px}
+.ux40-option-dial>.v070-option-label{grid-column:2;grid-row:1;color:var(--carbon-secondary,#bcc5ce);font-size:10px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ux40-option-dial>.co36-dial{grid-column:1;grid-row:1/3;width:34px;height:34px}
+.ux40-option-dial .ux40-exact{display:flex;align-items:center;gap:2px;grid-column:2;grid-row:2;min-width:0}
+body.ux40-workspace .ux40-exact .v070-proxy{width:48px;min-width:0;max-width:64px;min-height:22px;height:23px;font-size:11px;padding:2px 3px;box-sizing:border-box;text-align:right;font-variant-numeric:tabular-nums}
+body.ux40-workspace .ux40-exact .v070-proxy::-webkit-inner-spin-button{appearance:none}
+.ux40-exact .v070-readout{font-size:9px;min-width:0;opacity:.8}
+body.ux40-workspace .co36-dial[aria-disabled=true]{opacity:.35;cursor:not-allowed}
+body.ux40-workspace .ux40-shelf{grid-column:1/-1;grid-row:2;min-width:0;display:flex;align-items:center;gap:9px;border-top:1px solid var(--carbon-line);padding-top:3px;height:38px;box-sizing:border-box}
+.ux40-shelf-caption{font:700 9px system-ui;letter-spacing:.09em;color:var(--carbon-secondary,#a9b4bf);flex:0 0 auto;white-space:nowrap}
+.ux40-shelf-strip{flex:1;min-width:0;display:flex;align-items:center;gap:7px;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;scrollbar-color:var(--carbon-line-strong) transparent;overscroll-behavior-x:contain}
+.ux40-group{display:flex;align-items:center;gap:3px;flex:0 0 auto;padding-right:7px;border-right:1px solid var(--carbon-line)}
+.ux40-group:last-child{border-right:none}
+body.ux40-workspace .ux40-launch{display:inline-flex!important;align-items:center;justify-content:center;gap:4px;min-width:0;height:29px;min-height:29px;padding:3px 6px!important;box-sizing:border-box;line-height:1;white-space:nowrap;font-size:10px;font-weight:600;color:var(--carbon-text);background:transparent;border:1px solid transparent;border-radius:3px;flex:0 0 auto}
+body.ux40-workspace .ux40-launch svg{flex:none;display:block}
+body.ux40-workspace .ux40-launch:hover:not(:disabled){background:var(--carbon-hover);border-color:var(--carbon-line-strong)}
+body.ux40-workspace .ux40-launch[aria-pressed=true]{background:var(--carbon-active);border-color:var(--carbon-accent);color:var(--carbon-accent)}
+body.ux40-workspace .ux40-launch:disabled{opacity:.4;cursor:not-allowed}
+body.ux40-workspace .ux40-launch:focus-visible{outline:2px solid var(--carbon-accent);outline-offset:-2px}
+body.ux40-workspace .ci-studios-v0720[hidden]{display:none!important}
+body.ux40-sampling #ink{cursor:crosshair!important}
+body.ux40-workspace #ux40-sample svg{filter:drop-shadow(0 0 2px var(--ux40-sample,transparent))}
+body.ux40-workspace .v062-property-tabs{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+body.ux40-workspace .v062-property-tabs button{display:flex;align-items:center;justify-content:center;gap:5px}
+body.ux40-workspace .v062-property-tabs button svg{width:15px;height:15px;flex:none}
+body.ux40-workspace .v070-tool-switch{min-width:30px;padding:4px!important;display:inline-flex;align-items:center;justify-content:center}
+body.ux40-workspace .v070-tool-switch svg{width:16px;height:16px}
+body.studio-clip.ux40-workspace.v065-viewport #timeline.ux40-primary{height:68px!important;min-height:68px!important;max-height:68px!important;margin-top:3px!important;flex:0 0 68px}
+body.studio-clip.ux40-workspace.v065-viewport #timeline.ux40-primary .thumbnail-strip{height:43px!important}
+body.studio-clip.ux40-workspace.v065-viewport #timeline.ux40-primary .waveform-strip{height:24px!important}
+body.studio-clip.ux40-workspace.v065-viewport #timeline.ux40-primary .clip-segment{height:100%!important;min-height:0!important}
+body.studio-clip.ux40-workspace.v065-viewport .timeline-scroll{min-height:100px!important}
+body.studio-clip.ux40-workspace.v065-viewport .clip-timeline-panel>.panel-heading{min-height:27px!important;padding:4px 9px}
+body.studio-clip.ux40-workspace.v065-viewport .timeline-tools{min-height:30px!important;padding:3px 7px!important}
+body.studio-clip.ux40-workspace.v065-viewport .timeline-selection-note{padding:3px 8px!important;line-height:1.15!important}
+body.studio-clip.ux40-workspace.v065-viewport .timeline-footer{display:none!important}
+body.studio-clip.ux40-workspace.v065-viewport #segments{max-height:20px!important}
+body.studio-clip.ux40-workspace.v065-viewport #timeline-ruler{height:23px!important;min-height:23px!important}
+@media(max-width:1200px){.ux40-tool-label{display:none}.ux40-shelf-caption{font-size:8px}body.ux40-workspace .ux40-launch{width:32px;padding:3px!important}.ux40-group{gap:2px;padding-right:4px}.ux40-shelf-strip{gap:4px}}
+@media(max-height:660px){body.ux40-workspace .v070-options-bar{grid-template-rows:39px 32px;min-height:77px!important}body.ux40-workspace .ux40-shelf{height:32px}}
