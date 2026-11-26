@@ -1,0 +1,16 @@
+const assert=require('node:assert/strict'),E=require('../creative-effects-core-v0726.js');
+for(const p of E.presets)assert.deepEqual(E.check({gradient:p.gradient,shadows:[]}).gradient,p.gradient);
+const v={gradient:E.copy(E.presets[0].gradient),shadows:[E.shadow('shadow'),E.shadow('glow')]};assert.deepEqual(E.check(v),v);assert.equal(E.active(v),true);assert.equal(E.active(E.empty()),false);
+assert.equal(E.check({gradient:null,shadows:[{...E.shadow('glow'),x:12,y:15}]}).shadows[0].x,0);
+assert.throws(()=>E.check({...v,shadows:Array(7).fill(E.shadow('shadow'))}));
+assert.throws(()=>E.check({...v,gradient:{...v.gradient,stops:[v.gradient.stops[0],v.gradient.stops[0],v.gradient.stops[2]]}}));
+assert.throws(()=>E.check({...v,gradient:{...v.gradient,stops:v.gradient.stops.slice(1)}}));
+assert.throws(()=>E.check({...v,gradient:{...v.gradient,opacity:NaN}}));
+assert.throws(()=>E.check({...v,shadows:[{...v.shadows[0],color:'url(https://example.invalid)'}]}));
+const C={supports:()=>true};E.requireBudget([{type:'text',creativeFx:v}],3840,2160,C);
+assert.throws(()=>E.requireBudget([{type:'text',creativeFx:v}],4000,3000,C),/9 megapixels/);
+assert.throws(()=>E.requireBudget([{type:'redact',creativeFx:v}],100,100,C),/Protected/);
+assert.throws(()=>E.requireBudget([{type:'pen',creativeFx:v}],100,100,{supports:()=>false}),/blur/);
+assert.throws(()=>E.requireBudget(Array.from({length:65},()=>({type:'text',creativeFx:v})),100,100,C),/64 active/);
+assert.ok(E.gradientCSS(v.gradient).includes('linear-gradient'));
+console.log('Creative effects validation, gradient stops, protected layer and memory bounds passed');

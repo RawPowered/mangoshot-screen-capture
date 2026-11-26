@@ -20,7 +20,7 @@ const layerCore=globalThis.MangoImageLayersV0612;
 const typeEffects=globalThis.MangoImageTypeV0613;
 const vectorCore=globalThis.MangoImageVectorV0615;
 const penInput=globalThis.MangoPenInputV0616;
-const precisionBrush=globalThis.MangoBrushV0725;
+const precisionBrush=globalThis.MangoBrushV0725,creativeEffects=globalThis.MangoCreativeEffectsV0726;
 let brushPreference=precisionBrush?.read().profile||null;
 const layerOps=globalThis.MangoLayerOpsV0618;
 const selectedBox=document.getElementById('text-selection-box'),inline=document.getElementById('text-inline'),
@@ -210,11 +210,12 @@ function drawStroke(stroke){
 function rawLayerBounds(l,ctx=pen){return vectorCore?.isVector?.(l)?vectorCore.bounds(l):layerOps?.bounds?.(l,layerCore,typeEffects,ctx);}
 function rotationLocal(l,p){const a=rotationCore?.rotation(l)||0;return a?rotationCore.local(p,rawLayerBounds(l),a):p;}
 function paintCompositorStroke(pen,stroke,previewScale=1){
- const C=globalThis.MangoCompositorV0714,R=rotationCore,can=R?.eligible(stroke),b=can&&(R.rotation(stroke)||R.active(stroke.material))?rawLayerBounds(stroke,pen):null;
+ const C=globalThis.MangoCompositorV0714,R=rotationCore,can=R?.eligible(stroke),hasCreative=can&&creativeEffects?.active(stroke.creativeFx),b=can&&(R.rotation(stroke)||R.active(stroke.material)||hasCreative)?rawLayerBounds(stroke,pen):null;
  const raw=ctx=>can?R.paintRotated(ctx,stroke,b,p=>drawStrokeRaw(stroke,p)):drawStrokeRaw(stroke,ctx);
  const material=ctx=>can&&R.active(stroke.material)?R.materialPaint(ctx,stroke.material,raw,R.aabb(b,R.rotation(stroke)),ctx.canvas.height/1080):raw(ctx);
- const paint=()=>C?.active(stroke.effectStack)&&layerOps.mayStyle(stroke)?C.paintStack(pen,stroke.effectStack,material,pen.canvas.height/1080):material(pen);
- if(layerOps?.apply)layerOps.apply(pen,stroke,paint);else paint();
+ const filtered=target=>C?.active(stroke.effectStack)&&layerOps.mayStyle(stroke)?C.paintStack(target,stroke.effectStack,material,target.canvas.height/1080):material(target);
+ if(hasCreative){creativeEffects.paint(pen,stroke,filtered,R.aabb(b,R.rotation(stroke)),previewScale,layerOps.style(stroke));return;}
+ const paint=()=>filtered(pen);if(layerOps?.apply)layerOps.apply(pen,stroke,paint);else paint();
 }
 const imageStrokeContext=pen;
 function drawStrokeRaw(stroke,pen=imageStrokeContext){
@@ -591,14 +592,16 @@ function cutSelectedLayer(){
 function copySelectedStyle(){
  const layer=selectedAnyStroke();
  if(!layer||!layerOps?.mayStyle(layer))return false;
- styleClipboard={opacity:layer.opacity??1,layerFx:layerOps.copy(layerOps.style(layer))};
+ styleClipboard={opacity:layer.opacity??1,layerFx:layerOps.copy(layerOps.style(layer)),creativeFx:layer.creativeFx?creativeEffects.copy(layer.creativeFx):null};
  label('Layer appearance copied.');syncLayerProperties();return true;
 }
 function pasteCopiedStyle(){
  const layer=selectedAnyStroke(),index=selectedAnyIndex();
  if(!styleClipboard||!layer||layer.locked||!layerOps?.mayStyle(layer))return false;
- snapshot();
- strokes[index]={...layer,opacity:styleClipboard.opacity,layerFx:layerOps.copy(styleClipboard.layerFx)};
+ const next={...layer,opacity:styleClipboard.opacity,layerFx:layerOps.copy(styleClipboard.layerFx)};
+ if(styleClipboard.creativeFx)next.creativeFx=creativeEffects.copy(styleClipboard.creativeFx);else delete next.creativeFx;
+ try{creativeEffects.requireBudget(strokes.map((l,i)=>i===index?next:l),ink.width,ink.height);}catch(e){label(e.message);return false;}
+ snapshot();strokes[index]=next;
  redraw();setReady(true);syncLayerProperties();
  label('Layer style pasted · Ctrl+Z restores the original appearance.');return true;
 }
@@ -2034,8 +2037,8 @@ globalThis.MangoImageDocumentV0723=Object.freeze({
     const c=document.createElement('canvas');c.width=a.width;c.height=a.height;c.getContext('2d').drawImage(a.image,0,0);assets.push({id:l.assetId,name:a.name,width:a.width,height:a.height,png:c.toDataURL('image/png')});c.width=c.height=1;assetIds.add(l.assetId);}
    if(l.cutoutKey&&!matteIds.has(l.cutoutKey)){const m=registry.get(l.cutoutKey);if(!m)throw Error('Missing image matte.');mattes.push({id:l.cutoutKey,width:m.width,height:m.height,alpha:D.encode(m.data)});matteIds.add(l.cutoutKey);}
   }
-  const comp=advancedComp?.reconcile(composition,strokes),v2=advancedComp?.active(comp),v3=layers.some(l=>l.brush);
-  return D.check({format:'MangoShotImage',version:v3?3:v2?2:1,name,width:base.width,height:base.height,base:base.toDataURL('image/png'),layers,assets,mattes,...(v2||v3?{composition:comp}:{})},this.cores());
+  const comp=advancedComp?.reconcile(composition,strokes),v2=advancedComp?.active(comp),v3=layers.some(l=>l.brush),v4=layers.some(l=>l.creativeFx);
+  return D.check({format:'MangoShotImage',version:v4?4:v3?3:v2?2:1,name,width:base.width,height:base.height,base:base.toDataURL('image/png'),layers,assets,mattes,...(v2||v3||v4?{composition:comp}:{})},this.cores());
  },
  async open(raw,stamp){
   const D=globalThis.MangoImageDocumentCoreV0723,initial=this.state();if(!initial.canOpen||initial.stamp!==stamp)throw Error('Image editor is busy.');
@@ -2059,6 +2062,11 @@ globalThis.MangoImageDocumentV0723=Object.freeze({
   setReady(true);zoom();syncSelectedText();updateSelectionBox();updateImageSelectionBox();updateVectorSelectionBox();updateInkRotationBox();paintBatchOverlay();
   const info=document.getElementById('image-meta');if(info)info.textContent=p.width+' × '+p.height+' px · editable project';
   label('Project opened · '+p.layers.length+' editable layers');return {name:p.name,width:p.width,height:p.height,layers:p.layers.length};
+ },
+ maskThumbnail(id,canvas){
+  const l=strokes.find(x=>x.id===id);if(!l||l.type!=='image'||(!l.cutoutKey&&!l.mask?.paths?.length))return false;
+  const src=layerCore.composite(l);if(!src)return false;const q=canvas.getContext('2d'),w=canvas.width,h=canvas.height,scale=Math.min(w/src.width,h/src.height),rw=Math.max(1,src.width*scale),rh=Math.max(1,src.height*scale);
+  q.clearRect(0,0,w,h);q.save();try{q.drawImage(src,(w-rw)/2,(h-rh)/2,rw,rh);q.globalCompositeOperation='source-in';q.fillStyle='#ffffff';q.fillRect(0,0,w,h);q.globalCompositeOperation='destination-over';q.fillStyle='#111111';q.fillRect(0,0,w,h);}finally{q.restore();}return true;
  },
  thumbnail(id,canvas){
   const l=strokes.find(x=>x.id===id);if(!l||l.visible===false||!layerOps.mayStyle(l))return false;
@@ -2106,6 +2114,7 @@ globalThis.MangoLayerImageV0712=Object.freeze({
  preview(canvas,ids,args,stamp){
   const s=this.state();if(!s.ready||stamp!==s.stamp)throw Error('Image changed or is busy. Reopen Layer Studio.');
   let draft=strokes;if(ids.length&&Object.keys(args).length)draft=MangoLayerStudioV0712.plan('image',strokes,ids,'effects',args).layers;
+  creativeEffects?.requireBudget(draft,base.width,base.height);
   const w=canvas.width,h=canvas.height,scale=Math.min(w/base.width,h/base.height),rw=Math.max(1,Math.round(base.width*scale)),rh=Math.max(1,Math.round(base.height*scale));
   const off=document.createElement('canvas');off.width=rw;off.height=rh;const p=off.getContext('2d'),out=canvas.getContext('2d');
   p.scale(rw/base.width,rh/base.height);

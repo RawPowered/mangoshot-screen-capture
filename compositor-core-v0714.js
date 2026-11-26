@@ -93,7 +93,7 @@
   requireSupport(stack);const {c,p,w,h}=scratch(ctx);p.drawImage(ctx.canvas,0,0);
   ctx.save();try{ctx.setTransform(1,0,0,1,0,0);ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';ctx.filter='none';ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);ctx.filter=filter(stack,h/1080);ctx.drawImage(c,0,0);}finally{ctx.restore();}
  }
- function requireProject(layers,grade=[],width=0,height=0){root.MangoTransformMaterialV0715?.requireBudget(layers,width,height);requireSupport(grade);for(const l of layers||[]){if(l.effectStack!=null)requireSupport(l.effectStack);if(l.keyframes!=null)checkKeys(l.keyframes);}if(width*height>MAX_PIXELS&&(active(grade)||(layers||[]).some(l=>active(l.effectStack))))throw Error('Compositor canvas exceeds the raster budget. Reduce source dimensions or remove active filters.');}
+ function requireProject(layers,grade=[],width=0,height=0){root.MangoCreativeEffectsV0726?.requireBudget(layers,width,height);root.MangoTransformMaterialV0715?.requireBudget(layers,width,height);requireSupport(grade);for(const l of layers||[]){if(l.effectStack!=null)requireSupport(l.effectStack);if(l.keyframes!=null)checkKeys(l.keyframes);}if(width*height>MAX_PIXELS&&(active(grade)||(layers||[]).some(l=>active(l.effectStack))))throw Error('Compositor canvas exceeds the raster budget. Reduce source dimensions or remove active filters.');}
  const api=Object.freeze({MAX_STACK,MAX_KEYS,specs,effects,presets,copy,checkStack,active,filter,easing,neutral,checkKeys,pose,at,transform,box,supports,requireSupport,paintStack,gradeFrame,requireProject});
  root.MangoCompositorV0714=api;if(typeof module==='object'&&module.exports)module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

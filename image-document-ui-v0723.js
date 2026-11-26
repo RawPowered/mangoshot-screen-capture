@@ -19,7 +19,7 @@
   const s=H.state();if(d.querySelector('dialog[open]')||mode==='save'&&!s.ready||mode==='open'&&!s.canOpen)return false;
   returnFocus=d.activeElement;session={...s,mode};working=false;title.textContent=mode==='save'?'SAVE EDITABLE IMAGE PROJECT':'OPEN IMAGE PROJECT';
   nameInput.value=name;fileInput.value='';saveSection.hidden=mode!=='save';openSection.hidden=mode!=='open';confirm.textContent=mode==='save'?'Save .mangoimage':'Open & replace';
-  details.textContent=mode==='save'?s.width+' × '+s.height+' px · '+s.layers.length+' layers · embedded source assets and masks':'Version 1–3 local project · maximum 96 MiB · source dimensions and references validated';
+  details.textContent=mode==='save'?s.width+' × '+s.height+' px · '+s.layers.length+' layers · embedded source assets and masks':'Version 1–4 local project · maximum 96 MiB · source dimensions and references validated';
   status.textContent='Local only';dialog.showModal();sync();return true;
  }
  function download(blob,filename){const url=URL.createObjectURL(blob),a=el('a');a.href=url;a.download=filename;d.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
@@ -45,14 +45,16 @@
  if(quick)quick.prepend(openButton,saveButton);
  // A single list remains authoritative. Render thumbnails lazily for visible rows only.
  const list=by('stroke-list'),expanded=new Set();let pending=false,observer=null;
- function paint(row){if(!row.isConnected)return;const c=row.querySelector('canvas.md-thumb-v0723');if(!c||c.dataset.painted)return;c.dataset.painted='true';try{if(!H.thumbnail(row.dataset.layerId,c))c.hidden=true;}catch{c.hidden=true;}}
+ function paint(row){if(!row.isConnected)return;const c=row.querySelector('canvas.md-thumb-v0723');if(!c||c.dataset.painted)return;c.dataset.painted='true';try{if(!H.thumbnail(row.dataset.layerId,c))c.hidden=true;const mask=row.querySelector('canvas.ce-mask-thumb-v0726');if(mask&&!H.maskThumbnail(row.dataset.layerId,mask))mask.hidden=true;}catch{c.hidden=true;}}
  if(root.IntersectionObserver)observer=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting){observer.unobserve(entry.target);paint(entry.target);}},{root:null,rootMargin:'40px'});
  function decorate(){
   if(!list)return;const layers=new Map(H.state().layers.map(l=>[l.id,l]));for(const id of expanded)if(!layers.has(id))expanded.delete(id);observer?.disconnect();for(const row of list.querySelectorAll('.image-layer-row[data-layer-id]')){
    if(row.dataset.mdDecorated){if(observer&&row.querySelector('canvas.md-thumb-v0723:not([data-painted])'))observer.observe(row);continue;}const l=layers.get(row.dataset.layerId);if(!l)continue;row.dataset.mdDecorated='true';
    const target=row.querySelector('.image-object-select');
-   if(target&&l.eligible&&l.visible){const c=el('canvas','md-thumb-v0723');c.width=64;c.height=44;c.setAttribute('aria-hidden','true');c.title='Isolated layer preview';target.prepend(c);if(observer)observer.observe(row);else paint(row);}
+   if(target&&l.eligible&&l.visible){const c=el('canvas','md-thumb-v0723');c.width=64;c.height=44;c.setAttribute('aria-hidden','true');c.title='Isolated layer preview';target.prepend(c);if(l.maskPreview){const m=el('canvas','ce-mask-thumb-v0726');m.width=64;m.height=44;m.title='Effective alpha mask (white visible, dark transparent)';m.setAttribute('aria-label','Image alpha mask');c.after(m);}if(observer)observer.observe(row);else paint(row);}
    const effects=[];if(l.rotation)effects.push('Rotation '+l.rotation+'°');if(l.opacity!==1)effects.push('Opacity '+Math.round(l.opacity*100)+'%');if(l.fx.kind!=='none')effects.push(l.fx.kind==='shadow'?'Drop shadow':'Outer glow');if(l.fx.blend!=='source-over')effects.push('Blend: '+l.fx.blend);if(l.material?.kind&&l.material.kind!=='none')effects.push('Material: '+l.material.kind);for(const item of l.effectStack||[])effects.push((item.enabled?'':'Disabled · ')+item.kind+' '+item.value);
+   if(l.creativeFx?.gradient)effects.push('Gradient · '+l.creativeFx.gradient.kind+' · '+l.creativeFx.gradient.stops.length+' stops');for(const [i,s] of (l.creativeFx?.shadows||[]).entries())effects.push((s.enabled?'':'Disabled · ')+(s.kind==='shadow'?'Drop shadow':'Outer glow')+' '+(i+1));
+   if(l.maskPreview)effects.push('Editable image alpha mask');
    if(l.group?.length)effects.push('Folder: '+l.group.join(' / '));
    if(effects.length){const f=el('details','md-effects-v0723');f.open=expanded.has(l.id);const summary=el('summary','',effects.length+' appearance / organization entries');const items=el('div','md-effect-items-v0723');for(const effect of effects)items.append(el('span','',effect));f.append(summary,items);f.addEventListener('toggle',()=>{if(f.open)expanded.add(l.id);else expanded.delete(l.id);});row.append(f);}
   }

@@ -1,0 +1,38 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),{chromium}=require('playwright');
+(async()=>{
+ const dir=path.resolve(__dirname,'..'),out=path.join(dir,'creative-effects-screenshots');fs.mkdirSync(out,{recursive:true});
+ const ctx=await chromium.launchPersistentContext('',{channel:'chromium',headless:true,args:['--disable-extensions-except='+dir,'--load-extension='+dir,'--no-sandbox']});
+ try{let [bg]=ctx.serviceWorkers();if(!bg)bg=await ctx.waitForEvent('serviceworker',{timeout:20000});const base='chrome-extension://'+new URL(bg.url()).host+'/',p=await ctx.newPage();await p.setViewportSize({width:1440,height:900});await p.goto(base+'editor.html');await p.waitForFunction(()=>!!window.MangoCreativeEffectsUIV0726);
+  await p.evaluate(async()=>{const c=document.createElement('canvas');c.width=320;c.height=180;const g=c.getContext('2d');g.fillStyle='#343b43';g.fillRect(0,0,320,180);await MangoCaptureStore.save('creative-fx-fixture',{width:320,height:180,pageHeight:180,dpr:1,frames:1,full:false},[{index:0,scrollY:0,dataUrl:c.toDataURL()}]);});
+  await p.goto(base+'editor.html?stored=creative-fx-fixture');await p.waitForFunction(()=>MangoImageDocumentV0723.state().ready&&!!window.MangoCreativeEffectsUIV0726);
+  await p.evaluate(async()=>{const H=MangoImageDocumentV0723,s=H.state(),doc=H.save(s.stamp,'Creative FX');
+   const image=document.createElement('canvas');image.width=32;image.height=24;const g=image.getContext('2d');g.fillStyle='#f0f0f0';g.fillRect(0,0,32,24);
+   doc.assets=[{id:'asset1',name:'Matte image',width:32,height:24,png:image.toDataURL()}];doc.mattes=[{id:'matte1',width:32,height:24,alpha:MangoImageDocumentCoreV0723.encode(Uint8Array.from({length:32*24},(_,i)=>i%32<16?255:0))}];
+   doc.layers=[{id:'rect',type:'shape',kind:'rectangle',name:'Gradient panel',points:[{x:70,y:45,p:1},{x:220,y:135,p:1}],size:1,color:'#ffffff',opacity:1,visible:true,locked:false,vector:{stroke:'#ffffff',strokeWidth:1,fill:'#ffffff',fillEnabled:true,lineStyle:'solid',cornerRadius:0,starPoints:5,starInner:.46,arrowHead:'end'}},{id:'masked',type:'image',name:'Masked asset',assetId:'asset1',cutoutKey:'matte1',width:32,height:24,points:[{x:275,y:10,p:1}],opacity:1,visible:true,locked:false},{id:'redact',type:'redact',name:'Protected redaction',points:[{x:5,y:5,p:1},{x:24,y:24,p:1}],size:4,color:'#000000',visible:true,opacity:1}];
+   await H.open(doc,s.stamp);MangoLayerImageV0712.select(['rect']);});
+  const pixels=()=>p.locator('#ink').evaluate(c=>c.toDataURL()),initial=await pixels();
+  await p.locator('#ce-open-v0726').click();await p.locator('#ce-preset-spectrum-v0726').click();
+  await p.locator('#ce-add-stop-v0726').click();assert.equal(await p.locator('#ce-stop-select-v0726 option').count(),4);
+  await p.locator('#ce-stop-position-v0726').fill('20');await p.locator('#ce-stop-position-v0726').press('Tab');await p.locator('#ce-remove-stop-v0726').click();assert.equal(await p.locator('#ce-stop-select-v0726 option').count(),3);
+  await p.locator('#ce-tab-shadow-v0726').click();await p.locator('#ce-add-shadow-v0726').click();
+  async function num(id,v){const a=p.locator('#'+id);await a.fill(String(v));await a.press('Tab');}
+  async function color(id,v){await p.locator('#'+id).evaluate((e,v)=>{e.value=v;e.dispatchEvent(new Event('input',{bubbles:true}));},v);}
+  await color('ce-shadow-color-v0726','#ff00ff');await num('ce-shadow-opacity-v0726',100);await num('ce-shadow-blur-v0726',0);await num('ce-shadow-x-v0726',-22);await num('ce-shadow-y-v0726',0);
+  await p.locator('#ce-add-shadow-v0726').click();await color('ce-shadow-color-v0726','#00ffff');await num('ce-shadow-opacity-v0726',100);await num('ce-shadow-blur-v0726',0);await num('ce-shadow-x-v0726',22);await num('ce-shadow-y-v0726',0);
+  await p.locator('#ce-add-glow-v0726').click();await num('ce-shadow-blur-v0726',6);
+  await p.waitForFunction(()=>!document.getElementById('ce-apply-v0726').disabled);assert.equal(await pixels(),initial);await p.screenshot({path:path.join(out,'01-shadow-draft.png')});
+  await p.locator('#ce-tab-gradient-v0726').click();await p.screenshot({path:path.join(out,'02-gradient-draft.png')});await p.locator('#ce-apply-v0726').click();await p.locator('#ce-dialog-v0726').waitFor({state:'hidden'});
+  const data=await p.evaluate(()=>{const q=document.getElementById('ink').getContext('2d'),px=(x,y)=>Array.from(q.getImageData(x,y,1,1).data);return {left:px(76,90),center:px(145,90),right:px(214,90),shadowA:px(53,90),shadowB:px(237,90),redact:px(12,12)};});
+  assert.ok(data.left[0]>200&&data.left[1]<60);assert.ok(data.center[1]>245&&data.center[0]<10&&data.center[2]<10);assert.ok(data.right[2]>200&&data.right[1]<60);assert.ok(data.shadowA[0]>200&&data.shadowA[2]>200&&data.shadowA[1]<60);assert.ok(data.shadowB[1]>200&&data.shadowB[2]>200&&data.shadowB[0]<60);assert.deepEqual(data.redact,[17,17,17,255]);
+  const committed=await pixels();await p.evaluate(()=>MangoImageActions.run('undo'));assert.equal(await pixels(),initial);await p.evaluate(()=>MangoImageActions.run('redo'));assert.equal(await pixels(),committed);
+  const save=()=>p.evaluate(()=>{const H=MangoImageDocumentV0723;return H.save(H.state().stamp,'Creative effects');});const project=await save();assert.equal(project.version,4);assert.equal(project.layers[0].creativeFx.shadows.length,3);assert.equal(project.layers[0].creativeFx.gradient.stops.length,3);
+  await p.evaluate(()=>MangoLayerImageV0712.select(['redact']));await p.waitForFunction(()=>document.getElementById('ce-open-v0726').disabled);
+  assert.equal(await p.evaluate(()=>{const H=MangoLayerImageV0712,s=H.state();try{H.apply('effects',['redact'],{creativeFx:{gradient:MangoCreativeEffectsV0726.presets[0].gradient,shadows:[]}},s.stamp);return false;}catch{return true;}}),true);
+  await p.reload();await p.waitForFunction(()=>MangoImageDocumentV0723.state().canOpen);await p.evaluate(async project=>{const H=MangoImageDocumentV0723;await H.open(project,H.state().stamp);},project);assert.equal(await pixels(),committed);assert.deepEqual((await save()).layers,project.layers);
+  await p.locator('[data-image-tab=layers]').click();await p.waitForFunction(()=>{const c=document.querySelector('.ce-mask-thumb-v0726');return c&&!c.hidden&&c.getContext('2d').getImageData(15,22,1,1).data[0]>200;});
+  const mask=await p.locator('.ce-mask-thumb-v0726').evaluate(c=>[c.getContext('2d').getImageData(15,22,1,1).data[0],c.getContext('2d').getImageData(49,22,1,1).data[0]]);assert.ok(mask[0]>200&&mask[1]<40);
+  await p.evaluate(()=>MangoLayerImageV0712.select(['rect']));await p.locator('#ce-open-v0726').click();await p.locator('#ce-preset-gold-v0726').click();await p.keyboard.press('Escape');await p.locator('#ce-dialog-v0726').waitFor({state:'hidden'});assert.equal(await pixels(),committed);
+  await p.setViewportSize({width:1024,height:600});await p.locator('#ce-open-v0726').click();await p.locator('#ce-dialog-v0726').waitFor({state:'visible'});const box=await p.locator('#ce-dialog-v0726').boundingBox();assert.ok(box.x>=0&&box.y>=0&&box.x+box.width<=1025&&box.y+box.height<=601);await p.screenshot({path:path.join(out,'03-compact-effects.png')});
+  console.log('Creative gradient, independent shadow pixels, protected redaction, mask thumbnail, exact undo/redo and v4 roundtrip passed');
+ }finally{await ctx.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});
