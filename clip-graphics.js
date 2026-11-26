@@ -28,9 +28,9 @@
  const resolveFont=id=>root.MangoCreativeV079?.family(id,fontFamilies[id]||fontFamilies.sans)||fontFamilies[id]||fontFamilies.sans;
  const resolveWeight=(id,w)=>root.MangoCreativeV079?.weight(id,w)||w||'600';
  function create(kind,preset='none',at=0,opts={}){
-  const isCallout=kind==='callout';const style=styles[preset]||styles.none;
+  const isCallout=kind==='callout',isShape=kind==='shape';const style=styles[preset]||styles.none;
   const id=(root.crypto?.randomUUID?.()||String(Date.now())+'-'+Math.random().toString(36).slice(2));
-  const layer={id,kind:isCallout?'callout':'text',name:isCallout?'Callout':'Text',track:2,start:at,end:at+4,
+  const layer={id,kind:isShape?'shape':isCallout?'callout':'text',name:isShape?'Shape':isCallout?'Callout':'Text',track:2,start:at,end:at+4,
    x:.15,y:isCallout?.32:.72,width:isCallout?.48:.7,text:isCallout?'Highlight this area':'Add title',
    preset,fontSize:style.fontSize,font:style.font,weight:style.weight,color:style.color,
    background:style.background,outline:style.outline,outlineWidth:style.outlineWidth,shadow:style.shadow,
@@ -45,9 +45,10 @@
   if(['softBadge','pointerPop'].includes(preset)){layer.y=.34;layer.x=.28;layer.width=.44;}
   if(isCallout&&preset==='none')layer.background='#ffffffdc';
   const creative=root.MangoCreativeV079?.preset(preset);if(creative)Object.assign(layer,root.MangoCreativeV079.videoPatch(preset),{name:creative.name,fontSize:creative.category==='Signature'?76:64,x:.08,y:.26,width:.84,text:creative.sample});
+  if(isShape)Object.assign(layer,{name:'Rectangle',text:'',preset:'none',x:.25,y:.25,width:.40,color:'#b9f35d',background:'#b9f35d40',outline:'#b9f35d',outlineWidth:6,shadow:0,shape:root.MangoClipShapesV0742.defaults()});
   return {...layer,...opts};
  }
- function style(layer,preset){const p=styles[preset]||styles.none;
+ function style(layer,preset){if(layer.kind==='shape')return {...layer};const p=styles[preset]||styles.none;
   if(root.MangoCreativeV079?.preset(preset))return {...layer,...root.MangoCreativeV079.videoPatch(preset)};
   return {...layer,...cp(p),...(root.MangoCreativeV079?.preset(layer.preset)?{premium:null}:{}),preset};
  }
@@ -77,7 +78,7 @@
    output[maxRows-1]=text+'…';}
   return output.length?output:[''];
  }
- function paintOne(ctx,l,w,h,sec){const x=clamp(l.x*w,0,w-40),y=clamp(l.y*h,0,h-24),width=clamp(l.width*w,40,Math.max(40,w-x)),scale=h/1080;
+ function paintOne(ctx,l,w,h,sec){if(l.kind==='shape'){const box=root.MangoClipShapesV0742.bounds(l,w,h),C=root.MangoCompositorV0714,m=root.MangoMotion?.textFrame?.(l,sec);ctx.save();try{ctx.globalAlpha*=clamp(l.opacity,0,1)*fade(l,sec);if(C&&l.keyframes?.length){const p=C.at(l,sec);ctx.globalAlpha*=p.opacity;C.transform(ctx,p,box,w,h);}if(m){ctx.globalAlpha*=m.alpha;const x=box.x+box.w/2,y=box.y+box.h/2;ctx.translate(x+(m.dx||0)*box.w,y+(m.dy||0)*box.h);ctx.rotate(m.angle||0);ctx.scale((m.scale||1)*(m.scaleX||1),m.scale||1);ctx.translate(-x,-y);}root.MangoClipShapesV0742.paint(ctx,l,box,h);}finally{ctx.restore();}return box;}const x=clamp(l.x*w,0,w-40),y=clamp(l.y*h,0,h-24),width=clamp(l.width*w,40,Math.max(40,w-x)),scale=h/1080;
   let fontsize=clamp(l.fontSize*scale,9,200),pad,lineH,boxH,rendered;
   ctx.save();ctx.globalAlpha=clamp(l.opacity,0,1)*fade(l,sec);
   for(let i=0;i<16;i++){
@@ -169,7 +170,7 @@
    if(b-a>=.04)result.push({...cp(l),start:a-start,end:b-start});
   }return result;
  }
- function bounds(layer,w,h,ctx){const fh=clamp(layer.fontSize*h/1080,9,200),x=clamp(layer.x*w,0,w-40),y=clamp(layer.y*h,0,h-24),width=clamp(layer.width*w,40,Math.max(40,w-x));if(ctx){ctx.save();ctx.font=`${resolveWeight(layer.font,layer.weight)} ${fh}px ${resolveFont(layer.font)}`;const rows=lines(ctx,layer.text,width-2*Math.max(5,fh*.32),7);ctx.restore();return {x,y,w:width,h:Math.min(h-y,rows.length*fh*1.22+fh*.64)};}return {x,y,w:width,h:Math.min(h-y,fh*2.5)};}
+ function bounds(layer,w,h,ctx){if(layer.kind==='shape')return root.MangoClipShapesV0742.bounds(layer,w,h);const fh=clamp(layer.fontSize*h/1080,9,200),x=clamp(layer.x*w,0,w-40),y=clamp(layer.y*h,0,h-24),width=clamp(layer.width*w,40,Math.max(40,w-x));if(ctx){ctx.save();ctx.font=`${resolveWeight(layer.font,layer.weight)} ${fh}px ${resolveFont(layer.font)}`;const rows=lines(ctx,layer.text,width-2*Math.max(5,fh*.32),7);ctx.restore();return {x,y,w:width,h:Math.min(h-y,rows.length*fh*1.22+fh*.64)};}return {x,y,w:width,h:Math.min(h-y,fh*2.5)};}
  function animatedBounds(layer,w,h,ctx,seconds){const r=bounds(layer,w,h,ctx);return Number.isFinite(seconds)&&layer.keyframes?.length&&root.MangoCompositorV0714?root.MangoCompositorV0714.box(r,root.MangoCompositorV0714.at(layer,seconds),w,h):r;}
  root.MangoGraphics={styles,create,style,render,ripple,trim,bounds,animatedBounds,at,clone:cp};
 })(typeof globalThis!=='undefined'?globalThis:this);

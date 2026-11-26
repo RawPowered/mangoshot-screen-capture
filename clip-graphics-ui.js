@@ -83,7 +83,7 @@
   (current().selectedLayer()===layer.id?' is-selected':'');chip.tabIndex=0;chip.role='button';chip.dataset.layerId=layer.id;
   chip.title=`G${layer.track}: ${layer.name} · ${fmt(layer.start)}–${fmt(layer.end)} · drag to move or resize ends`;
   chip.style.left=100*layer.start/total+'%';chip.style.width=Math.max(.6,100*(layer.end-layer.start)/total)+'%';
-  const label=document.createElement('span');label.className='graphic-chip-label';label.textContent=(layer.kind==='callout'?'◆ ':'T ')+layer.name;
+  const label=document.createElement('span');label.className='graphic-chip-label';label.textContent=(layer.kind==='shape'?'◇ ':layer.kind==='callout'?'◆ ':'T ')+layer.name;
   chip.appendChild(label);
   for(const edge of ['start','end']){
    const h=document.createElement('span');h.className='graphic-clip-handle handle-'+edge;h.dataset.edge=edge;
@@ -124,7 +124,7 @@
     }
    });
    listGrip(layer,row,rows);
-   const choose=button((layer.kind==='callout'?'◆ ':'T ')+layer.name,'Select '+layer.name,()=>select(layer.id));
+   const choose=button((layer.kind==='shape'?'◇ ':layer.kind==='callout'?'◆ ':'T ')+layer.name,'Select '+layer.name,()=>select(layer.id));
    choose.className='layer-entry-select';row.appendChild(choose);
    const timing=document.createElement('span');timing.className='layer-entry-time';timing.textContent=`G${layer.track} · ${fmt(layer.start)}–${fmt(layer.end)}`;row.appendChild(timing);
    row.appendChild(button(layer.visible?'◉':'○',layer.visible?'Hide layer':'Show layer',()=>st.setLayerHidden(layer.id,layer.visible)));
@@ -134,15 +134,15 @@
    remove.disabled=disabled||layer.locked;row.appendChild(remove);
    rows.appendChild(row);
   }
-  if(!items.length)rows.textContent='No graphics yet. Add Text or Callout.';
-  const layer=activeLayer(),properties=el('graphic-inspector');properties.hidden=!layer;
+  if(!items.length)rows.textContent='No graphics yet. Add a title, callout or shape overlay.';
+  const layer=activeLayer(),properties=el('graphic-inspector');properties.hidden=!layer;properties.dataset.kind=layer?.kind||'';
   if(layer){
    for(const [id,[field]] of Object.entries(fields)){
     const input=el(id);if(!input)continue;const value=layer[field];
     input.value=['x','y','width','opacity','tailX'].includes(field)?Math.round(value*100):value;
-    input.disabled=layer.locked||st.exporting();
+    input.disabled=layer.locked||st.exporting()||(layer.kind==='shape'&&['text','font','weight','fontSize','align','tailX','tailLength','color'].includes(field));
    }
-   el('graphic-preset').value=layer.preset;el('graphic-preset').disabled=layer.locked||st.exporting();
+   el('graphic-preset').value=layer.preset;el('graphic-preset').disabled=layer.locked||st.exporting()||layer.kind==='shape';
    el('graphic-duplicate').disabled=st.exporting();el('graphic-delete').disabled=st.exporting()||layer.locked;
    el('graphic-duration').textContent=`G${layer.track} · In ${fmt(layer.start)} · Out ${fmt(layer.end)} · Duration ${fmt(layer.end-layer.start)}`;
   }
@@ -201,7 +201,7 @@
   const box=MangoGraphics.bounds(clicked,w,h),size=20;
   const onHandle=st.selectedLayer()===clicked.id&&Math.abs(p.x*w-(box.x+box.w))<size&&Math.abs(p.y*h-(box.y+box.h))<size;
   movingCanvas={id:clicked.id,startX:p.x,startY:p.y,x:clicked.x,y:clicked.y,width:clicked.width,
-   size:clicked.fontSize,mode:onHandle?'resize':'move',moved:false};
+   size:clicked.fontSize,height:clicked.shape?.height,mode:onHandle?'resize':'move',moved:false};
  });
  canvas.addEventListener('pointermove',e=>{if(!movingCanvas)return;
   const st=current(),l=st.layers().find(x=>x.id===movingCanvas.id);if(!l)return;
@@ -209,9 +209,10 @@
   if(movingCanvas.mode==='resize'){
    const width=Math.max(.1,Math.min(1-l.x,movingCanvas.width+dx));
    const fontSize=e.shiftKey?Math.max(12,Math.min(220,movingCanvas.size*(1+dy*2))):movingCanvas.size;
-   if(Math.abs(width-l.width)+Math.abs(fontSize-l.fontSize)/200<.0005)return;
+   const height=l.kind==='shape'?Math.max(.03,Math.min(1-l.y,movingCanvas.height+dy)):null;
+   if(Math.abs(width-l.width)+(height===null?Math.abs(fontSize-l.fontSize)/200:Math.abs(height-l.shape.height))<.0005)return;
    if(!movingCanvas.moved){st.beginLayerMove(l.id);movingCanvas.moved=true;}
-   st.resizeLayer(l.id,width,fontSize);
+   st.resizeLayer(l.id,width,fontSize,height);
   }else{
    const x=Math.max(0,Math.min(1-l.width,movingCanvas.x+dx));
    const y=Math.max(0,Math.min(.94,movingCanvas.y+dy));

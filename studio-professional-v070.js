@@ -248,7 +248,7 @@
   active.textContent=studio==='image'?
    (byId('tool')?.selectedOptions?.[0]?.textContent||tool):
    (graphic?'Selected graphic':{select:'Selection',razor:'Razor',range:'Range'}[tool]||'Timeline');
-  const layerType=studio==='image'?(byId('image-inspector-state')?.textContent||''):'';
+  const layerType=studio==='image'?(byId('image-inspector-state')?.textContent||''):(root.MangoClipView?.layers?.().find(l=>l.id===root.MangoClipView.selectedLayer())?.kind||'');
   const fields=core.fieldsFor(studio,tool,graphic,layerType).filter(spec=>!!byId(spec.id));
   const key=fields.map(v=>v.id).join('|')+'|'+studio+'|'+tool+'|'+graphic+'|'+layerType;
   if(key!==signature){

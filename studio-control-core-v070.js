@@ -54,7 +54,7 @@
   return preset?validateLayout({...current,...preset}):validateLayout(current);
  }
  function fieldsFor(studio,tool,selectedGraphic=false,selectedType=''){
-  if(studio==='clip')return selectedGraphic?[...clip.graphic,...clip.timeline]:clip.timeline.slice();
+  if(studio==='clip')return selectedGraphic?[...(selectedType==='shape'?clip.graphic.filter(v=>!['graphic-font','graphic-size','graphic-color'].includes(v.id)):clip.graphic),...clip.timeline]:clip.timeline.slice();
   if(tool==='select'){
    const base=image.select.slice();
    const type=String(selectedType).toUpperCase();

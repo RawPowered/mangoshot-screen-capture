@@ -16,7 +16,7 @@
   const ids=new Set();
   const layers=data.layers.map(l=>{
     if(typeof l.id!=='string'||l.id.length>120||ids.has(l.id))fail('layer ID');ids.add(l.id);
-    if(!['text','callout'].includes(l.kind)||![2,3].includes(l.track))fail('layer type/track');
+    if(!['text','callout','shape'].includes(l.kind)||![2,3].includes(l.track))fail('layer type/track');
     if(typeof l.text!=='string'||l.text.length>400||typeof l.name!=='string'||l.name.length>100)fail('layer text');
     for(const key of ['start','end','x','y','width','opacity','fontSize','fadeIn','fadeOut','outlineWidth','shadow','tailX','tailLength']){
       if(!valid(l[key]))fail('numeric field '+key);
@@ -33,7 +33,7 @@
     if(l.premium!=null){if(!root.MangoPremium)fail('premium schema unavailable');root.MangoPremium.validate(l.premium);}
     if(l.layerGroup!=null){if(!root.MangoLayerStudioV0712)fail('layer group schema unavailable');root.MangoLayerStudioV0712.checkGroup(l.layerGroup);}
     if(l.layerFx!=null){if(!root.MangoLayerStudioV0712)fail('layer effect schema unavailable');root.MangoLayerStudioV0712.checkFx(l.layerFx);}
-    const normalized={...l};
+    const normalized={...l};if(l.kind==='shape'){if(!root.MangoClipShapesV0742)fail('shape schema unavailable');normalized.shape=root.MangoClipShapesV0742.check(l.shape);if(l.premium!=null)fail('text premium preset on shape');}else if(l.shape!=null)fail('shape payload on non-shape layer');
     if(l.material!=null){if(!root.MangoTransformMaterialV0715)fail('material schema unavailable');normalized.material=root.MangoTransformMaterialV0715.checkMaterial(l.material);}
     if(l.effectStack!=null){if(!root.MangoCompositorV0714)fail('effect stack schema unavailable');normalized.effectStack=root.MangoCompositorV0714.checkStack(l.effectStack);}
     if(l.keyframes!=null){if(!root.MangoCompositorV0714)fail('keyframe schema unavailable');normalized.keyframes=root.MangoCompositorV0714.checkKeys(l.keyframes);}

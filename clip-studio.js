@@ -551,6 +551,7 @@ globalThis.MangoClipView={
    remember();layers.push(primary);if(second)layers.push(second);
    selectedLayerId=primary.id;selectedClipIndex=null;rangeSelected=false;refreshed();label('Premium composition inserted: '+primary.name);return true;
  },
+ applyShapeDraft(draft,expected,id=null){const state=this.automationCapture();if(!state.ready||state.identity!==expected?.identity||state.stamp!==expected?.stamp)throw Error('Editor changed. Reopen Shape Studio.');const next={...draft,shape:globalThis.MangoClipShapesV0742.check(draft.shape)};if(next.kind!=='shape')throw Error('Expected a shape overlay.');let list=layers.slice();if(id){const i=list.findIndex(l=>l.id===id&&l.kind==='shape');if(i<0||list[i].locked||next.id!==id)throw Error('Select an unlocked shape.');list[i]=next;}else{if(list.length>=200||list.some(l=>l.id===next.id))throw Error('Graphic layer limit or duplicate ID.');list.push(next);}const source={size:original.size,format:originalFormat,duration};MangoProject.check(MangoProject.pack(source,segments,list,globalThis.MangoClipTimeline?.markers?.()||[],transitions,sourceGrade),source);compositor?.requireProject(list,sourceGrade,video.videoWidth,video.videoHeight);remember();layers=list;selectedLayerId=next.id;selectedClipIndex=null;rangeSelected=false;refreshed();label('Shape overlay applied. Ctrl+Z to undo.');return next.id;},
  addLayer(kind,preset='none'){
    if(!original||exporting)return;
    const at=MangoEditOps.toOutput(segments,video.currentTime)??0;
@@ -582,8 +583,8 @@ globalThis.MangoClipView={
    layers.push(dup);selectedLayerId=dup.id;selectedClipIndex=null;rangeSelected=false;refreshed();},
  beginLayerMove(id){if(exporting)return;const l=layers.find(x=>x.id===id);if(l&&!l.locked)remember();},
  moveLayer(id,x,y){const l=layers.find(x=>x.id===id);if(!l||l.locked)return;l.x=x;l.y=y;paintPreview();},
- resizeLayer(id,width,fontSize){const l=layers.find(x=>x.id===id);if(!l||l.locked)return;
-  l.width=Math.max(.1,Math.min(1-l.x,width));l.fontSize=Math.max(12,Math.min(220,fontSize));paintPreview();},
+ resizeLayer(id,width,fontSize,height=null){const l=layers.find(x=>x.id===id);if(!l||l.locked)return;
+  l.width=Math.max(.1,Math.min(1-l.x,width));if(l.kind==='shape'&&Number.isFinite(height))l.shape={...l.shape,height:Math.max(.03,Math.min(1-l.y,height))};else l.fontSize=Math.max(12,Math.min(220,fontSize));paintPreview();},
  endLayerMove(){refreshed();},
  setLayerHidden(id,value){const l=layers.find(x=>x.id===id);if(!l)return;remember();l.visible=!value;refreshed();},
  setLayerLocked(id,value){const l=layers.find(x=>x.id===id);if(!l)return;remember();l.locked=!!value;refreshed();},
@@ -629,9 +630,8 @@ globalThis.MangoLayerClipV0712=Object.freeze({
  preview(canvas,ids,args,stamp,progress=.5){
   const s=this.state();if(!s.ready||s.stamp!==stamp)throw Error('Clip changed or is busy. Reopen Layer Studio.');
   let draft=layers;if(ids.length&&Object.keys(args).length)draft=MangoLayerStudioV0712.plan('clip',layers,ids,'effects',args).layers;
-  const selected=draft.filter(l=>ids.includes(l.id)),ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height;
-  ctx.fillStyle='#202630';ctx.fillRect(0,0,w,h);ctx.fillStyle='#303844';ctx.fillRect(0,h*.5,w,h*.5);
-  if(selected.length){const first=selected[0],at=first.start+(first.end-first.start)*Math.min(.999999,Math.max(0,progress));MangoGraphics.render(ctx,selected,at,w,h);}
+  const selected=draft.filter(l=>ids.includes(l.id)),aspect=video.videoWidth&&video.videoHeight?video.videoWidth/video.videoHeight:16/9,w=Math.max(1,Math.round(Math.min(720,400*aspect))),h=Math.max(1,Math.round(w/aspect));if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}const ctx=canvas.getContext('2d');ctx.fillStyle='#202630';ctx.fillRect(0,0,w,h);if(video.readyState>=2){const at=globalThis.MangoClipView.sequencePosition()??0;MangoCreativeZoom.draw(ctx,video,zoomEvents,at,w,h);if(compositor?.active(sourceGrade))compositor.gradeFrame(ctx,sourceGrade);}
+  if(selected.length){const first=selected[0],at=first.start+(first.end-first.start)*Math.min(.999999,Math.max(0,progress));MangoGraphics.render(ctx,draft,at,w,h);}
  }
 });
 
