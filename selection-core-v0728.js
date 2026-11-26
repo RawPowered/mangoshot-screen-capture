@@ -31,16 +31,17 @@
  const active=v=>!!v&&v.enabled&&v.regions.length>0;
  function dimensions(w,h,max=MAX_SOURCE){if(!Number.isInteger(w)||!Number.isInteger(h)||w<1||h<1||w*h>max)throw Error('Selection exceeds the pixel budget.');return w*h;}
  function requireProject(layers,lookup,C=root.MangoCompositorV0714){
-  let total=0,points=0;const seen=new Set();
+  let total=0,points=0,activeLayers=0;
   for(const l of layers||[]){if(l.selectionMask==null)continue;if(l.type!=='image')throw Error('Selection masks require imported image layers.');
    const v=check(l.selectionMask);points+=v.regions.reduce((n,r)=>n+r.points.length,0);
    if(!active(v))continue;
    const a=lookup(l);if(!a)throw Error('Missing selection mask asset.');const n=dimensions(a.width,a.height);
-   const k=JSON.stringify([l.assetId,v]);if(!seen.has(k)){seen.add(k);total+=n;}
+   // Existing masked canvases are per stroke, not shared between duplicate layers.
+   activeLayers++;total+=n;
    if(v.feather&&C?.supports&&!C.supports())throw Error('This browser does not support Canvas2D feathering.');
   }
-  if(points>MAX_PROJECT_POINTS||total>MAX_TOTAL||seen.size>MAX_RECIPES)throw Error('Selection mask project budget exceeded (18 MP, 12 recipes, 100,000 points).');
-  return {pixels:total,recipes:seen.size,points};
+  if(points>MAX_PROJECT_POINTS||total>MAX_TOTAL||activeLayers>MAX_RECIPES)throw Error('Selection mask project budget exceeded (18 MP, 12 active layers, 100,000 points).');
+  return {pixels:total,activeLayers,points};
  }
  function path(q,r,w,h){
   const a=r.points.map(p=>({x:p.x*w,y:p.y*h}));q.beginPath();

@@ -38,7 +38,7 @@
   finish.disabled=gesture?.kind!=='polygon'||gesture.points.length<3;undoRegion.disabled=!undo.length;invert.checked=draft.inverted;enabled.checked=draft.enabled;
   feather.value=featherNumber.value=String(draft.feather);invert.disabled=enabled.disabled=feather.disabled=featherNumber.disabled=!draft.regions.length;
   compositionPreview.hidden=scope.value!=='source';action.textContent=scope.value==='source'?'Apply selection mask':'Export selection PNG';
-  action.disabled=working||!target||(scope.value==='source'?!changed():!S.active(draft));
+  scope.disabled=working;action.disabled=working||!target||(scope.value==='source'?!changed():!S.active(draft));
  }
  function edit(fn){
   if(!session||working)return;const old=S.copy(draft);try{const next=S.check(fn(),true);if(JSON.stringify(old)===JSON.stringify(next))return;undo.push(old);if(undo.length>24)undo.shift();draft=next;gesture=null;sync();schedule();}catch(e){status.textContent=e.message;}
@@ -59,7 +59,8 @@
  function draftForPreview(){if(!gesture)return draft;try{return S.add(draft,shape(gesture));}catch{return draft;}}
  function render(){
   frame=0;if(!modal.open||!session||!source)return;
-  const q=view.getContext('2d'),r=result.getContext('2d'),w=view.width,h=view.height,v=draftForPreview();
+  const w=view.width,h=view.height,v=draftForPreview();if(result.width!==w)result.width=w;if(result.height!==h)result.height=h;
+  const q=view.getContext('2d'),r=result.getContext('2d');
   q.setTransform(1,0,0,1,0,0);q.globalCompositeOperation='source-over';q.clearRect(0,0,w,h);q.drawImage(source,0,0);
   r.setTransform(1,0,0,1,0,0);r.globalCompositeOperation='source-over';r.clearRect(0,0,w,h);r.drawImage(source,0,0);rightLabel.textContent='Selected pixels · scaled preview';
   if(S.active(v)){
@@ -102,7 +103,8 @@
  feather.addEventListener('pointerdown',()=>{undo.push(S.copy(draft));if(undo.length>24)undo.shift();});
  featherNumber.addEventListener('change',()=>edit(()=>({...draft,feather:featherNumber.valueAsNumber})));
  function showComposition(){
-  if(scope.value!=='source'||!session)return;
+  if(scope.value!=='source'||!session||working)return;
+  if(frame)cancelAnimationFrame(frame);frame=0;
   try{result.width=480;result.height=270;H.previewMask(result,session.selected.id,currentMask(),session.stamp);rightLabel.textContent='Draft composition · actual layer renderer';status.textContent='Composition preview ready.';}catch(e){status.textContent=e.message;}
  }
  function download(blob){const url=URL.createObjectURL(blob),a=el('a');a.href=url;a.download='MangoShot-selection-'+Date.now()+'.png';d.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
@@ -122,6 +124,7 @@
   finally{if(session===active&&revision===token){working=false;sync();}}
  }
  function open(){
+  scope.disabled=false;
   const s=H.state();if(!s.ready||d.querySelector('dialog[open]'))return false;session=s;focus=d.activeElement;kind='rectangle';combine.value='replace';
   scope.querySelector('[value=source]').disabled=!s.selected;scope.value=s.selected?'source':'composition';modal.showModal();load();return true;
  }
