@@ -61,18 +61,18 @@
  }
  form.append(fontHead,fontGallery);
  const drawers=mk('div','v063-drawers');
- function drawer(title,ids){
-  const d=mk('details','v063-drawer');d.append(mk('summary','',title));const body=mk('div','v063-drawer-fields');
+ function drawer(title,ids,scope=''){
+  const d=mk('details','v063-drawer');if(scope)d.dataset.ux44Scope=scope;d.append(mk('summary','',title));const body=mk('div','v063-drawer-fields');
   for(const id of ids){const c=input(id);if(!c)continue;body.append(c.closest('label')||c);}
   d.append(body);drawers.append(d);return d;
  }
- drawer('Typography · Fine controls',['graphic-font','graphic-weight','graphic-size','graphic-align']);
- const layout=drawer('Layout · Position, width, pointer',['graphic-track','graphic-x','graphic-y','graphic-width','graphic-tail-x','graphic-tail-length']);
- drawer('Appearance · Colors and effects',['graphic-color','graphic-bg','graphic-opacity','graphic-outline','graphic-outline-width','graphic-shadow']);
+ drawer('Typography · Fine controls',['graphic-font','graphic-weight','graphic-size','graphic-align'],'text');
+ const layout=drawer('Layout · Position and width',['graphic-track','graphic-x','graphic-y','graphic-width']);drawer('Shape · Height and rotation',['graphic-shape-height','graphic-shape-rotation'],'shape');drawer('Callout pointer',['graphic-tail-x','graphic-tail-length'],'callout');
+ drawer('Appearance · Colors and effects',['graphic-color','graphic-bg','graphic-opacity','graphic-shape-fill-opacity','graphic-outline','graphic-outline-width','graphic-shadow']);
  const timing=drawer('Timing · In/Out and fades',['graphic-in','graphic-out','graphic-fade-in','graphic-fade-out']);
  const actions=drawer('Layer actions · Reorder, duplicate, delete',[]);
  const actionRow=input('graphic-duplicate')?.closest('.layer-create-row');if(actionRow)actions.lastElementChild.append(actionRow);
- const manual=drawer('Style dropdown · Manual selection',['graphic-preset']);
+ const manual=drawer('Style dropdown · Manual selection',['graphic-preset'],'text');
  const duration=el('graphic-duration');if(duration)timing.lastElementChild.append(duration);
  for(const hint of original.querySelectorAll('.inspector-hint'))layout.lastElementChild.append(hint);
  form.append(drawers);original.replaceWith(form);

@@ -63,6 +63,15 @@
  graphics.insertBefore(layerDock,graphicTabs.bar);
  // Preserve original visual style gallery, text editor and quick tools.
  graphicTabs.pages.design.append(styleBench,inspector);
+ const selectedActions=create('div','ux44-selected-actions'),selectedName=create('strong','ux44-selected-name','No graphic selected');
+ const shapeEdit=btn('Edit shape','ux44-selected-action','Edit shape geometry and paint',()=>{const l=selectLayer();if(l?.kind==='shape')root.MangoShapeStudioV0742?.open(l.id);});
+ shapeEdit.id='ux44-edit-selected-shape';
+ const effectEdit=btn('Effects','ux44-selected-action','Edit selected layer appearance and filters',()=>root.MangoLayerStudioUIV0712?.open('effects'));
+ effectEdit.id='ux44-edit-selected-effects';
+ const keysEdit=btn('Keyframes','ux44-selected-action','Edit transform keyframes',()=>root.MangoCompositorUIV0714?.open('keys'));
+ keysEdit.id='ux44-edit-selected-keys';
+ selectedActions.append(selectedName,shapeEdit,effectEdit,keysEdit);
+ graphicTabs.pages.design.prepend(selectedActions);
  const title=inspector.querySelector('h3');if(title)title.textContent='Selected graphic';
  // Move the manual v0.6.3 drawers, do not recreate their fields or handlers.
  graphicTabs.pages.advanced.append(create('h3','v068-page-title','Exact typography & layout controls'),drawers);
@@ -271,6 +280,7 @@
   const l=selectLayer();layerSummary.textContent='Layers · '+(view()?.layers?.()?.length||0)+(l?' · '+l.name:' · Select a layer');
   deleteSelected.disabled=!l||l.locked||!!view()?.exporting?.();
   deleteSelected.title=l?'Delete '+l.name+' (Ctrl+Z to undo)':'Select a layer to delete';
+  const shape=l?.kind==='shape';graphics.dataset.ux44Kind=l?.kind||'';selectedActions.hidden=!l;selectedName.textContent=l?.name||'';shapeEdit.hidden=!shape;for(const b of [shapeEdit,effectEdit,keysEdit])b.disabled=!l||l.locked||!!view()?.exporting?.();for(const key of ['premium','numbers']){const tab=graphicTabs.bar.querySelector('#v068-graphic-tab-'+key);tab.hidden=!!shape;}if(shape&&['premium','numbers'].includes(graphicTabs.current()))graphicTabs.activate('design');
   drawers.hidden=!l;
   transitionAdvanced.hidden=!selectedTransition();
   const current=el('v067-'+currentPhase+'-type')?.value||'none';

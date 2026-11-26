@@ -41,3 +41,27 @@ body.studio .ls-dialog-v0712 .fx42-appearance{gap:7px}
 body.studio .ls-dialog-v0712 .fx42-appearance .ls-presets-v0712{grid-template-columns:repeat(3,minmax(0,1fr))}
 @media(max-width:800px){body.studio .ls-dialog-v0712.fx43-active .ls-work-v0712{grid-template-columns:minmax(190px,.85fr) minmax(0,1.15fr)}body.studio .ls-dialog-v0712 .fx42-preview-box canvas{max-height:23vh}.fx42-tabs{flex-wrap:wrap}.fx42-tabs button{flex:1 1 40%}}
 @media(max-width:480px){body.studio .ls-dialog-v0712.fx43-active .ls-work-v0712{grid-template-columns:1fr;grid-template-rows:minmax(110px,.8fr) minmax(0,1.2fr)}body.studio .ls-dialog-v0712 .fx42-preview-box canvas{max-height:16vh}}
+
+/* Focused inspector: canonical inputs remain live; irrelevant galleries and duplicates stay out of the way. */
+body.studio-clip #v062-graphics-panel[data-ux44-kind=shape] :is(.v063-design-bench,.v063-graphic-form,[data-ux44-scope=text],[data-ux44-scope=callout],.ux44-secondary-dials,.ux44-sequence-link){display:none!important}
+body.studio-clip #v062-graphics-panel:not([data-ux44-kind=shape]) [data-ux44-scope=shape]{display:none!important}
+body.studio-clip #v062-graphics-panel:not([data-ux44-kind=callout]) [data-ux44-scope=callout]{display:none!important}
+body.studio-clip #v062-graphics-panel:not([data-ux44-kind=shape]) label:has(#graphic-shape-fill-opacity){display:none!important}
+body.studio-clip #v062-graphics-panel [role=tab][hidden],body.studio-clip .ux44-selected-actions[hidden],body.studio-clip .ux44-selected-action[hidden]{display:none!important}
+.ux44-selected-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;padding:7px 0;align-items:center}
+.ux44-selected-name{grid-column:1/-1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--carbon-text)}
+body.studio-clip .ux44-selected-actions button{min-width:0;min-height:28px;padding:4px 5px;font-size:11px;white-space:normal}
+body.studio-clip .ux44-selected-actions #ux44-edit-selected-shape:not([hidden]){grid-column:1/-1;border-color:var(--carbon-accent-edge)}
+body.studio-clip #v062-graphics-panel[data-ux44-kind=shape] #ux42-edit-shape{display:none!important}
+body.studio-clip .ux44-secondary-dials,body.studio-clip .ux44-sequence-link{display:block;padding:5px 7px}
+body.studio-clip .ux44-secondary-dials:not([open])>:not(summary),body.studio-clip .ux44-sequence-link:not([open])>:not(summary){display:none!important}
+body.studio-clip .ux44-secondary-dials>summary,body.studio-clip .ux44-sequence-link>summary{cursor:pointer;font-size:11px;color:var(--carbon-secondary)}
+body.studio-clip .ux44-secondary-dials[open]>.zs38-knobs{margin-top:7px}
+body.studio-image .monitor-tools>[hidden]{display:none!important}
+body.studio-image .ux42-viewzoom{gap:5px}
+body.studio-image .ux42-viewzoom input[type=range]{width:clamp(68px,9vw,138px)}
+body.studio-image .ux42-viewzoom button[aria-pressed=true]{border-color:var(--carbon-accent-edge);color:var(--carbon-accent)}
+body.studio-image .ls-launch-v0712{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+body.studio-image .ls-launch-v0712>button{grid-column:auto;min-width:0;white-space:normal;padding:5px 3px;font-size:10px}
+body.studio-image .ux40-shelf-strip .ux40-launch[hidden]{display:none!important}
+@media(max-width:760px){body.studio-image .ux42-viewzoom>span:first-child{display:none}body.studio-image .ux42-viewzoom input[type=range]{width:60px}}

@@ -65,9 +65,9 @@
  const panel=by('v062-camera-panel');if(panel){const b=button('zs38-open-camera','Open Zoom Studio · dials & preview',open);b.className='zs38-launch';panel.prepend(b);}
  const graphic=by('graphic-inspector');
  if(graphic){
-  const access=el('div','zs38-advanced-link');access.append(el('strong','','ADVANCED CALLOUTS'),el('span','','Callout Designer, property keyframes and Smart Focus are in the independent Sequence editor.'),link.cloneNode(true));graphic.prepend(access);
+  const access=el('details','zs38-advanced-link ux44-sequence-link');access.append(el('summary','','Independent Sequence tools'));access.append(el('strong','','ADVANCED CALLOUTS'),el('span','','Callout Designer, property keyframes and Smart Focus are in the independent Sequence editor.'),link.cloneNode(true));graphic.prepend(access);
   const specs=[['graphic-opacity','Graphic opacity',0,100,5,100],['graphic-width','Graphic width',10,100,1,70],['graphic-shadow','Graphic shadow',0,40,1,0],['graphic-size','Text size',12,220,2,48]];
-  const panel=el('div','zs38-graphic-knobs');panel.append(el('strong','','PRECISION DIALS'));const grid=el('div','zs38-knobs');panel.append(grid);graphic.prepend(panel);
+  const panel=el('details','zs38-graphic-knobs ux44-secondary-dials');panel.append(el('summary','','Additional precision dials'));const grid=el('div','zs38-knobs');panel.append(grid);graphic.prepend(panel);
   const controls=[];
   for(const [id,label,min,max,step,reset] of specs){const input=by(id);if(!input)continue;const box=el('div','zs38-knob'),readout=el('output');let pending=null,held=false;const allowed=()=>!input.disabled&&!graphic.hidden&&!!v()?.selectedLayer()&&!v()?.exporting();
    const get=()=>pending??(Number.isFinite(input.valueAsNumber)?input.valueAsNumber:reset);

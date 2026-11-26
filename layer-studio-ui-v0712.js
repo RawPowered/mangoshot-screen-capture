@@ -152,10 +152,10 @@
   chosen=new Set(r.selection);refresh();message('Applied · Ctrl+Z restores the complete operation.');
  }
  function open(event,next='layers'){
-  if(dlg.open){refresh(false);mode(next);search.focus();return;}
+  if(dlg.open){mode(next);(next==='effects'?fxTab:search).focus();return;}
   if(doc.querySelector('dialog[open]'))return;
   returnFocus=event?.currentTarget||doc.activeElement;for(const m of doc.querySelectorAll('.v06-menu[open]'))m.open=false;
-  root.MangoToolGroupsV071?.close?.();search.value='';type.value='all';filter.value='all';collapsed.clear();sampled=applied=false;followTime=true;compare.checked=false;if(!image){referenceStart=root.MangoClipView.sequencePosition()??0;reference.max=String(Math.max(0,root.MangoClipView.outputDuration()-.005));reference.value=String(referenceStart);referenceTime.textContent=referenceStart.toFixed(2)+' s';}showFx('appearance');refresh(false);dlg.showModal();mode(next);(next==='effects'?fxTab:search).focus();if(!state.ready)message(state.reason,true);else if(next==='layers')message('Select layers to organize or apply effects.');else if(!chosen.size)message('Select a layer in the editor or the list to begin.',true);
+  root.MangoToolGroupsV071?.close?.();search.value='';type.value='all';filter.value='all';collapsed.clear();sampled=applied=false;followTime=true;compare.checked=false;if(!image){referenceStart=root.MangoClipView.sequencePosition()??0;reference.max=String(Math.max(0,root.MangoClipView.outputDuration()-.005));reference.value=String(referenceStart);referenceTime.textContent=referenceStart.toFixed(2)+' s';}showFx('appearance');refresh(false);dlg.showModal();mode(next);(next==='effects'?fxTab:search).focus();if(!state.ready)message(state.reason,true);else if(next==='layers')message('Select layers to organize or apply effects.');else if(!chosen.size)message(image?'Select a layer in the editor or the list to begin.':'Select a layer, or use Footage to grade the source.',image);
  }
  const F=root.MangoCompositorV0714,U=root.MangoCalloutMotionUIV0736;
  const currentStack=()=>fxMode==='grade'?gradeDraft:stackDraft;
@@ -187,5 +187,5 @@
  dlg.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();dlg.close();}},true);
  dlg.addEventListener('close',()=>{if(!image&&sampled&&!applied&&capture&&root.MangoClipView.automationCapture().identity===capture.identity)root.MangoClipView.seekOutput(referenceStart);if(previewFrame)root.cancelAnimationFrame(previewFrame);previewFrame=0;if(returnFocus?.isConnected){const summary=returnFocus.closest('.v06-menu')?.querySelector('summary');(summary||returnFocus).focus({preventScroll:true});}});
  for(const [id,next] of [['layer-studio-open-v0712','layers'],['effects-studio-open-v0712','effects'],['layer-studio-menu-v0712','layers'],['effects-studio-menu-v0712','effects']])doc.getElementById(id)?.addEventListener('click',event=>open(event,next));
- root.MangoLayerStudioUIV0712=Object.freeze({open:(mode='layers')=>open(null,mode)});
+ root.MangoLayerStudioUIV0712=Object.freeze({open:(mode='layers',section='appearance')=>{open(null,mode);if(dlg.open&&mode==='effects'&&['appearance','filters','motion','grade'].includes(section)&&(!image||!['motion','grade'].includes(section)))showFx(section);}});
 })(typeof globalThis!=='undefined'?globalThis:this);
