@@ -1,12 +1,12 @@
 /* Independent sequence document. Local media references only; no recording clock. */
 (function(root){'use strict';
- const SCHEMA='mangoshot.sequence.v3',SCHEMA4='mangoshot.sequence.v4',TRACKS=['V1','V2','V3','A1','A2','G1','G2','G3'],FPS=[24,25,30,50,60],MAX_CLIPS=64,MAX_SECONDS=3600,MAX_PIXELS=4096*2160,MIN=.1,EPS=.00001;
+ const SCHEMA='mangoshot.sequence.v3',SCHEMA4='mangoshot.sequence.v4',SCHEMA5='mangoshot.sequence.v5',TRACKS=['V1','V2','V3','A1','A2','G1','G2','G3'],FPS=[24,25,30,50,60],MAX_CLIPS=64,MAX_SECONDS=3600,MAX_PIXELS=4096*2160,MIN=.1,EPS=.00001;
  const PRESETS=['title','lowerThird','minimal','editorial','kinetic','glass','premium','outline'];
  const copy=x=>JSON.parse(JSON.stringify(x)),finite=(x,a,b)=>typeof x==='number'&&Number.isFinite(x)&&x>=a&&x<=b,clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
  const uid=()=>root.crypto?.randomUUID?.()||'clip-'+Date.now()+'-'+Math.random().toString(36).slice(2);
  const visual=t=>t==='V1'||t==='V2'||t==='V3',audio=t=>t==='A1'||t==='A2',graphic=t=>['G1','G2','G3'].includes(t),dimensional=t=>t==='G2'||t==='G3';
  const speed=()=>root.MangoSpeedRampV0729,mesh=()=>root.MangoDimensionalV0729;
- const upgrade=p=>{p.schema=SCHEMA4;p.version=4;return p;};
+ const upgrade=(p,version=4)=>{if(p.version<version){p.schema=version===5?SCHEMA5:SCHEMA4;p.version=version;}return p;};
  const color=x=>typeof x==='string'&&/^#[0-9a-f]{6}$/i.test(x),id=x=>typeof x==='string'&&/^[\w-]{1,90}$/.test(x);
  function settings(x){
   if(!x||typeof x.name!=='string'||!x.name.trim()||x.name.length>100||!Number.isInteger(x.width)||!Number.isInteger(x.height)||x.width%2||x.height%2||!finite(x.width,160,4096)||!finite(x.height,160,4096)||x.width*x.height>MAX_PIXELS||!FPS.includes(x.fps)||!finite(x.duration,1,MAX_SECONDS)||!color(x.background))throw Error('Invalid sequence settings. Use even dimensions, at most 8.85 MP, 24/25/30/50/60 fps, and 1–3600 seconds.');
@@ -19,22 +19,22 @@
   return {id:a.id,name:a.name,kind:a.kind,size:a.size,lastModified:a.lastModified,mime:a.mime,duration:a.duration??null,width:a.width??null,height:a.height??null};
  }
  function check(p){
-  if(!p||!((p.schema===SCHEMA&&p.version===3)||(p.schema===SCHEMA4&&p.version===4))||!Array.isArray(p.assets)||p.assets.length>200||!Array.isArray(p.clips)||p.clips.length>MAX_CLIPS||!Array.isArray(p.transitions)||p.transitions.length>MAX_CLIPS||!p.tracks)throw Error('Invalid independent sequence document or clip budget.');
-  const out=empty(p.settings),assets=new Map(),ids=new Set();if(p.version===4)upgrade(out);
+  if(!p||!((p.schema===SCHEMA&&p.version===3)||(p.schema===SCHEMA4&&p.version===4)||(p.schema===SCHEMA5&&p.version===5))||!Array.isArray(p.assets)||p.assets.length>200||!Array.isArray(p.clips)||p.clips.length>MAX_CLIPS||!Array.isArray(p.transitions)||p.transitions.length>MAX_CLIPS||!p.tracks)throw Error('Invalid independent sequence document or clip budget.');
+  const out=empty(p.settings),assets=new Map(),ids=new Set();if(p.version>=4)upgrade(out,p.version);
   for(const raw of p.assets){const a=assetAllowed(raw);if(assets.has(a.id))throw Error('Duplicate media asset.');assets.set(a.id,a);out.assets.push(a);}
   for(const t of TRACKS){const a=p.tracks[t]||(p.version===3&&dimensional(t)?out.tracks[t]:null);if(!a||typeof a.visible!=='boolean'||typeof a.muted!=='boolean'||typeof a.locked!=='boolean'||!finite(a.opacity,0,1)||!finite(a.gain,0,2))throw Error('Invalid track controls.');out.tracks[t]={visible:a.visible,muted:a.muted,locked:a.locked,opacity:a.opacity,gain:a.gain};}
   for(const c of p.clips){
    if(!c||!id(c.id)||ids.has(c.id)||!TRACKS.includes(c.track))throw Error('Invalid clip ID or track.');
    const title=c.track==='G1',g=graphic(c.track),shape=dimensional(c.track),a=g?null:assets.get(c.assetId);if(g?c.assetId!==null:!a||audio(c.track)!==(a.kind==='audio'))throw Error('Media type does not match track.');
-   let ramp=null;if(c.speedRamp!=null){if(p.version!==4||!a||a.kind==='image'||!speed())throw Error('Speed ramps require a v4 video or audio clip.');ramp=speed().check(c.speedRamp);}
+   let ramp=null;if(c.speedRamp!=null){if(p.version<4||!a||a.kind==='image'||!speed())throw Error('Speed ramps require a v4 video or audio clip.');ramp=speed().check(c.speedRamp);}
    if(!finite(c.start,0,out.settings.duration)||!finite(c.end,c.start+MIN-EPS,out.settings.duration+EPS)||!finite(c.sourceIn,0,864000)||!finite(c.sourceOut,c.sourceIn+(ramp?MIN*.25:MIN)-EPS,864000)||Math.abs((c.end-c.start)*(ramp?speed().integral(ramp):1)-c.sourceOut+c.sourceIn)>.001)throw Error('Clip timing exceeds sequence or does not match integrated source length.');
    if(a&&a.kind!=='image'&&c.sourceOut>a.duration+.025)throw Error('Clip exceeds its source duration.');
    if(!finite(c.opacity,0,1)||!finite(c.gain,0,2)||!finite(c.x,-1,1)||!finite(c.y,-1,1)||!finite(c.width,.05,2)||!finite(c.height,.05,2)||!['contain','cover','stretch'].includes(c.fit)||!finite(c.fadeIn,0,c.end-c.start+EPS)||!finite(c.fadeOut,0,c.end-c.start+EPS)||typeof c.visible!=='boolean'||typeof c.muted!=='boolean'||typeof c.locked!=='boolean')throw Error('Invalid clip controls or fades.');
    const grade=root.MangoCompositorV0714?.checkStack(c.grade||[])||[];if((g||audio(c.track))&&grade.length)throw Error('Media grades require visual media.');
    if(title&&(!PRESETS.includes(c.preset)||typeof c.text!=='string'||c.text.length>400||!finite(c.fontSize,12,220)||!color(c.color)||c.x<0||c.y<0||c.width>1||c.width<.1))throw Error('Invalid title settings.');
-   if(shape&&(p.version!==4||!mesh()||!c.callout3d))throw Error('Dimensional graphics require a v4 callout.');if(!shape&&c.callout3d!=null)throw Error('Dimensional callout requires a graphics track.');
+   if(shape&&(p.version<4||!mesh()||!c.callout3d))throw Error('Dimensional graphics require a v4 callout.');if(!shape&&c.callout3d!=null)throw Error('Dimensional callout requires a graphics track.');
    const normalized={id:c.id,assetId:g?null:c.assetId,track:c.track,start:c.start,end:c.end,sourceIn:c.sourceIn,sourceOut:c.sourceOut,opacity:c.opacity,gain:c.gain,visible:c.visible,muted:c.muted,locked:c.locked,x:c.x,y:c.y,width:c.width,height:c.height,fit:c.fit,fadeIn:c.fadeIn,fadeOut:c.fadeOut,grade};
-   if(title)Object.assign(normalized,{text:c.text,preset:c.preset,fontSize:c.fontSize,color:c.color});if(shape)normalized.callout3d=mesh().check(c.callout3d);if(ramp)normalized.speedRamp=ramp;
+   if(title)Object.assign(normalized,{text:c.text,preset:c.preset,fontSize:c.fontSize,color:c.color});if(shape){normalized.callout3d=mesh().check(c.callout3d);if(normalized.callout3d.mode==='spatial'&&p.version!==5)throw Error('Spatial arrows require sequence v5.');}if(ramp)normalized.speedRamp=ramp;
    ids.add(c.id);out.clips.push(normalized);
   }
   out.clips.sort((a,b)=>TRACKS.indexOf(a.track)-TRACKS.indexOf(b.track)||a.start-b.start||a.id.localeCompare(b.id));
@@ -70,7 +70,7 @@
   else n.clips.push(make(n,a,track,at));
   if(dimensional(track))upgrade(n);return check(n);
  }
- function addCallout(p,at,value){const n=copy(p),end=Math.min(n.settings.duration,at+4),t=['G2','G3'].find(t=>!n.tracks[t].locked&&!n.clips.some(c=>c.track===t&&c.start<end-EPS&&c.end>at+EPS));if(!t)throw Error('Both dimensional graphics tracks overlap this range or are locked.');const c=make(n,null,t,at);c.callout3d=mesh().check(value);n.clips.push(c);return check(upgrade(n));}
+ function addCallout(p,at,value){const n=copy(p),end=Math.min(n.settings.duration,at+4),t=['G2','G3'].find(t=>!n.tracks[t].locked&&!n.clips.some(c=>c.track===t&&c.start<end-EPS&&c.end>at+EPS));if(!t)throw Error('Both dimensional graphics tracks overlap this range or are locked.');const c=make(n,null,t,at);c.callout3d=mesh().check(value);const spatial=c.callout3d.mode==='spatial';if(spatial)Object.assign(c,{x:0,y:0,width:1,height:1});n.clips.push(c);return check(upgrade(n,spatial?5:4));}
  function change(p,id,patch){
   const n=copy(p),i=n.clips.findIndex(c=>c.id===id);if(i<0)throw Error('Clip no longer exists.');const c=n.clips[i];
   if(patch===null){unlocked(n,c);if(attached(n,c))throw Error('Remove its dissolve before deleting the clip.');n.clips.splice(i,1);}
@@ -80,7 +80,7 @@
    if(attached(n,c)&&keys.some(k=>['track','start','end','sourceIn','sourceOut','speedRamp'].includes(k)&&patch[k]!==c[k]))throw Error('Remove the attached dissolve before editing clip timing.');
    const next={...c,...patch};if(Object.hasOwn(patch,'speedRamp')){if(patch.speedRamp===null)delete next.speedRamp;else{next.speedRamp=speed().check(patch.speedRamp);upgrade(n);}}
    if(next.speedRamp||Object.hasOwn(patch,'speedRamp')){if(keys.some(k=>['start','end','sourceIn','speedRamp'].includes(k)))next.sourceOut=speed().sourceOut(next);}
-   if(Object.hasOwn(patch,'callout3d'))upgrade(n);n.clips[i]=next;
+   if(Object.hasOwn(patch,'callout3d'))upgrade(n,next.callout3d?.mode==='spatial'?5:4);n.clips[i]=next;
   }return check(n);
  }
  function move(p,id,mode,delta,track,snap=0,playhead=0){
@@ -121,6 +121,6 @@
  const sourceAt=(c,t)=>c.speedRamp?speed().source(c,t):clamp(c.sourceIn+t-c.start,c.sourceIn,c.sourceOut);
  const rateAt=(c,t)=>c.speedRamp?speed().rate(c.speedRamp,speed().fraction(c,t)):1;
  function fit(sw,sh,dw,dh,mode){if(mode==='stretch')return {x:0,y:0,w:dw,h:dh};const f=(mode==='cover'?Math.max:Math.min)(dw/sw,dh/sh);return {x:(dw-sw*f)/2,y:(dh-sh*f)/2,w:sw*f,h:sh*f};}
- const api=Object.freeze({SCHEMA,SCHEMA4,TRACKS,FPS,PRESETS,MAX_CLIPS,MAX_SECONDS,MAX_PIXELS,MIN,EPS,copy,settings,empty,assetAllowed,check,asset,attached,visual,audio,graphic,dimensional,make,add,addCallout,change,move,dissolve,removeDissolve,active,show,sound,needed,fade,mix,intervals,sourceAt,rateAt,fit});
+ const api=Object.freeze({SCHEMA,SCHEMA4,SCHEMA5,TRACKS,FPS,PRESETS,MAX_CLIPS,MAX_SECONDS,MAX_PIXELS,MIN,EPS,copy,settings,empty,assetAllowed,check,asset,attached,visual,audio,graphic,dimensional,make,add,addCallout,change,move,dissolve,removeDissolve,active,show,sound,needed,fade,mix,intervals,sourceAt,rateAt,fit});
  root.MangoIndependentSequenceV0719=api;if(typeof module==='object'&&module.exports)module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

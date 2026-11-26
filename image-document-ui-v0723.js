@@ -19,7 +19,7 @@
   const s=H.state();if(d.querySelector('dialog[open]')||mode==='save'&&!s.ready||mode==='open'&&!s.canOpen)return false;
   returnFocus=d.activeElement;session={...s,mode};working=false;title.textContent=mode==='save'?'SAVE EDITABLE IMAGE PROJECT':'OPEN IMAGE PROJECT';
   nameInput.value=name;fileInput.value='';saveSection.hidden=mode!=='save';openSection.hidden=mode!=='open';confirm.textContent=mode==='save'?'Save .mangoimage':'Open & replace';
-  details.textContent=mode==='save'?s.width+' × '+s.height+' px · '+s.layers.length+' layers · embedded source assets and masks':'Version 1–7 local project · maximum 96 MiB · source dimensions and references validated';
+  details.textContent=mode==='save'?s.width+' × '+s.height+' px · '+s.layers.length+' layers · embedded source assets and masks':'Version 1–8 local project · maximum 96 MiB · source dimensions and references validated';
   status.textContent='Local only';dialog.showModal();sync();return true;
  }
  function download(blob,filename){const url=URL.createObjectURL(blob),a=el('a');a.href=url;a.download=filename;d.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
@@ -55,7 +55,7 @@
    const effects=[];if(l.rotation)effects.push('Rotation '+l.rotation+'°');if(l.opacity!==1)effects.push('Opacity '+Math.round(l.opacity*100)+'%');if(l.fx.kind!=='none')effects.push(l.fx.kind==='shadow'?'Drop shadow':'Outer glow');if(l.fx.blend!=='source-over')effects.push('Blend: '+l.fx.blend);if(l.material?.kind&&l.material.kind!=='none')effects.push('Material: '+l.material.kind);for(const item of l.effectStack||[])effects.push((item.enabled?'':'Disabled · ')+item.kind+' '+item.value);
    if(l.creativeFx?.gradient)effects.push('Gradient · '+l.creativeFx.gradient.kind+' · '+l.creativeFx.gradient.stops.length+' stops');for(const [i,s] of (l.creativeFx?.shadows||[]).entries())effects.push((s.enabled?'':'Disabled · ')+(s.kind==='shadow'?'Drop shadow':'Outer glow')+' '+(i+1));
    for(const [i,r] of (l.rasterFx||[]).entries())effects.push((r.enabled?'':'Disabled · ')+'Raster '+(i+1)+' · '+root.MangoRasterLayerV0727.kinds[r.op]+' '+r.amount+'%');
-   if(l.callout3d)effects.push('3D '+l.callout3d.shape+' · '+l.callout3d.material+' · editable extrusion');
+   if(l.callout3d)effects.push(l.callout3d.mode==='spatial'?'Spatial arrow · '+l.callout3d.points.length+' XYZ nodes · '+l.callout3d.camera.projection:'Legacy extrusion · '+l.callout3d.shape+' · '+l.callout3d.material);
    if(l.selectionMask)effects.push((l.selectionMask.enabled?'':'Disabled · ')+'Selection mask · '+l.selectionMask.regions.length+' regions · '+l.selectionMask.feather+' px feather');
    if(l.maskPreview)effects.push('Editable image alpha mask');
    if(l.group?.length)effects.push('Folder: '+l.group.join(' / '));

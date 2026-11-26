@@ -69,7 +69,7 @@
  }
  function check(p,cores){
   keys(p,p?.version>=2?['format','version','name','width','height','base','layers','assets','mattes','composition']:['format','version','name','width','height','base','layers','assets','mattes']);
-  if(p.format!=='MangoShotImage'||![1,2,3,4,5,6,7].includes(p.version)||!text(p.name,120)||!p.name.trim())fail('Unsupported image project format or version.');
+  if(p.format!=='MangoShotImage'||![1,2,3,4,5,6,7,8].includes(p.version)||!text(p.name,120)||!p.name.trim())fail('Unsupported image project format or version.');
   dimensions(p.width,p.height);pngHeader(p.base,p.width,p.height);
   if(!Array.isArray(p.layers)||p.layers.length>MAX_LAYERS||!Array.isArray(p.assets)||p.assets.length>128||!Array.isArray(p.mattes)||p.mattes.length>128)fail('Project layer or asset limit exceeded.');
   const budget={n:0},layers=p.layers.map(l=>layer(l,budget,cores)),ids=new Set(),assets=new Map(),mattes=new Map();let total=p.width*p.height,encoded=p.base.length;
@@ -85,7 +85,8 @@
   if(layers.some(l=>l.creativeFx)&&p.version<4)fail('Creative effects require project version 4 or newer.');
   if(layers.some(l=>l.rasterFx)&&p.version<5)fail('Editable raster filters require project version 5 or newer.');
   if(layers.some(l=>l.selectionMask)&&p.version<6)fail('Selection masks require project version 6 or newer.');
-  if(layers.some(l=>l.callout3d)&&p.version!==7)fail('Dimensional callouts require project version 7.');
+  if(layers.some(l=>l.callout3d)&&p.version<7)fail('Dimensional callouts require project version 7 or newer.');
+  if(layers.some(l=>l.callout3d?.mode==='spatial')&&p.version!==8)fail('Spatial arrows require project version 8.');
   root.MangoSelectionV0728?.requireProject(layers,l=>assets.get(l.assetId),cores.compositor);
   root.MangoRasterLayerV0727?.requireProject(layers,l=>assets.get(l.assetId));
   root.MangoCreativeEffectsV0726?.requireBudget(layers,p.width,p.height,cores.compositor);

@@ -20,7 +20,7 @@
   assertLive(signal);if(v.error||v.seeking||v.readyState<2||Math.abs(v.currentTime-target)>.04)throw Error('Source did not decode at the requested timestamp.');
  }
  const sameMeta=(a,m)=>a.kind==='image'?a.width===m.width&&a.height===m.height:Number.isFinite(m.duration)&&Math.abs(a.duration-m.duration)<.12&&(a.kind!=='video'||a.width===m.width&&a.height===m.height);
- function validateSources(project,registry){for(const c of project.clips){if(P.graphic(c.track))continue;const a=P.asset(project,c),entry=registry.get(c.assetId);if(!a||!entry||entry.missing||!entry.blob||!entry.url||entry.size!==a.size||entry.kind!==a.kind||entry.name!==a.name)throw Error('Relink missing or mismatched source: '+(a?.name||c.assetId));C?.requireSupport(c.grade);}}
+ function validateSources(project,registry){if(project.clips.some(c=>c.callout3d?.mode==='spatial'))root.MangoSpatialRendererV0730.requireRenderer();for(const c of project.clips){if(P.graphic(c.track))continue;const a=P.asset(project,c),entry=registry.get(c.assetId);if(!a||!entry||entry.missing||!entry.blob||!entry.url||entry.size!==a.size||entry.kind!==a.kind||entry.name!==a.name)throw Error('Relink missing or mismatched source: '+(a?.name||c.assetId));C?.requireSupport(c.grade);}}
  async function preflight(project,registry,signal){const p=P.check(project);validateSources(p,registry);const seen=new Set();
   for(const c of p.clips){if(P.graphic(c.track)||seen.has(c.assetId))continue;seen.add(c.assetId);const a=P.asset(p,c),m=await inspect(registry.get(c.assetId),signal);if(!sameMeta(a,m))throw Error('Decoded source metadata does not match saved project: '+a.name);}
   return p;
