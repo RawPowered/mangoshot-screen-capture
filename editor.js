@@ -1936,6 +1936,25 @@ globalThis.MangoImageActions={
  * to the source identity and all intervening editor revisions. */
 globalThis.MangoToolImageV0711=Object.freeze({state:()=>({selection:batchLayers().map(l=>l.id),layers:strokes.map(l=>({id:l.id,name:l.name||l.type,type:l.type,locked:!!l.locked,visible:l.visible!==false,bounds:tsBounds(l)})),tool:tool.value})});
 
+/* Raster Lab reads the exact currently exported composition, never unredacted source. */
+globalThis.MangoRasterImageV0722=Object.freeze({
+ state(){const s=globalThis.MangoLayerImageV0712.state();return {ready:s.ready,stamp:s.stamp,width:base.width,height:base.height};},
+ capture(stamp,mode){
+  const s=this.state();if(!s.ready||s.stamp!==stamp)throw Error('Image changed or is busy. Reopen Raster Lab.');
+  if(!s.width||!s.height)throw Error('Open an image first.');
+  if(mode==='full'){
+   if(s.width*s.height>16000000)throw Error('Raster export is limited to 16 megapixels in this preview. Standard export is unchanged.');
+   return flatten(true);
+  }
+  if(!['fit','detail'].includes(mode))throw Error('Invalid preview mode.');
+  const scale=mode==='fit'?Math.min(1,840/s.width,520/s.height):1;
+  const sw=mode==='detail'?Math.min(s.width,840):s.width,sh=mode==='detail'?Math.min(s.height,520):s.height;
+  const sx=Math.floor((s.width-sw)/2),sy=Math.floor((s.height-sh)/2),c=document.createElement('canvas');
+  c.width=Math.max(1,Math.round(sw*scale));c.height=Math.max(1,Math.round(sh*scale));
+  const g=c.getContext('2d');g.drawImage(base,sx,sy,sw,sh,0,0,c.width,c.height);g.drawImage(ink,sx,sy,sw,sh,0,0,c.width,c.height);
+  return c;
+ }
+});
 globalThis.MangoLayerImageV0712=Object.freeze({
  state(){
   ensureLayerIds();const C=globalThis.MangoLayerStudioV0712,primary=selectedAnyStroke(),busy=!!(drawing||active||textDraft||dragText||dragImage||maskDraw||dragVector||entireErase||layerDrag||layerStackDrag!==null||resizeDrag||rotationDrag||appearanceGesture||batchDrag||marqueeDrag);

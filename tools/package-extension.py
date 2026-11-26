@@ -16,6 +16,11 @@ def build(out,release_tag):
                  set(p for p in (BASE/'assets').glob('*.webp') if p.is_file()) |
                  set(p for p in (BASE/'assets'/'fonts').glob('*') if p.is_file() and p.suffix in ('.ttf','.txt','.json')) |
                  set(p for p in (BASE/'LICENSE',BASE/'README.md') if p.is_file()))
+    if release_tag.endswith('-mango-engine-raster-preview'):
+        binary=BASE/'mango-engine-v0722.wasm'
+        if not binary.is_file() or not binary.read_bytes().startswith(b'\x00asm\x01\x00\x00\x00'):
+            raise ValueError('Compile MangoEngine Wasm before packaging this preview')
+        files=sorted(set(files)|{binary})
     required=['manifest.json','popup.html','capture-store.js','content.js','background.js','editor.js','recorder.js','clip-studio.js','pdf-export.js']
     for name in required:
         if name not in {p.name for p in files}:raise ValueError(f'Missing required extension file: {name}')
@@ -36,6 +41,9 @@ def build(out,release_tag):
                 assert b'SIL OPEN FONT LICENSE' in z.read('assets/fonts/'+entry['license']), 'Missing font license'
         actual=json.loads(z.read('manifest.json'))
         if actual['version']!=version:raise ValueError('Invalid archive manifest')
+        if release_tag.endswith('-mango-engine-raster-preview'):
+            for name in ('mango-engine-v0722.wasm','mango-raster-core-v0722.js','mango-raster-worker-v0722.js','mango-raster-ui-v0722.js','mango-raster-v0722.css'):
+                if name not in z.namelist():raise ValueError('Missing raster runtime: '+name)
         for html in ('popup.html','editor.html'):
             if b'capture-store.js' not in z.read(html):raise ValueError(f'Capture library missing from {html}')
         if release_tag.endswith('-alpha.2') and version=='0.6.18':

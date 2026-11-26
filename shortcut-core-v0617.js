@@ -141,7 +141,7 @@
  }
  function editable(target){
   return !!(target?.isContentEditable||target?.closest?.(
-   'input:not([type="hidden"]),textarea,select,[contenteditable],[role="textbox"],[role="combobox"],[role="searchbox"]'));
+   'input:not([type="hidden"]),textarea,select,[contenteditable],[role="textbox"],[role="combobox"],[role="searchbox"],[role="slider"],[role="separator"]'));
  }
  function eventEditable(event){
   const path=typeof event?.composedPath==='function'?event.composedPath():[event?.target];
