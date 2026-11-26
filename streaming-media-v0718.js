@@ -79,7 +79,7 @@
   for(const p of parts){if(stop())break;primary.pause();pause();
    if(recorder.state==='recording')await recorderEvent(recorder,'pause',()=>recorder.pause());
    await seekPrimary(p.start);if(stop())break;await prime(p.outputStart);if(stop())break;
-   if(primary.readyState<2)await wait(primary,'loadeddata',()=>{},null);
+   if(primary.readyState<2)await wait(primary,'canplay',()=>{},null);
    draw(p.outputStart,false);
    if(!started){recorder.start(800);started=true;}else await recorderEvent(recorder,'resume',()=>recorder.resume());
    await Promise.all([start(p.outputStart),primary.play()]);
@@ -96,6 +96,6 @@
   }
   primary.pause();pause();if(!stop())progress(total,total);return started;
  }
- const api=Object.freeze({MAX_PIXELS,MAX_DECODERS,DRIFT_LIMIT,STILL_TOLERANCE,isVideo,enabled,selected,has,sourceAt,partition,probe,pool,exportRanges});
+ const api=Object.freeze({MAX_PIXELS,MAX_DECODERS,DRIFT_LIMIT,STILL_TOLERANCE,isVideo,enabled,selected,has,sourceAt,partition,probe,seek,pool,exportRanges});
  root.MangoStreamingV0718=api;if(typeof module==='object'&&module.exports)module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

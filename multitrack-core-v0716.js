@@ -32,7 +32,7 @@
   const span=Math.min(a.kind==='image'?3:a.duration||0,a.kind==='video'&&root.MangoStreamingV0718?length:a.kind==='video'||gif(a)?4:120,length-at);if(span<.1)throw Error('Move playhead earlier or wait for metadata.');
   return {id:root.crypto?.randomUUID?.()||'media-'+Date.now()+'-'+Math.random().toString(36).slice(2),assetId:a.id,track,start:at,end:at+span,sourceIn:0,sourceOut:span,opacity:1,volume:1,locked:false,visible:true,x:0,y:0,width:1,height:1,fit:'contain',grade:[]};
  }
- const active=(m,t)=>m.clips.filter(c=>c.start<=t&&t<c.end&&c.visible&&(visual(c)?m.tracks[c.track].visible&&m.tracks[c.track].opacity*c.opacity>0:!m.tracks.A2.muted&&m.tracks.A2.volume*c.volume>0));
+ const active=(m,t)=>m.clips.filter(c=>c.start<=t+.000001&&t<c.end-.000001&&c.visible&&(visual(c)?m.tracks[c.track].visible&&m.tracks[c.track].opacity*c.opacity>0:!m.tracks.A2.muted&&m.tracks.A2.volume*c.volume>0));
  const hasAudio=m=>m.clips.some(c=>!visual(c)&&c.visible&&!m.tracks.A2.muted&&m.tracks.A2.volume*c.volume>0);
  function dimensions(w,h,count){const s=Math.min(1,960/w,540/h,Math.sqrt(MAX_RASTER/(Math.max(1,count)*4*w*h)));return {w:Math.max(1,Math.floor(w*s)),h:Math.max(1,Math.floor(h*s))};}
  function fitRect(sw,sh,dw,dh,fit){if(fit==='stretch')return {x:0,y:0,w:dw,h:dh};const k=(fit==='cover'?Math.max:Math.min)(dw/sw,dh/sh);return {x:(dw-sw*k)/2,y:(dh-sh*k)/2,w:sw*k,h:sh*k};}
@@ -104,7 +104,7 @@
   async function paintExact(ctx,m,t,w,h){if(!ready(m))throw Error('Secondary project not prepared.');const isolated=S?.pool(asset);
    try{if(isolated)await isolated.prime(m,t);if(!paint(ctx,m,t,w,h,false,isolated))throw Error('Exact secondary frame unavailable.');}finally{isolated?.clear();}
   }
-  const stats=()=>({...(streams?.stats()||{}),cachedVideoFrames:[...cache.values()].filter(e=>e.videoMeta).reduce((n,e)=>n+e.frames.length,0),cachedVisualFrames:[...cache.values()].reduce((n,e)=>n+e.frames.length,0)});
+  const stats=()=>({...(streams?.stats()||{}),cachedVideoFrames:[...cache.values()].filter(e=>e.videoMeta).reduce((n,e)=>n+e.frames.length,0),cachedVisualFrames:[...cache.values()].reduce((n,e)=>n+e.frames.length,0),nativeSources:[...cache.values()].filter(e=>e.videoMeta).map(e=>({...e.videoMeta}))});
   return {prepare,ready,paint,mixer,clear,hasStreams,primeStreams,startStreams,pauseStreams,paintExact,stats,streamsReadyAt:(m,t,run=false)=>!streams||streams.readyAt(m,t,run)};
  }
  const api=Object.freeze({TRACKS,FPS,MAX_FRAMES,MAX_RASTER,MAX_FILE,defaults,copy,check,make,gif,visual,active,hasAudio,framesFor,dimensions,fitRect,createRuntime});

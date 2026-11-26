@@ -4,7 +4,7 @@
  */
 (function(root){
  'use strict';
- function create(video,getParts,onPosition,onState){
+ function create(video,getParts,onPosition,onState,hooks={}){
   let playing=false,token=0,active=0,lastOutput=0,raf=0,frameId=null,busy=false;
   let pausedForJump=false;
   const rows=()=>root.MangoSequenceMedia.sections(getParts());
@@ -16,7 +16,7 @@
    if(playing&&row)return Math.min(row.outputEnd,row.outputStart+Math.max(0,video.currentTime-row.sourceStart));
    if(lastOutput>=root.MangoSequenceMedia.duration(getParts())-.001)return lastOutput;
    return root.MangoSequenceMedia.atSource(getParts(),video.currentTime)?.output??lastOutput;}
-  function stop(){++token;playing=false;busy=false;pausedForJump=false;cancel();video.pause();onState?.(false);}
+  function stop(){++token;playing=false;busy=false;pausedForJump=false;cancel();video.pause();hooks.onPause?.();onState?.(false);}
   function seekOutput(seconds){const map=root.MangoSequenceMedia.atOutput(getParts(),seconds);
    if(!map)return false;active=map.index;lastOutput=map.output;
    // Updating currentTime invalidates the prior cached frame and clears previous cut audio.
@@ -36,7 +36,7 @@
   async function advance(){if(!playing||busy)return;
    const ranges=rows(),next=ranges[active+1];if(!next){lastOutput=ranges[ranges.length-1].outputEnd;onPosition?.(lastOutput);stop();return;}
    busy=true;const captured=token;
-   video.pause();pausedForJump=true;
+   video.pause();hooks.onPause?.();pausedForJump=true;
    try{
     active+=1;lastOutput=next.outputStart;
     if(Math.abs(video.currentTime-next.sourceStart)>.002){
@@ -48,6 +48,8 @@
       });
       video.currentTime=next.sourceStart;await ready;
     }
+    if(!playing||token!==captured)return;
+    if(hooks.beforePlay)await hooks.beforePlay(next.outputStart,()=>playing&&token===captured);
     if(!playing||token!==captured)return;
     pausedForJump=false;busy=false;onPosition?.(next.outputStart);
     await video.play();if(playing&&token===captured)loop();
@@ -61,7 +63,7 @@
    const at=mapped?.output??lastOutput;
    seekOutput(at);playing=true;busy=false;pausedForJump=false;token++;const my=token;
    onState?.(true);
-   try{await video.play();if(playing&&token===my)loop();}
+   try{if(hooks.beforePlay)await hooks.beforePlay(at,()=>playing&&token===my);if(!playing||token!==my)return;await video.play();if(playing&&token===my)loop();}
    catch(error){if(playing&&token===my){stop();onState?.(false,error.message);}}
   }
   function toggle(){if(playing){stop();return Promise.resolve();}return play();}
