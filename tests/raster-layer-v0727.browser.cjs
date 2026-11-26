@@ -33,6 +33,20 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   await p.evaluate(()=>MangoLayerImageV0712.select(['redact']));await p.waitForFunction(()=>document.getElementById('rl-open-v0727').disabled);
   await p.evaluate(()=>MangoLayerImageV0712.select(['photo']));await p.locator('#rl-open-v0727').click();await p.locator('#rl-remove-v0727').click();await p.keyboard.press('Escape');await p.locator('#rl-dialog-v0727').waitFor({state:'hidden'});assert.equal(await pixels(),committed);
   await p.setViewportSize({width:1024,height:600});await p.locator('#rl-open-v0727').click();await p.locator('#rl-dialog-v0727').waitFor({state:'visible'});const box=await p.locator('#rl-dialog-v0727').boundingBox();assert.ok(box.x>=0&&box.y>=0&&box.x+box.width<=1025&&box.y+box.height<=601);
+  // Measure representative source-resolution work with worker and cache, not a claimed GPU speedup.
+  const benchmark=await p.evaluate(async()=>{
+   const E=MangoRasterLayerV0727,results=[];
+   for(const [w,h] of [[1920,1080],[3840,2160]]){
+    const c=document.createElement('canvas');c.width=w;c.height=h;const q=c.getContext('2d'),g=q.createLinearGradient(0,0,w,h);g.addColorStop(0,'#ff0000');g.addColorStop(1,'#3377ff');q.fillStyle=g;q.fillRect(0,0,w,h);
+    const a={image:c,width:w,height:h},stack=[{op:'gray',amount:100,enabled:true},{op:'sharp',amount:40,enabled:true}],r=await E.prepare(a,stack,'auto'),hit=await E.prepare(a,stack,'auto'),js=await E.prepare(a,stack,'js');
+    if(!hit.cached||!r.backend.includes('Rust / Wasm worker')||!js.backend.includes('JS worker'))throw Error('Representative worker/cache qualification failed.');
+    results.push({width:w,height:h,wasmPreparationMs:r.ms,jsPreparationMs:js.ms,cacheHit:hit.cached,cachePixels:E.stats().pixels});
+    // A pre-aborted request must never create a replacement cache entry.
+    const ctl=new AbortController();ctl.abort();let canceled=false;try{await E.prepare(a,[{op:'blur',amount:90,enabled:true}],'auto',ctl.signal);}catch(err){canceled=err.name==='AbortError';}if(!canceled)throw Error('Cancellation gate failed.');
+    E.retain([]);c.width=c.height=1;
+   }
+   return results;
+  });fs.writeFileSync(path.join(out,'raster-benchmark.json'),JSON.stringify(benchmark,null,2));console.log('Representative raster preparation:',JSON.stringify(benchmark));
   const probe=await p.evaluate(()=>MangoRasterLayerV0727.gpuProbe());assert.ok(['passed','unavailable','failed'].includes(probe.status));console.log('WebGPU optional probe:',probe.status,probe.detail);await p.screenshot({path:path.join(out,'02-compact-raster.png')});
   console.log('Editable raster actual Wasm/JS preview parity, masks, immutable assets, undo/redo, cache fallback and v5 roundtrip passed');
  }finally{await ctx.close();}

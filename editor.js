@@ -2057,7 +2057,7 @@ globalThis.MangoImageDocumentV0723=Object.freeze({
     const c=document.createElement('canvas');c.width=a.width;c.height=a.height;c.getContext('2d').drawImage(a.image,0,0);assets.push({id:l.assetId,name:a.name,width:a.width,height:a.height,png:c.toDataURL('image/png')});c.width=c.height=1;assetIds.add(l.assetId);}
    if(l.cutoutKey&&!matteIds.has(l.cutoutKey)){const m=registry.get(l.cutoutKey);if(!m)throw Error('Missing image matte.');mattes.push({id:l.cutoutKey,width:m.width,height:m.height,alpha:D.encode(m.data)});matteIds.add(l.cutoutKey);}
   }
-  const comp=advancedComp?.reconcile(composition,strokes),v2=advancedComp?.active(comp),v3=layers.some(l=>l.brush),v4=layers.some(l=>l.creativeFx),v5=layers.some(l=>l.rasterFx?.length);
+  const comp=advancedComp?.reconcile(composition,strokes),v2=advancedComp?.active(comp),v3=layers.some(l=>l.brush),v4=layers.some(l=>l.creativeFx),v5=layers.some(l=>Array.isArray(l.rasterFx));
   return D.check({format:'MangoShotImage',version:v5?5:v4?4:v3?3:v2?2:1,name,width:base.width,height:base.height,base:base.toDataURL('image/png'),layers,assets,mattes,...(v2||v3||v4||v5?{composition:comp}:{})},this.cores());
  },
  async open(raw,stamp){
