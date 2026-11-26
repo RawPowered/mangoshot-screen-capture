@@ -26,10 +26,10 @@
   return p;
  }
  function createPool(project,registry,signal,ctx=null,dest=null){
-  const entries=new Map();let peak=0,maxDrift=0,seeks=0;
+  const entries=new Map();let peak=0,maxDrift=0,seeks=0;const focusRenderer=root.MangoSmartFocusV0737?.renderer();
   function release(e){try{e.node?.disconnect();e.gain?.disconnect();}catch{}closeMedia(e.media);e.image?.close();}
   function pause(){for(const e of entries.values())if(e.media){e.media.pause();e.media.playbackRate=1;if(e.gain)e.gain.gain.value=0;}}
-  function clear(){pause();for(const e of entries.values())release(e);entries.clear();}
+  function clear(){pause();for(const e of entries.values())release(e);entries.clear();focusRenderer?.clear();}
   function at(t){return P.needed(project,t);}
   async function prime(t){assertLive(signal);pause();const wanted=at(t),ids=new Set(wanted.map(c=>c.id));if(wanted.length>MAX_ACTIVE)throw Error('Active media decoder budget exceeded.');
    for(const [id,e] of entries)if(!ids.has(id)){release(e);entries.delete(id);}
@@ -55,7 +55,8 @@
     for(const c of P.active(p,t)){if(!P.visual(c.track)||!P.show(p,c))continue;const e=entries.get(c.id),f=e?.image||e?.media;if(!f)throw Error('Required visual frame unavailable.');
      const dw=c.width*w,dh=c.height*h,r=P.fit(f.videoWidth||f.width,f.videoHeight||f.height,dw,dh,c.fit);q.save();try{q.translate(c.x*w,c.y*h);q.beginPath();q.rect(0,0,dw,dh);q.clip();q.globalAlpha=P.mix(p,c,t).opacity;q.filter=C?.filter(c.grade,h/1080)||'none';q.drawImage(f,r.x,r.y,r.w,r.h);}finally{q.restore();}
     }
-    for(const c of P.active(p,t)){if(!P.graphic(c.track)||!P.show(p,c))continue;if(P.dimensional(c.track)){const b={x:c.x*w,y:c.y*h,width:c.width*w,height:c.height*h},opacity=P.mix(p,c,t).opacity;if(c.callout2d){const u=(t-c.start)/(c.end-c.start),m=c.calloutMotion?root.MangoCalloutMotionV0736.evaluate(c.calloutMotion,c,c.callout2d,u):null;root.MangoCalloutV0735.paint(q,m?m.recipe:c.callout2d,m?{x:m.pose.x*w,y:m.pose.y*h,width:m.pose.width*w,height:m.pose.height*h}:b,m?m.pose.opacity*p.tracks[c.track].opacity*P.fade(c,t):opacity,u,w,h);}else if(c.sceneMotion){const m=root.MangoUnifiedSceneMotionV0734.evaluate(c.sceneMotion,(t-c.start)/(c.end-c.start),c.callout3d);root.MangoSpatialRendererV0730.paint(q,m.scene,b,opacity,1,true,m.reveals);}else if(c.spatialMotion){const m=root.MangoSpatialMotionV0731.evaluate(c.spatialMotion,(t-c.start)/(c.end-c.start),c.callout3d);root.MangoSpatialRendererV0730.paint(q,m.value,b,opacity,m.reveal,true);}else root.MangoDimensionalV0729.paint(q,c.callout3d,b,opacity);continue;}const g=G.create('text',c.preset,c.start,{id:c.id,start:c.start,end:c.end,text:c.text,x:c.x,y:c.y,width:c.width,fontSize:c.fontSize,color:c.color,opacity:c.opacity*p.tracks.G1.opacity,fadeIn:c.fadeIn,fadeOut:c.fadeOut});G.render(q,[g],t,w,h);}
+    const graphics=P.active(p,t).filter(c=>P.graphic(c.track)&&P.show(p,c));const clean=graphics.some(c=>c.focus?.mode==='lens')?focusRenderer.capture(canvas):null;
+    for(const c of graphics){if(P.dimensional(c.track)){const b={x:c.x*w,y:c.y*h,width:c.width*w,height:c.height*h},opacity=P.mix(p,c,t).opacity;if(c.callout2d){const u=(t-c.start)/(c.end-c.start),m=c.calloutMotion?root.MangoCalloutMotionV0736.evaluate(c.calloutMotion,c,c.callout2d,u):null;const recipe=m?m.recipe:c.callout2d,box=m?{x:m.pose.x*w,y:m.pose.y*h,width:m.pose.width*w,height:m.pose.height*h}:b,alpha=m?m.pose.opacity*p.tracks[c.track].opacity*P.fade(c,t):opacity;if(c.focus)focusRenderer.paint(q,c.focus,recipe,box,alpha,u,w,h,clean);else root.MangoCalloutV0735.paint(q,recipe,box,alpha,u,w,h);}else if(c.sceneMotion){const m=root.MangoUnifiedSceneMotionV0734.evaluate(c.sceneMotion,(t-c.start)/(c.end-c.start),c.callout3d);root.MangoSpatialRendererV0730.paint(q,m.scene,b,opacity,1,true,m.reveals);}else if(c.spatialMotion){const m=root.MangoSpatialMotionV0731.evaluate(c.spatialMotion,(t-c.start)/(c.end-c.start),c.callout3d);root.MangoSpatialRendererV0730.paint(q,m.value,b,opacity,m.reveal,true);}else root.MangoDimensionalV0729.paint(q,c.callout3d,b,opacity);continue;}const g=G.create('text',c.preset,c.start,{id:c.id,start:c.start,end:c.end,text:c.text,x:c.x,y:c.y,width:c.width,fontSize:c.fontSize,color:c.color,opacity:c.opacity*p.tracks.G1.opacity,fadeIn:c.fadeIn,fadeOut:c.fadeOut});G.render(q,[g],t,w,h);}
    }finally{q.restore();}
   }
   return {prime,start,pause,clear,draw,stats:()=>({active:entries.size,peak,maxDrift,seeks})};
