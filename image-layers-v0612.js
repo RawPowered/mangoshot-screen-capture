@@ -74,20 +74,21 @@
   const b=bounds(stroke),paths=stroke.mask?.paths||[],last=paths.at(-1);
   const R=root.MangoRasterLayerV0727,recipe=stroke.rasterFx?R.key(stroke.rasterFx):'';
   const source=stroke.rasterFx?R.source(item,stroke.rasterFx):item.image;
-  if(!paths.length&&!stroke.cutoutKey)return source;
+  const S=root.MangoSelectionV0728,selection=S?.active(stroke.selectionMask)?stroke.selectionMask:null;
+  if(!paths.length&&!stroke.cutoutKey&&!selection)return source;
   // Import stays source-resolution for clean edges; max 16MP temporary canvas to avoid huge allocations.
-  const factor=Math.min(1,4096/item.width,4096/item.height,Math.sqrt(16000000/(item.width*item.height)));
+  const factor=selection&&!paths.length&&!stroke.cutoutKey?1:Math.min(1,4096/item.width,4096/item.height,Math.sqrt(16000000/(item.width*item.height)));
   const w=Math.max(1,Math.round(item.width*factor)),h=Math.max(1,Math.round(item.height*factor));
-  const key=[item.version,recipe,stroke.cutoutKey||'',w,h,paths.length,last?.points?.length||0,
+  const key=[item.version,recipe,selection?JSON.stringify(selection):'',stroke.cutoutKey||'',w,h,paths.length,last?.points?.length||0,
    last?.points?.at(-1)?.x||0,last?.points?.at(-1)?.y||0,stroke.mask?.feather||0].join(':');
   const prior=maskedCache.get(stroke);if(prior?.key===key)return prior.canvas;
   const output=freshCanvas(w,h),ctx=output.getContext('2d');
   ctx.drawImage(source,0,0,w,h);
-  let mask=makeMask(stroke,item,w,h);
-  ctx.globalCompositeOperation='destination-in';
-  const feather=clamp(stroke.mask?.feather||0,0,20);
-  if(feather)ctx.filter='blur('+feather*factor+'px)';
-  ctx.drawImage(mask,0,0);ctx.filter='none';ctx.globalCompositeOperation='source-over';
+  if(paths.length||stroke.cutoutKey){const mask=makeMask(stroke,item,w,h);
+   ctx.globalCompositeOperation='destination-in';const feather=clamp(stroke.mask?.feather||0,0,20);
+   if(feather)ctx.filter='blur('+feather*factor+'px)';ctx.drawImage(mask,0,0);ctx.filter='none';ctx.globalCompositeOperation='source-over';mask.width=mask.height=1;
+  }
+  if(selection)S.apply(ctx,selection,item.width,item.height);
   maskedCache.set(stroke,{key,canvas:output});
   return output;
  }
