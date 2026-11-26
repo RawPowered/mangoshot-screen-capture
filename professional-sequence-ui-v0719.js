@@ -11,7 +11,7 @@
  const clone=P.copy,fmt=t=>Math.max(0,t).toFixed(3)+'s',clamp=(x,a,b)=>Math.min(b,Math.max(a,x)),clip=()=>model.clips.find(c=>c.id===selected),asset=()=>registry.get(assetId);
  function message(text,error=false){const s=by('seq-status');s.textContent=text;s.dataset.error=String(error);}
  function monitor(text=''){const s=by('seq-monitor-state');s.hidden=!text;s.textContent=text;}
- function name(c){return P.dimensional(c.track)?(c.callout3d.mode==='spatial'?'Spatial 3D arrow':'Legacy '+c.callout3d.shape):c.track==='G1'?c.text||'Title':P.asset(model,c)?.name||'Missing media';}
+ function name(c){return P.dimensional(c.track)?(c.callout3d.mode==='spatial'?'Spatial 3D '+c.callout3d.shape:'Legacy '+c.callout3d.shape):c.track==='G1'?c.text||'Title':P.asset(model,c)?.name||'Missing media';}
  function checkReady(){if(busy)throw Error('Finish the current '+busy+' operation first.');}
  function cancelScrub(){scrub?.abort();scrub=null;}
  function stamp(){return revision;}

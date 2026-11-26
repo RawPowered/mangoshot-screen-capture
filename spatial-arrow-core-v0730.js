@@ -2,21 +2,23 @@
  * World units are layer-local, not inferred coordinates of photographed/game objects. */
 (function(root){'use strict';
  const LIMIT=3,MAX_NODES=12,SIDES=16,NEAR=.05,FAR=50,EPS=1e-7;
+ const SHAPES=Object.freeze(['arrow','tube','ribbon','ring','sphere','cone']),isPath=s=>['arrow','tube','ribbon'].includes(s);
  const finite=(n,a,b)=>typeof n==='number'&&Number.isFinite(n)&&n>=a&&n<=b,clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),copy=x=>JSON.parse(JSON.stringify(x));
  const add=(a,b)=>a.map((x,i)=>x+b[i]),sub=(a,b)=>a.map((x,i)=>x-b[i]),mul=(a,s)=>a.map(x=>x*s),dot=(a,b)=>a.reduce((s,x,i)=>s+x*b[i],0),cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],length=a=>Math.hypot(...a),unit=a=>mul(a,1/Math.max(EPS,length(a))),lerp=(a,b,t)=>add(a,mul(sub(b,a),t)),rad=x=>x*Math.PI/180;
  const exact=(v,k)=>v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).length===k.length&&k.every(x=>Object.hasOwn(v,x));
  const vector=(v,b)=>Array.isArray(v)&&v.length===3&&v.every(x=>finite(x,-b,b));
  const defaultCamera=()=>({azimuth:12,elevation:15,distance:6.8,fov:39,projection:'perspective',target:[0,0,0]});
  const defaults=()=>({mode:'spatial',shape:'arrow',points:[[-2,-.65,1.3],[-.8,.15,.7],[.2,.12,-.5],[1.5,.6,-1.3]],radius:.085,headRadius:.19,headLength:.48,color:'#f4b942',material:'metal',smooth:true,camera:defaultCamera(),light:-45});
- function checkCamera(c){if(!exact(c,['azimuth','elevation','distance','fov','projection','target'])||!finite(c.azimuth,-180,180)||!finite(c.elevation,-89.5,89.5)||!finite(c.distance,2,18)||!finite(c.fov,15,90)||!['perspective','orthographic'].includes(c.projection)||!vector(c.target,LIMIT))throw Error('Invalid spatial camera.');return {...c,target:c.target.slice()};}
+ function shapePoints(shape){if(!SHAPES.includes(shape))throw Error('Invalid spatial primitive.');return isPath(shape)?defaults().points:shape==='ring'?[[0,0,0],[0,1.25,0]]:shape==='sphere'?[[0,0,0],[.8,0,0]]:[[0,-.7,0],[0,.9,-.35]];}
+ function checkCamera(c){const keys=['azimuth','elevation','distance','fov','projection','target'];if(c&&Object.hasOwn(c,'roll'))keys.push('roll');if(!exact(c,keys)||!finite(c.azimuth,-180,180)||!finite(c.elevation,-89.5,89.5)||!finite(c.distance,2,18)||!finite(c.fov,15,90)||!['perspective','orthographic'].includes(c.projection)||!vector(c.target,LIMIT)||Object.hasOwn(c,'roll')&&!finite(c.roll,-180,180))throw Error('Invalid spatial camera.');const out={...c,target:c.target.slice()};if(!out.roll)delete out.roll;return out;}
  function checkOcclusion(a){if(!Array.isArray(a)||a.length>4)throw Error('Use at most four foreground polygons.');return a.map(poly=>{if(!Array.isArray(poly)||poly.length<3||poly.length>64||!poly.every(p=>Array.isArray(p)&&p.length===2&&p.every(n=>finite(n,0,1)))||new Set(poly.map(p=>p.join(':'))).size<3)throw Error('Foreground polygons require 3–64 normalized points.');return poly.map(p=>p.slice());});}
  function check(v){
   const keys=Object.keys(defaults());if(v&&Object.hasOwn(v,'occlusion'))keys.push('occlusion');
-  if(!exact(v,keys)||v.mode!=='spatial'||v.shape!=='arrow'||!Array.isArray(v.points)||v.points.length<2||v.points.length>MAX_NODES||!v.points.every(p=>vector(p,LIMIT))||typeof v.smooth!=='boolean'||typeof v.color!=='string'||!/^#[0-9a-f]{6}$/i.test(v.color)||!['matte','metal','gloss'].includes(v.material)||!finite(v.radius,.025,.25)||!finite(v.headRadius,.05,.5)||v.headRadius<v.radius*1.2||!finite(v.headLength,.12,1.2)||!finite(v.light,-180,180))throw Error('Invalid spatial arrow geometry or material.');
+  if(!exact(v,keys)||v.mode!=='spatial'||!SHAPES.includes(v.shape)||!Array.isArray(v.points)||v.points.length<2||v.points.length>MAX_NODES||!isPath(v.shape)&&v.points.length!==2||!v.points.every(p=>vector(p,LIMIT))||typeof v.smooth!=='boolean'||typeof v.color!=='string'||!/^#[0-9a-f]{6}$/i.test(v.color)||!['matte','metal','gloss'].includes(v.material)||!finite(v.radius,.025,.25)||!finite(v.headRadius,.05,.5)||v.headRadius<v.radius*1.2||!finite(v.headLength,.12,1.2)||!finite(v.light,-180,180))throw Error('Invalid spatial arrow geometry or material.');
   if(v.points.some((p,i)=>i&&length(sub(p,v.points[i-1]))<.045))throw Error('Adjacent path points must be at least 0.045 world units apart.');
   const out={...v,color:v.color.toLowerCase(),points:v.points.map(p=>p.slice()),camera:checkCamera(v.camera)};if(Object.hasOwn(v,'occlusion')){const masks=checkOcclusion(v.occlusion);if(masks.length)out.occlusion=masks;else delete out.occlusion;}return out;
  }
- function camera(c,w,h){c=checkCamera(c);const a=rad(c.azimuth),e=rad(c.elevation),offset=[c.distance*Math.sin(a)*Math.cos(e),c.distance*Math.sin(e),c.distance*Math.cos(a)*Math.cos(e)],eye=add(c.target,offset),forward=unit(mul(offset,-1)),right=unit(cross(forward,[0,1,0])),up=cross(right,forward),t=Math.tan(rad(c.fov)/2);return {eye,forward,right,up,t,aspect:w/h,ortho:c.projection==='orthographic',distance:c.distance};}
+ function camera(c,w,h){c=checkCamera(c);const a=rad(c.azimuth),e=rad(c.elevation),offset=[c.distance*Math.sin(a)*Math.cos(e),c.distance*Math.sin(e),c.distance*Math.cos(a)*Math.cos(e)],eye=add(c.target,offset),forward=unit(mul(offset,-1)),r0=unit(cross(forward,[0,1,0])),u0=cross(r0,forward),roll=rad(c.roll||0),right=add(mul(r0,Math.cos(roll)),mul(u0,Math.sin(roll))),up=add(mul(u0,Math.cos(roll)),mul(r0,-Math.sin(roll))),t=Math.tan(rad(c.fov)/2);return {eye,forward,right,up,t,aspect:w/h,ortho:c.projection==='orthographic',distance:c.distance};}
  function project(p,c,w,h){const v=camera(c,w,h),d=sub(p,v.eye),z=dot(d,v.forward);if(z<=NEAR||z>=FAR)return null;const s=v.t*(v.ortho?v.distance:z);return {x:w/2*(1+dot(d,v.right)/(s*v.aspect)),y:h/2*(1-dot(d,v.up)/s),z};}
  function viewDelta(p,c,w,h,dx,dy){const b=camera(c,w,h),z=dot(sub(p,b.eye),b.forward),factor=2*b.t*(b.ortho?b.distance:z)/h;return add(mul(b.right,dx*factor),mul(b.up,-dy*factor));}
  function axisDelta(p,c,w,h,axis,dx,dy){const a=project(p,c,w,h),b=project(add(p,mul(axis,.5)),c,w,h);if(!a||!b)return null;const x=b.x-a.x,y=b.y-a.y,d=x*x+y*y;if(d<36)return null;return mul(axis,.5*(dx*x+dy*y)/d);}
@@ -31,23 +33,44 @@
  }
  function frame(t,old){let n=old?sub(old,mul(t,dot(old,t))):[0,0,0];if(length(n)<.001)n=cross(t,Math.abs(t[1])<.85?[0,1,0]:[1,0,0]);n=unit(n);return {n,b:unit(cross(t,n))};}
  function revealSamples(samples,progress){if(progress>=1)return samples;if(progress<=0)return [];const lengths=[0];for(let i=1;i<samples.length;i++)lengths.push(lengths.at(-1)+length(sub(samples[i],samples[i-1])));const cut=lengths.at(-1)*progress;let i=1;while(i<lengths.length-1&&lengths[i]<cut)i++;const tip=lerp(samples[i-1],samples[i],(cut-lengths[i-1])/Math.max(EPS,lengths[i]-lengths[i-1]));const out=samples.slice(0,i);if(length(sub(tip,out.at(-1)))>EPS)out.push(tip);return out;}
+ function primitive(v,progress){
+  const p=v.points[0],delta=sub(v.points[1],p),r=length(delta),axis=unit(delta),f=frame(axis,null),vertices=[],normals=[],samples=[];
+  const tri=(a,b,c,na,nb,nc)=>{vertices.push(...a,...b,...c);normals.push(...na,...nb,...nc);};
+  const quad=(a,b,c,d)=>{tri(a.p,b.p,c.p,a.n,b.n,c.n);tri(a.p,c.p,d.p,a.n,c.n,d.n);};
+  const around=a=>add(mul(f.n,Math.cos(a)),mul(f.b,Math.sin(a)));
+  let arcLength=0,tip=p.slice();
+  if(progress>0&&v.shape==='ring'){
+   const count=Math.max(1,Math.ceil(48*progress)),minor=Math.min(v.radius,r*.45),at=(a,b)=>{const radial=around(a),n=add(mul(radial,Math.cos(b)),mul(axis,Math.sin(b)));return {p:add(add(p,mul(radial,r)),mul(n,minor)),n};};
+   for(let i=0;i<=count;i++){const a=i/count*2*Math.PI*progress;samples.push(add(p,mul(around(a),r)));if(i===count)break;const b=(i+1)/count*2*Math.PI*progress;for(let j=0;j<SIDES;j++){const u=j/SIDES*2*Math.PI,w=(j+1)/SIDES*2*Math.PI;quad(at(a,u),at(b,u),at(b,w),at(a,w));}}
+   if(progress<1)for(const [a,sign] of [[0,-1],[2*Math.PI*progress,1]]){const center=add(p,mul(around(a),r)),n=mul(around(a+Math.PI/2),sign);for(let j=0;j<SIDES;j++)tri(center,at(a,j/SIDES*2*Math.PI).p,at(a,(j+1)/SIDES*2*Math.PI).p,n,n,n);}
+   arcLength=2*Math.PI*r*progress;tip=samples.at(-1).slice();
+  }else if(progress>0&&v.shape==='sphere'){
+   const at=(a,b)=>{const n=add(mul(around(a),Math.sin(b)),mul(axis,Math.cos(b)));return {p:add(p,mul(n,r*progress)),n};};
+   for(let i=0;i<32;i++)for(let j=0;j<16;j++){const a=i/32*2*Math.PI,b=(i+1)/32*2*Math.PI,u=j/16*Math.PI,w=(j+1)/16*Math.PI,A=at(a,u),B=at(b,u),C=at(b,w),D=at(a,w);if(j>0)tri(A.p,B.p,C.p,A.n,B.n,C.n);if(j<15)tri(A.p,C.p,D.p,A.n,C.n,D.n);}
+   tip=add(p,mul(delta,progress));samples.push(p.slice(),tip);arcLength=r*progress;
+  }else if(progress>0&&v.shape==='cone'){
+   const radius=v.headRadius*progress,height=r*progress;tip=add(p,mul(delta,progress));const back=mul(axis,-1);for(let i=0;i<SIDES;i++){const a=around(i/SIDES*2*Math.PI),b=around((i+1)/SIDES*2*Math.PI),A=add(p,mul(a,radius)),B=add(p,mul(b,radius)),na=unit(add(mul(a,height),mul(axis,radius))),nb=unit(add(mul(b,height),mul(axis,radius)));tri(A,B,tip,na,nb,unit(add(na,nb)));tri(p,B,A,back,back,back);}samples.push(p.slice(),tip);arcLength=height;
+  }
+  return {positions:new Float32Array(vertices),normals:new Float32Array(normals),samples,tip,headBase:p.slice(),arcLength,triangles:vertices.length/9};
+ }
  function mesh(value,progress=1){
-  const v=check(value);if(!finite(progress,0,1))throw Error('Invalid path reveal.');const samples=revealSamples(centerline(v),progress);if(samples.length<2)return {positions:new Float32Array(),normals:new Float32Array(),samples,tip:v.points[0].slice(),headBase:v.points[0].slice(),arcLength:0,triangles:0};const lengths=[0];for(let i=1;i<samples.length;i++)lengths.push(lengths.at(-1)+length(sub(samples[i],samples[i-1])));
-  const total=lengths.at(-1),headLength=Math.min(v.headLength,total*.42),growth=Math.min(1,total/Math.max(.12,v.headLength*1.3));let cut=total-headLength;
+  const v=check(value);if(!finite(progress,0,1))throw Error('Invalid path reveal.');if(!isPath(v.shape))return primitive(v,progress);const samples=revealSamples(centerline(v),progress);if(samples.length<2)return {positions:new Float32Array(),normals:new Float32Array(),samples,tip:v.points[0].slice(),headBase:v.points[0].slice(),arcLength:0,triangles:0};const lengths=[0];for(let i=1;i<samples.length;i++)lengths.push(lengths.at(-1)+length(sub(samples[i],samples[i-1])));
+  const total=lengths.at(-1),hasHead=v.shape==='arrow',headLength=hasHead?Math.min(v.headLength,total*.42):0,growth=Math.min(1,total/Math.max(.12,hasHead?v.headLength*1.3:v.radius*2));let cut=total-headLength;
   let i=1;while(i<lengths.length-1&&lengths[i]<cut)i++;
   let center=lerp(samples[i-1],samples[i],(cut-lengths[i-1])/Math.max(EPS,lengths[i]-lengths[i-1]));
-  if(length(sub(samples.at(-1),center))<EPS){i=samples.length-1;center=samples[i-1].slice();}
+  if(hasHead&&length(sub(samples.at(-1),center))<EPS){i=samples.length-1;center=samples[i-1].slice();}
   const shaft=samples.slice(0,i);if(length(sub(center,shaft.at(-1)))>EPS)shaft.push(center);else shaft[shaft.length-1]=center;
-  const tip=samples.at(-1),headT=unit(sub(tip,center)),vertices=[],normals=[],rings=[];let old=null;
+  const tip=samples.at(-1),headT=unit(sub(tip,hasHead?center:samples.at(-2))),vertices=[],normals=[],rings=[];let old=null;
   const tri=(a,b,c,na,nb,nc)=>{vertices.push(...a,...b,...c);normals.push(...na,...nb,...nc);};
   const radial=(f,k)=>add(mul(f.n,Math.cos(k*2*Math.PI/SIDES)),mul(f.b,Math.sin(k*2*Math.PI/SIDES)));
   for(let j=0;j<shaft.length;j++){
    const p=shaft[j],delta=sub(shaft[Math.min(shaft.length-1,j+1)],shaft[Math.max(0,j-1)]),t=j===shaft.length-1?headT:unit(length(delta)>EPS?delta:sub(shaft[j+1],shaft[j])),f=frame(t,old);old=f.n;
-   rings.push({p,t,f,points:Array.from({length:SIDES},(_,k)=>{const n=radial(f,k);return {n,p:add(p,mul(n,v.radius*growth))};})});
+   rings.push({p,t,f,points:Array.from({length:SIDES},(_,k)=>{const a=k*2*Math.PI/SIDES,flat=v.shape==='ribbon'?.16:1,n=unit(add(mul(f.n,Math.cos(a)),mul(f.b,Math.sin(a)/flat))),offset=add(mul(f.n,Math.cos(a)),mul(f.b,Math.sin(a)*flat));return {n,p:add(p,mul(offset,v.radius*growth))};})});
   }
   for(let j=1;j<rings.length;j++)for(let k=0;k<SIDES;k++){const z=(k+1)%SIDES,a=rings[j-1].points[k],b=rings[j-1].points[z],c=rings[j].points[k],d=rings[j].points[z];tri(a.p,b.p,c.p,a.n,b.n,c.n);tri(b.p,d.p,c.p,b.n,d.n,c.n);}
   const first=rings[0],f0=mul(first.t,-1);
   for(let k=0;k<SIDES;k++){const j=(k+1)%SIDES;tri(first.p,first.points[j].p,first.points[k].p,f0,f0,f0);}
+  if(!hasHead){const end=rings.at(-1);for(let k=0;k<SIDES;k++){const j=(k+1)%SIDES;tri(end.p,end.points[k].p,end.points[j].p,end.t,end.t,end.t);}return {positions:new Float32Array(vertices),normals:new Float32Array(normals),samples,tip:tip.slice(),headBase:center,arcLength:total,triangles:vertices.length/9};}
   const f=frame(headT,old),coneLength=length(sub(tip,center)),back=mul(headT,-1);
   for(let k=0;k<SIDES;k++){const a=radial(f,k),b=radial(f,k+1),p=add(center,mul(a,v.headRadius*growth)),q=add(center,mul(b,v.headRadius*growth)),na=unit(add(mul(a,coneLength),mul(headT,v.headRadius*growth))),nb=unit(add(mul(b,coneLength),mul(headT,v.headRadius*growth)));
    tri(p,q,tip,na,nb,unit(add(na,nb)));tri(center,q,p,back,back,back);
@@ -56,6 +79,6 @@
  }
  function scalePoints(points,factor){const center=mul(points.reduce(add,[0,0,0]),1/points.length);return points.map(p=>add(center,mul(sub(p,center),factor)));}
  function rotatePoints(points,axis,degrees){const a=rad(degrees),s=Math.sin(a),c=Math.cos(a),center=mul(points.reduce(add,[0,0,0]),1/points.length),u=[0,0,0];u[axis]=1;return points.map(p=>{const v=sub(p,center);return add(center,add(add(mul(v,c),mul(cross(u,v),s)),mul(u,dot(u,v)*(1-c))));});}
- const api=Object.freeze({LIMIT,MAX_NODES,SIDES,NEAR,FAR,copy,defaults,defaultCamera,check,checkCamera,checkOcclusion,add,sub,mul,dot,length,camera,project,viewDelta,axisDelta,centerline,revealSamples,mesh,rotatePoints,scalePoints});
+ const api=Object.freeze({LIMIT,MAX_NODES,SIDES,NEAR,FAR,SHAPES,isPath,shapePoints,copy,defaults,defaultCamera,check,checkCamera,checkOcclusion,add,sub,mul,dot,length,camera,project,viewDelta,axisDelta,centerline,revealSamples,mesh,rotatePoints,scalePoints});
  root.MangoSpatialArrowV0730=api;if(typeof module==='object'&&module.exports)module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

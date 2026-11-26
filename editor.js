@@ -1992,7 +1992,7 @@ globalThis.MangoDimensionalImageV0729=Object.freeze({
   const s=this.state(),M=globalThis.MangoDimensionalV0729;if(!s.ready||s.stamp!==stamp)throw Error('Image changed; reopen 3D Callouts.');const v=M.check(value);if(v.mode==='spatial')globalThis.MangoSpatialRendererV0730.requireRenderer();
   if(id){if(s.selected?.id!==id)throw Error('Select an unlocked dimensional layer.');return replaceLayer(strokes.findIndex(l=>l.id===id),{callout3d:v});}
   const spatial=v.mode==='spatial',x=spatial?0:base.width*.21,y=spatial?0:base.height*.22,w=spatial?base.width:base.width*.58,h=spatial?base.height:base.height*.50,l=vectorCore.make('rectangle',{x,y},{x:x+w,y:y+h},{fillEnabled:true,fill:v.color,stroke:v.color});
-  Object.assign(l,{id:crypto.randomUUID(),name:spatial?'Spatial 3D arrow':'3D '+(v.shape==='arrow'&&v.curve?'curved arrow':v.shape),callout3d:v,locked:false});
+  Object.assign(l,{id:crypto.randomUUID(),name:spatial?'Spatial 3D '+v.shape:'3D '+(v.shape==='arrow'&&v.curve?'curved arrow':v.shape),callout3d:v,locked:false});
   clearBatch();snapshot();strokes.push(l);tool.value='select';syncTool();selectLayerAt(strokes.length-1);setReady(ready);label('Dimensional shape inserted. Ctrl+Z to undo.');return true;
  }
 });
@@ -2108,8 +2108,8 @@ globalThis.MangoImageDocumentV0723=Object.freeze({
     const c=document.createElement('canvas');c.width=a.width;c.height=a.height;c.getContext('2d').drawImage(a.image,0,0);assets.push({id:l.assetId,name:a.name,width:a.width,height:a.height,png:c.toDataURL('image/png')});c.width=c.height=1;assetIds.add(l.assetId);}
    if(l.cutoutKey&&!matteIds.has(l.cutoutKey)){const m=registry.get(l.cutoutKey);if(!m)throw Error('Missing image matte.');mattes.push({id:l.cutoutKey,width:m.width,height:m.height,alpha:D.encode(m.data)});matteIds.add(l.cutoutKey);}
   }
-  const comp=advancedComp?.reconcile(composition,strokes),v2=advancedComp?.active(comp),v3=layers.some(l=>l.brush),v4=layers.some(l=>l.creativeFx),v5=layers.some(l=>Array.isArray(l.rasterFx)),v6=layers.some(l=>l.selectionMask),v7=layers.some(l=>l.callout3d),v8=layers.some(l=>l.callout3d?.mode==='spatial'),v9=layers.some(l=>l.callout3d?.occlusion?.length);
-  return D.check({format:'MangoShotImage',version:v9?9:v8?8:v7?7:v6?6:v5?5:v4?4:v3?3:v2?2:1,name,width:base.width,height:base.height,base:base.toDataURL('image/png'),layers,assets,mattes,...(v2||v3||v4||v5||v6||v7?{composition:comp}:{})},this.cores());
+  const comp=advancedComp?.reconcile(composition,strokes),v2=advancedComp?.active(comp),v3=layers.some(l=>l.brush),v4=layers.some(l=>l.creativeFx),v5=layers.some(l=>Array.isArray(l.rasterFx)),v6=layers.some(l=>l.selectionMask),v7=layers.some(l=>l.callout3d),v8=layers.some(l=>l.callout3d?.mode==='spatial'),v9=layers.some(l=>l.callout3d?.occlusion?.length),v10=layers.some(l=>l.callout3d?.mode==='spatial'&&(l.callout3d.shape!=='arrow'||l.callout3d.camera?.roll));
+  return D.check({format:'MangoShotImage',version:v10?10:v9?9:v8?8:v7?7:v6?6:v5?5:v4?4:v3?3:v2?2:1,name,width:base.width,height:base.height,base:base.toDataURL('image/png'),layers,assets,mattes,...(v2||v3||v4||v5||v6||v7?{composition:comp}:{})},this.cores());
  },
  async open(raw,stamp){
   const D=globalThis.MangoImageDocumentCoreV0723,initial=this.state();if(!initial.canOpen||initial.stamp!==stamp)throw Error('Image editor is busy.');

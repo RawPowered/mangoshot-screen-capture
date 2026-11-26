@@ -19,7 +19,7 @@
   const keys=v.keys.map((k,i)=>{if(!exact(k,['at','pose','reveal','ease'])||!finite(k.at,0,1)||!finite(k.reveal,0,1)||!['linear','smooth','hold'].includes(k.ease)||i&&k.at-v.keys[i-1].at<.009999999||Object.hasOwn(k.pose||{},'occlusion'))throw Error('Invalid motion key. Times must be at least 1% apart.');return {...k,pose:pose(k.pose)};});
   if(keys[0].at!==0||keys.at(-1).at!==1)throw Error('Motion needs keys at 0% and 100%.');
   if(base&&JSON.stringify(pose(base))!==JSON.stringify(keys[0].pose))throw Error('Base arrow must match its first pose.');
-  for(let i=1;i<keys.length;i++){if(keys[i].pose.points.length!==keys[0].pose.points.length)throw Error('Motion keys must share path topology.');if(keys[i-1].ease!=='hold')checkSegment(keys[i-1].pose,keys[i].pose);}
+  for(let i=1;i<keys.length;i++){if(keys[i].pose.shape!==keys[0].pose.shape||keys[i].pose.points.length!==keys[0].pose.points.length)throw Error('Motion keys must share path topology.');if(keys[i-1].ease!=='hold')checkSegment(keys[i-1].pose,keys[i].pose);}
   return {keys};
  }
  function defaults(base,grow=false){const p=pose(base);return {keys:[{at:0,pose:copy(p),reveal:grow?0:1,ease:'smooth'},{at:1,pose:copy(p),reveal:1,ease:'linear'}]};}
@@ -28,7 +28,7 @@
   c.points=a.points.map((p,i)=>vector(p,b.points[i],t));for(const k of ['radius','headRadius','headLength'])c[k]=lerp(a[k],b[k],t);
   c.light=angle(a.light,b.light,t);c.color=hex(a.color,b.color,t);
   for(const k of ['elevation','distance','fov'])c.camera[k]=lerp(a.camera[k],b.camera[k],t);
-  c.camera.azimuth=angle(a.camera.azimuth,b.camera.azimuth,t);c.camera.target=vector(a.camera.target,b.camera.target,t);
+  c.camera.azimuth=angle(a.camera.azimuth,b.camera.azimuth,t);if(a.camera.roll||b.camera.roll)c.camera.roll=angle(a.camera.roll||0,b.camera.roll||0,t);c.camera.target=vector(a.camera.target,b.camera.target,t);
   return S.check(c);
  }
  function evaluate(motion,u,base){
