@@ -1204,7 +1204,8 @@ function chooseImageTool(name){
  }
  if(name==='erase-brush'||name==='erase-stroke')lastEraserMode=name;
  if(name!=='select'&&name!=='marquee')clearBatch();
- if(name!=='select'&&name!=='text'&&name!=='marquee'){selectedText=-1;selectedImage=-1;selectedObject=-1;}
+ if(name!=='select'&&name!=='text'&&name!=='marquee'&&!name.startsWith('mask-')){selectedText=-1;selectedImage=-1;selectedObject=-1;}
+ if(name.startsWith('mask-')){selectedText=-1;selectedObject=-1;}
  syncTool();syncSelectedText();redraw();
 }
 tool.addEventListener('change',()=>chooseImageTool(tool.value));
