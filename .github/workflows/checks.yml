@@ -201,10 +201,12 @@ jobs:
           timeout 180s node tests/carbon-image-v0720.browser.cjs
           timeout 180s node tests/callout-motion-v0736.browser.cjs
           timeout 180s node tests/smart-focus-v0737.browser.cjs
+      - name: Label the verified ZIP with its actual preview version
+        run: cp dist/MangoShot-v0.6.18-mango-engine-raster-preview-Extension.zip dist/MangoShot-v0.7.38-Zoom-Recovery-Extension.zip
       - uses: actions/upload-artifact@v4
         with:
           name: MangoShot-v0.7.38-Packaged-Recovery-Preview
-          path: dist/MangoShot-v0.6.18-mango-engine-raster-preview-Extension.zip
+          path: dist/MangoShot-v0.7.38-Zoom-Recovery-Extension.zip
           retention-days: 14
       - uses: actions/upload-artifact@v4
         if: always()
@@ -381,10 +383,12 @@ jobs:
           unzip -l dist/MangoShot-v0.6.18-mango-engine-raster-preview-Extension.zip | grep cursor-director-core-v074.js
           unzip -l dist/MangoShot-v0.6.18-mango-engine-raster-preview-Extension.zip | grep cursor-director-ui-v074.js
           for src in professional-sequence.html professional-sequence-v0719.css professional-sequence-ui-v0719.js independent-sequence-core-v0719.js independent-sequence-runtime-v0719.js streaming-media-v0718.js professional-timeline-core-v0717.js professional-timeline-ui-v0717.js professional-timeline-v0717.css multitrack-core-v0716.js multitrack-ui-v0716.js multitrack-v0716.css transform-material-core-v0715.js transform-material-v0715.css compositor-core-v0714.js compositor-ui-v0714.js compositor-v0714.css cinematic-core-v0713.js cinematic-ui-v0713.js cinematic-v0713.css layer-studio-core-v0712.js layer-studio-ui-v0712.js layer-studio-v0712.css tool-studio-core-v0711.js tool-studio-ui-v0711.js tool-studio-v0711.css recorder-control-v0710.js recorder-controls-v0710.css theme-carbon-v078.css bridge-core-v077.js bridge-ui-v077.js bridge-v077.css sequence-engine-v076.js sequence-studio-v076.js sequence-studio-v076.css automation-core-v075.js automation-adapters-v075.js automation-ui-v075.js automation-v075.css; do unzip -l dist/MangoShot-v0.6.18-mango-engine-raster-preview-Extension.zip | grep "$src"; done
+      - name: Label the verified ZIP with its actual preview version
+        run: cp dist/MangoShot-v0.6.18-mango-engine-raster-preview-Extension.zip dist/MangoShot-v0.7.38-Zoom-Recovery-Extension.zip
       - uses: actions/upload-artifact@v4
         with:
           name: MangoShot-v0.7.38-Zoom-Recovery-Extension
-          path: dist/MangoShot-v0.6.18-mango-engine-raster-preview-Extension.zip
+          path: dist/MangoShot-v0.7.38-Zoom-Recovery-Extension.zip
           retention-days: 14
 
       - uses: actions/upload-artifact@v4
