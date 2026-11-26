@@ -21,13 +21,14 @@
   sample.onclick=()=>{if(!root.MangoImageActions?.state().ready)return;set(!armed);};
   root.addEventListener('pointerdown',e=>{if(!armed)return;if(sample.contains(e.target))return;if(e.target!==ink){set(false);return;}e.preventDefault();e.stopImmediatePropagation();const b=ink.getBoundingClientRect();try{const value=root.MangoColorSampleV0740.use((e.clientX-b.left)*ink.width/b.width,(e.clientY-b.top)*ink.height/b.height);sample.style.setProperty('--ux40-sample',value);}catch(err){by('status').textContent=err.message;}finally{set(false);}},true);
   root.addEventListener('keydown',e=>{if(armed&&e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();set(false);}},true);
-  const retouch=group('Pixel painting and retouching');retouch.id='ux41-pixel-tools';
+  const shapeGroup=group('Shape overlays');shapeGroup.id='ux42-shape-group';
+ const retouch=group('Pixel painting and retouching');retouch.id='ux41-pixel-tools';
  const precision=group('Precision and pixel tools');
   real(precision,'ci-open-v0720','dial','Dials','Precision dials');
   real(precision,'bs-open-v0725','pen','Brush','Precision Brush Studio');
   real(precision,'ps-open-v0728','marquee','Pixels','Pixel Selection and Mask Studio');
   real(precision,'rl-open-v0727','gradient','Filters','Editable Raster Filters');
-  const fx=group('Effects and design');real(fx,'ce-open-v0726','fx','FX','Creative Effects Studio');real(fx,'ac-open-v0724','layers','Composite','Compositing Studio');real(fx,'us-image-open','cube','3D','3D Scene Studio');
+  const fx=group('Effects and design');proxy(fx,'effects-studio-menu-v0712','fx','FX','Effects Studio for selected layers',()=>root.MangoLayerStudioUIV0712?.open('effects'));real(fx,'ce-open-v0726','gradient','Style','Creative gradients and layer styles');real(fx,'ac-open-v0724','layers','Composite','Compositing Studio');real(fx,'us-image-open','cube','3D','3D Scene Studio');
   const advanced=group('Additional creative tools');real(advanced,'sa-image-open','cube','Spatial','Spatial 3D object');real(advanced,'mc-image-open','cube','Extrude','Legacy 3D extrusions');real(advanced,'mr-open-v0722','wand','Raster','Raster Lab');
   const old=d.querySelector('.ci-studios-v0720');if(old){for(const [i,b] of [...old.querySelectorAll('button')].entries()){const text=b.textContent.trim(),name=b.title||text;decorate(b,({Layers:'layers',Effects:'fx',Material:'gradient',Type:'text'})[text]||'settings',text,name);advanced.append(b);}old.hidden=true;}
   // Original quick-access buttons remain accessible; the ribbon owns the moved nodes.
@@ -36,7 +37,7 @@
  }else{
   const camera=group('Motion and cursor');real(camera,'zs38-open','zoom','Zoom','Open Zoom Studio');proxy(camera,'ci39-open-cursor','cursor','Cursor','Open Cursor Studio');
   proxy(camera,'compositor-key-menu-v0714','key','Keys','Open Keyframe Studio');
-  const creative=group('Graphics and effects');proxy(creative,'add-text','text','Title','Add title');proxy(creative,'add-callout','callout','Callout','Add callout');proxy(creative,'effects-studio-menu-v0712','fx','FX','Open Effects Studio');proxy(creative,'cinematic-menu-v0713','transition','Transitions','Open Cinematic Studio');proxy(creative,'compositor-grade-menu-v0714','color','Color','Open Source Color Studio');
+  const creative=group('Graphics and effects');creative.id='ux42-shape-group';proxy(creative,'add-text','text','Title','Add title');proxy(creative,'add-callout','callout','Callout','Add callout');proxy(creative,'effects-studio-menu-v0712','fx','FX','Open Effects Studio');proxy(creative,'cinematic-menu-v0713','transition','Transitions','Open Cinematic Studio');proxy(creative,'compositor-grade-menu-v0714','color','Color','Open Source Color Studio');
   const tracks=group('Layers and media');proxy(tracks,'layer-studio-menu-v0712','layers','Layers','Open Layer Studio');proxy(tracks,'multitrack-menu-v0716','film','Tracks','Open Multitrack Studio');proxy(tracks,'compositor-menu-v0714','gradient','Composite','Open Professional Compositor');proxy(tracks,'creative-open-v079','text','Presets','Open Creative Library');
   const primary=by('timeline'),ruler=by('timeline-ruler');if(primary&&ruler&&primary.parentNode===ruler.parentNode){ruler.after(primary);primary.classList.add('ux40-primary');}
   for(const b of d.querySelectorAll('[data-v062-tab]')){const label=b.textContent.trim(),key=({clip:'film',graphics:'callout',camera:'zoom',cursor:'cursor',voice:'wave',autocut:'autocut'})[b.dataset.v062Tab];if(key){b.title=label;b.setAttribute('aria-label',label);b.replaceChildren(icon(key),el('span','',label));}}
