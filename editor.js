@@ -534,8 +534,10 @@ function moveLayerAt(index,delta){
  if(selectedObject===index)selectedObject=target;else if(selectedObject===target)selectedObject=index;
  redraw();setReady(ready);syncLayerProperties();return true;
 }
+function creativeCopyAllowed(copies){try{creativeEffects?.requireBudget([...strokes,...copies],ink.width,ink.height);return true;}catch(e){label(e.message);return false;}}
 function duplicateSelectedLayer(){
  const i=selectedAnyIndex();if(i<0||!strokes[i]||strokes[i].locked)return false;
+ if(!creativeCopyAllowed([strokes[i]]))return false;
  snapshot();const layer=cloneStrokes([strokes[i]])[0];
  layer.id=(layer.id||'annotation')+'-copy-'+Math.floor(Math.random()*1e7);
  layer.name=(layer.name||layer.type)+' copy';
@@ -576,6 +578,7 @@ function pasteCopiedLayer(){
  layerClipboardCount++;
  const copy=layerOps.cloneLayer(layerClipboard,20*layerClipboardCount);
  if(!copy)return false;
+ if(!creativeCopyAllowed([copy])){layerClipboardCount--;return false;}
  snapshot();
  const position=selectedAnyIndex();
  const index=advancedComp?advancedComp.afterGroup(composition,strokes,position):position>=0?position+1:strokes.length;
@@ -934,7 +937,7 @@ function batchCommit(mode,dx=0,dy=0){
  if(mode==='lock'||mode==='visibility'){const field=mode==='lock'?'locked':'visible',value=mode==='lock'?!a.every(l=>l.locked):!a.every(l=>l.visible!==false);
   next=strokes.map(l=>ids.has(l.id)?{...l,[field]:value}:l);
  }else if(mode==='delete'){if(a.some(l=>l.locked))return false;next=strokes.filter(l=>!ids.has(l.id));}
- else if(mode==='duplicate'){if(a.some(l=>l.locked||!layerOps.mayCopy(l)))return false;const copies=a.map(l=>layerOps.cloneLayer(l,20));next=[...strokes,...copies];}
+ else if(mode==='duplicate'){if(a.some(l=>l.locked||!layerOps.mayCopy(l)))return false;const copies=a.map(l=>layerOps.cloneLayer(l,20));if(!creativeCopyAllowed(copies))return false;next=[...strokes,...copies];}
  else{
   if(!batchAllowed())return false;
   const delta=mode==='move'?a.map(l=>({id:l.id,dx,dy})):ts.align(a.map(l=>({id:l.id,bounds:tsBounds(l)})),mode);
@@ -1588,6 +1591,7 @@ ink.addEventListener('pointermove',event=>{
   const dx=p.x-d.start.x,dy=p.y-d.start.y;
   if(!d.moved&&Math.hypot(dx,dy)<3)return;
   if(!d.moved){
+   if(d.clone&&!creativeCopyAllowed([d.original])){layerDrag=null;return;}
    snapshot();d.moved=true;
    if(d.clone){
     const newLayer=layerOps.cloneLayer(d.original,0);
