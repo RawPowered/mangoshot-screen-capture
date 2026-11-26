@@ -28,7 +28,8 @@
  function duplicate(scene,objectId){const n=copy(scene),o=n.objects.find(o=>o.id===objectId);if(!o||o.locked)throw Error('Select an unlocked object.');if(n.objects.length>=MAX_OBJECTS)throw Error('Maximum eight scene objects.');const a={...copy(o),id:id(),name:(o.name.slice(0,58)+' copy'),locked:false};n.objects.push(a);return check(n);}
  function remove(scene,objectId){const n=copy(scene),o=n.objects.find(o=>o.id===objectId);if(!o||o.locked||n.objects.length<=1)throw Error('Cannot remove a locked or last object.');n.objects=n.objects.filter(o=>o.id!==objectId);return check(n);}
  function update(scene,objectId,patch){const n=copy(scene),o=n.objects.find(o=>o.id===objectId);if(!o||Object.keys(patch).some(k=>!['name','visible','locked'].includes(k)))throw Error('Invalid scene object update.');if(o.locked&&Object.hasOwn(patch,'name'))throw Error('Object is locked.');Object.assign(o,patch);return check(n);}
+ function instantiate(scene){const n=check(scene);delete n.occlusion;for(const o of n.objects){o.id=id();o.locked=false;}return check(n);}
  function entries(scene){const v=check(scene);return v.objects.filter(o=>o.visible).map(o=>({id:o.id,value:pose(o.geometry,v.camera)}));}
- const api=Object.freeze({MAX_OBJECTS,copy,check,geometry,pose,defaults,selectedPose,replace,addObject,duplicate,remove,update,entries});
+ const api=Object.freeze({MAX_OBJECTS,copy,check,geometry,pose,defaults,selectedPose,replace,addObject,duplicate,remove,update,instantiate,entries});
  root.MangoUnifiedSceneV0733=api;if(typeof module==='object'&&module.exports)module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
