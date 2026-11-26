@@ -83,6 +83,8 @@ jobs:
           node tests/pixel-tools-v0741.cjs
           node tests/clip-shapes-v0742.cjs
           node --check shape-effects-ui-v0742.js
+          node --check tests/shape-effects-v0742.browser.cjs
+          node --check tests/pixel-tools-v0741.browser.cjs
           node --check pixel-tools-ui-v0741.js
           node --check media-duration-v0739.js
           node --check zoom-studio-v0738.js
