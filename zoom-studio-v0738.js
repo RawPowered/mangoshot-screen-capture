@@ -1,0 +1,82 @@
+/* Camera recovery: one staged Clip Studio session, using its existing camera model. */
+(function(root){'use strict';
+ const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),round=n=>Math.round(n*10000)/10000;
+ function range(length,at=0){if(!Number.isFinite(length)||length<.11)throw Error('Recording is too short for a camera move.');const start=round(clamp(at,0,Math.max(0,length-.11))),duration=Math.min(.4,Math.max(.05,Math.floor((length-start-.01)*100/2)/100)),end=round(Math.min(length-duration-.005,start+Math.max(duration+.01,2.5)));return {start,end,duration};}
+ function validate(length,start,end,duration,returning){if(![length,start,duration].every(Number.isFinite)||length<=0||start<0||start>=length||duration<.05||duration>5||start+duration>length+.00001)throw Error('Choose a start and transition that fit inside the recording.');if(returning&&(!Number.isFinite(end)||end<=start+duration||end+duration>length+.00001))throw Error('Return must start after the zoom transition and finish within the recording.');return true;}
+ function build(items,config,model){const {length,start,end,duration,scale,x,y,returning}=config;validate(length,start,end,duration,returning);const stop=returning?end+duration:start+duration;if(items.some(k=>k.start<stop-.00001&&k.start+k.duration>start+.00001))throw Error('This camera move overlaps an existing transition. Select and edit that key or choose an unused range.');let next=model.add(items,start,scale,x,y,duration);if(returning)next=model.add(next,end,1,.5,.5,duration);return next;}
+ if(typeof module==='object'&&module.exports)module.exports={range,validate,build};
+ const d=root.document,Z=root.MangoCreativeZoom,H=root.MangoZoomHUDMath,U=root.MangoCalloutMotionUIV0736;if(!d||!Z||!H||!U)return;
+ const by=id=>d.getElementById(id),v=()=>root.MangoClipView,el=(tag,cls,text)=>{const n=d.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n;};
+ const launch=by('zs38-open');if(!launch)return;
+ let session=null,items=[],selected=null,draft=null,drag=null,lastFocus=null,fields={},dials=[],changed=false;
+ const dialog=el('dialog','zs38-dialog');dialog.id='zs38-dialog';dialog.setAttribute('aria-labelledby','zs38-title');
+ const header=el('header','zs38-head'),heading=el('div');const title=el('h2','','ZOOM STUDIO');title.id='zs38-title';heading.append(title,el('small','','CLIP STUDIO · Camera animation · local footage'));
+ const button=(id,text,fn)=>{const n=el('button','',text);n.type='button';n.id=id;n.onclick=()=>safe(fn);return n;};
+ const close=button('zs38-close','Close ×',()=>dialog.close());header.append(heading,close);
+ const layout=el('div','zs38-layout'),left=el('div','zs38-previews'),right=el('div','zs38-controls'),source=el('canvas','zs38-canvas'),result=el('canvas','zs38-canvas');source.id='zs38-source';result.id='zs38-result';for(const c of [source,result]){c.width=640;c.height=360;}
+ source.tabIndex=0;source.setAttribute('aria-label','Source framing canvas. Drag crop or use arrow keys.');result.setAttribute('aria-label','Magnified draft output');const sourceWrap=el('div','zs38-preview-wrap'),resultWrap=el('div','zs38-preview-wrap');sourceWrap.append(el('strong','','SOURCE · DRAG FRAME'),source);resultWrap.append(el('strong','','OUTPUT · LIVE DRAFT'),result);left.append(sourceWrap,resultWrap);
+ const hint=el('p','zs38-note','The source and output show the current decoded footage frame. Scrub the main timeline before opening to sample another moment. Drag the source rectangle or its bottom-right corner. No edits are committed until Apply.');
+ left.append(hint);
+ const empty=el('p','zs38-empty','Import a video in Clip Studio first, then open Zoom Studio. Sequence Studio is a separate editor.');empty.hidden=true;
+ const knobGrid=el('div','zs38-knobs');
+ function field(key,label,min,max,step,reset,dial=true){
+  const wrap=el('div',dial?'zs38-knob':'zs38-time'),l=el('label','',label),n=el('input');n.type='number';n.id='zs38-'+key;n.min=String(min);n.max=String(max);n.step='any';l.htmlFor=n.id;fields[key]=n;
+  const update=val=>{if(!draft||!session)return;const bound=Number(n.max);draft[key]=round(clamp(val,min,Number.isFinite(bound)?bound:max));sync(false);draw();};
+  const a=dial?U.dial(label,min,max,step,()=>draft?.[key]??reset,update,()=>reset,false):null;if(a)dials.push(a);
+  n.oninput=()=>{if(Number.isFinite(n.valueAsNumber)&&n.valueAsNumber>=min&&n.valueAsNumber<=Number(n.max)){draft[key]=n.valueAsNumber;for(const k of dials)k.refresh();draw();}};
+  n.onchange=()=>{if(Number.isFinite(n.valueAsNumber))update(n.valueAsNumber);else sync(false);};
+  wrap.append(l);if(a)wrap.append(a.element);wrap.append(n);return wrap;
+ }
+ knobGrid.append(field('scale','Zoom ×',1,5,.05,1.5),field('x','Pan X',0,1,.01,.5),field('y','Pan Y',0,1,.01,.5),field('duration','Ease seconds',.05,5,.05,.4));
+ const presets=el('div','zs38-presets');for(const s of [1,1.5,2,3,4,5])presets.append(button('zs38-preset-'+String(s).replace('.','-'),s+'×',()=>{draft.scale=s;sync(false);draw();}));
+ const times=el('div','zs38-times');times.append(field('start','Start (s)',0,3600,.01,0,false),field('end','Return start (s)',0,3600,.01,2.5,false));
+ const returning=el('input');returning.type='checkbox';returning.id='zs38-return';const rl=el('label','zs38-check');rl.append(returning,el('span','','Return to fit'));returning.onchange=()=>{draft.returning=returning.checked;sync(false);};
+ const fit=button('zs38-fit','Fit timing to clip',()=>{Object.assign(draft,range(session.length,draft.start));sync(false);draw();});
+ const add=button('zs38-add','Stage camera move',()=>stage()),fresh=button('zs38-new','New move',()=>resetDraft()),remove=button('zs38-remove','Remove selected',()=>{if(!selected)return;items=Z.remove(items,selected);resetDraft();refreshList();});
+ const actions=el('div','zs38-actions');actions.append(add,fit,fresh,remove);
+ const list=el('div','zs38-list');list.id='zs38-list';const listTitle=el('strong','zs38-list-title','STAGED CAMERA KEYFRAMES');
+ right.append(el('strong','','CAMERA CONTROLS'),knobGrid,presets,times,rl,actions,listTitle,list);
+ layout.append(left,right);
+ const foot=el('footer','zs38-foot'),status=el('p','zs38-status','');status.id='zs38-status';status.setAttribute('role','status');
+ const apply=button('zs38-apply','Apply camera edits',()=>{if(!session)return;if(!changed&&JSON.stringify(items)===JSON.stringify(session.original))return;if(v().commitZoomStudio(items,session.expected))dialog.close();});apply.classList.add('primary');foot.append(status,apply);
+ const seq=el('p','zs38-note');const link=el('a','','Open Sequence Studio for advanced callouts and Smart Focus');link.href='professional-sequence.html';link.target='_blank';link.rel='noopener';seq.append(link,el('span','',' · Separate project; Clip Studio edits are not transferred.'));right.append(seq);
+ dialog.append(header,empty,layout,foot);d.body.append(dialog);
+ function safe(fn){try{fn();}catch(e){status.textContent=e.message;}}
+ function resetDraft(){selected=null;draft={...range(session.length,session.at),scale:2,x:.5,y:.5,returning:true};sync(false);refreshList();draw();}
+ function sync(refresh=true){if(!draft||!session)return;fields.start.max=fields.end.max=String(session.length);for(const [k,n] of Object.entries(fields))n.value=String(draft[k]);for(const a of dials)a.refresh();returning.checked=draft.returning;returning.disabled=!!selected;fields.end.disabled=!!selected||!draft.returning;remove.disabled=!selected;add.textContent=selected?'Stage keyframe update':'Stage camera move';if(refresh)refreshList();}
+ function refreshList(){list.replaceChildren();for(const k of items){const n=button('zs38-key-'+k.id,k.start.toFixed(2)+' s · '+k.scale.toFixed(2)+'× · '+k.duration.toFixed(2)+' s',()=>{selected=k.id;draft={start:k.start,end:k.start,duration:k.duration,scale:k.scale,x:k.x,y:k.y,returning:false};sync();draw();});n.setAttribute('aria-pressed',String(selected===k.id));list.append(n);}if(!items.length)list.append(el('span','zs38-note','No camera keyframes. Stage a move above.'));changed=JSON.stringify(items)!==JSON.stringify(session.original);apply.disabled=!changed;status.textContent=changed?'Camera changes staged. Apply commits one undo step.':'No changes staged.';}
+ function stage(){if(!session||!draft)return;const cfg={...draft,length:session.length};if(selected){validate(session.length,draft.start,draft.end,draft.duration,false);const next=Z.check(items.map(k=>k.id===selected?{id:k.id,start:draft.start,duration:draft.duration,scale:draft.scale,x:draft.x,y:draft.y}:k));const k=next.find(k=>k.id===selected);if(next.some(o=>o.id!==k.id&&o.start<k.start+k.duration-.00001&&o.start+o.duration>k.start+.00001))throw Error('Updated key overlaps another camera transition.');items=next;}else items=build(items,cfg,Z);refreshList();}
+ function draw(){if(!session||!draft)return;const video=v().video(),ready=video?.readyState>=2&&video.videoWidth&&video.videoHeight;const w=640,h=ready?Math.max(1,Math.round(w*video.videoHeight/video.videoWidth)):360;for(const c of [source,result]){if(c.width!==w||c.height!==h){c.width=w;c.height=h;}const q=c.getContext('2d',{alpha:false});q.fillStyle='#15191e';q.fillRect(0,0,w,h);}
+  const a=source.getContext('2d'),b=result.getContext('2d');if(!ready){a.fillStyle='#c0c8d0';a.font='16px system-ui';a.fillText('Frame is not decoded. Close, seek, and reopen.',16,35);return;}
+  a.drawImage(video,0,0,w,h);const r=H.compute(draft.scale,draft.x,draft.y),x=r.left*w,y=r.top*h,rw=r.width*w,rh=r.height*h;
+  b.drawImage(video,x/w*video.videoWidth,y/h*video.videoHeight,rw/w*video.videoWidth,rh/h*video.videoHeight,0,0,w,h);
+  a.save();a.fillStyle='rgba(0,0,0,.45)';a.beginPath();a.rect(0,0,w,h);a.rect(x,y,rw,rh);a.fill('evenodd');a.strokeStyle='#b9f35d';a.lineWidth=2;a.strokeRect(x+1,y+1,Math.max(1,rw-2),Math.max(1,rh-2));a.fillStyle='#b9f35d';a.fillRect(x+rw-10,y+rh-10,10,10);a.restore();}
+ function pt(e){const r=source.getBoundingClientRect();return {x:clamp((e.clientX-r.left)/r.width,0,1),y:clamp((e.clientY-r.top)/r.height,0,1)};}
+ source.onpointerdown=e=>{if(!draft||!session||e.button!==0)return;const p=pt(e),r=H.compute(draft.scale,draft.x,draft.y),box=source.getBoundingClientRect(),corner=Math.abs(p.x-r.left-r.width)<14/box.width&&Math.abs(p.y-r.top-r.height)<14/box.height;drag={id:e.pointerId,p,r,corner,offset:p.x>=r.left&&p.x<=r.left+r.width&&p.y>=r.top&&p.y<=r.top+r.height?{x:p.x-r.left,y:p.y-r.top}:{x:r.width/2,y:r.height/2}};source.setPointerCapture(e.pointerId);e.preventDefault();};
+ source.onpointermove=e=>{if(!drag||drag.id!==e.pointerId)return;const p=pt(e),n=drag.corner?H.resize(drag.r,'se',p.x-drag.p.x,p.y-drag.p.y):H.drag(drag.r,p,drag.offset);draft.x=round(n.x);draft.y=round(n.y);if(drag.corner)draft.scale=round(n.scale);sync(false);draw();};
+ source.onpointerup=source.onpointercancel=source.onlostpointercapture=()=>{drag=null;};
+ source.onkeydown=e=>{if(!draft||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();const k=['ArrowLeft','ArrowRight'].includes(e.key)?'x':'y';draft[k]=round(clamp(draft[k]+(['ArrowLeft','ArrowUp'].includes(e.key)?-1:1)*(e.shiftKey?.005:.02),0,1));sync(false);draw();};
+ function open(){if(dialog.open||d.querySelector('dialog[open]'))return;lastFocus=d.activeElement;const st=v()?.automationCapture?.();session=null;items=[];draft=null;layout.hidden=!st?.ready;empty.hidden=!!st?.ready;apply.disabled=true;status.textContent=st?.ready?'':st?.reason||'Import a video first.';dialog.showModal();if(!st?.ready)return;try{session={expected:st,original:v().zoomFrames(),length:v().outputDuration(),at:v().sequencePosition()||0};items=JSON.parse(JSON.stringify(session.original));resetDraft();}catch(e){session=null;layout.hidden=true;empty.hidden=false;empty.textContent=e.message;status.textContent=e.message;}}
+ dialog.addEventListener('close',()=>{session=null;draft=null;drag=null;lastFocus?.focus?.({preventScroll:true});lastFocus=null;});
+ launch.onclick=()=>safe(open);
+ const panel=by('v062-camera-panel');if(panel){const b=button('zs38-open-camera','Open Zoom Studio · dials & preview',open);b.className='zs38-launch';panel.prepend(b);}
+ const graphic=by('graphic-inspector');
+ if(graphic){
+  const access=el('div','zs38-advanced-link');access.append(el('strong','','ADVANCED CALLOUTS'),el('span','','Callout Designer, property keyframes and Smart Focus are in the independent Sequence editor.'),link.cloneNode(true));graphic.prepend(access);
+  const specs=[['graphic-opacity','Graphic opacity',0,100,5,100],['graphic-width','Graphic width',10,100,1,70],['graphic-shadow','Graphic shadow',0,40,1,0],['graphic-size','Text size',12,220,2,48]];
+  const panel=el('div','zs38-graphic-knobs');panel.append(el('strong','','PRECISION DIALS'));const grid=el('div','zs38-knobs');panel.append(grid);graphic.prepend(panel);
+  const controls=[];
+  for(const [id,label,min,max,step,reset] of specs){const input=by(id);if(!input)continue;const box=el('div','zs38-knob'),readout=el('output');let pending=null,held=false;const allowed=()=>!input.disabled&&!graphic.hidden&&!!v()?.selectedLayer()&&!v()?.exporting();
+   const get=()=>pending??(Number.isFinite(input.valueAsNumber)?input.valueAsNumber:reset);
+   const commit=()=>{if(pending===null)return;const value=pending;pending=null;if(allowed()){input.value=String(value);input.dispatchEvent(new Event('change',{bubbles:true}));}sync();};
+   const a=U.dial(label,min,max,step,get,val=>{if(!allowed())return;pending=Math.round(val/step)*step;readout.textContent=String(pending);if(!held)commit();},()=>reset,false);
+   function sync(){const off=!allowed();a.element.setAttribute('aria-disabled',String(off));a.element.tabIndex=off?-1:0;readout.textContent=String(get());a.refresh();}
+   a.element.addEventListener('pointerdown',e=>{if(allowed()&&e.button===0)held=true;},true);a.element.addEventListener('pointerup',()=>{held=false;commit();});for(const event of ['pointercancel','lostpointercapture'])a.element.addEventListener(event,()=>{if(held){held=false;pending=null;sync();}});
+   a.element.addEventListener('keydown',e=>{if(!allowed())e.stopImmediatePropagation();},true);a.element.addEventListener('pointerdown',e=>{if(!allowed())e.stopImmediatePropagation();},true);
+   box.append(el('span','',label),a.element,readout);grid.append(box);controls.push(sync);input.addEventListener('change',sync);input.addEventListener('input',sync);
+  }
+  let queued=false;function refresh(){if(queued)return;queued=true;root.requestAnimationFrame(()=>{queued=false;for(const sync of controls)sync();});}
+  for(const name of ['click','change','input','pointerup','keydown'])d.addEventListener(name,refresh,true);new MutationObserver(refresh).observe(graphic,{subtree:true,attributes:true,attributeFilter:['disabled','hidden','value']});refresh();
+ }
+ root.MangoZoomStudioV0738=Object.freeze({open,state:()=>({open:dialog.open,draft:draft?{...draft}:null,staged:items.length})});
+})(typeof globalThis!=='undefined'?globalThis:this);

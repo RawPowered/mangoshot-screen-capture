@@ -486,7 +486,8 @@ globalThis.MangoClipView={
    }catch(error){label(error.message);return false;}
   },
   zoomFrames:()=>clone(zoomEvents),setZoomFrames(items){zoomEvents=MangoCreativeZoom.check(items);refreshed();},
-  addZoomKeyframe(at,scale,x,y,ease){if(!original||exporting)throw Error('Load a video first');remember();zoomEvents=MangoCreativeZoom.add(zoomEvents,at,scale,x,y,ease);refreshed();},
+  addZoomKeyframe(at,scale,x,y,ease){if(!original||exporting)throw Error('Load a video first');const next=MangoCreativeZoom.add(zoomEvents,at,scale,x,y,ease);if(next.some(e=>e.start>=MangoEditOps.length(segments)))throw Error('Camera keyframe must start inside the edited sequence');remember();zoomEvents=next;refreshed();},
+  commitZoomStudio(items,expected){const actual=this.automationCapture();if(!actual.ready||actual.identity!==expected?.identity||actual.stamp!==expected?.stamp)throw Error('Camera draft is stale. Close and reopen Zoom Studio.');const checked=MangoCreativeZoom.check(items);if(checked.some(e=>e.start>=MangoEditOps.length(segments)))throw Error('Camera keyframe must start inside the edited sequence');if(new Set(checked.map(e=>e.id)).size!==checked.length)throw Error('Duplicate camera keyframe ID');if(JSON.stringify(checked)===JSON.stringify(zoomEvents))return false;remember();zoomEvents=checked;refreshed();label('Camera animation applied. Ctrl+Z restores the previous camera edit.');return true;},
   removeZoomKeyframe(id){if(exporting)return;remember();zoomEvents=MangoCreativeZoom.remove(zoomEvents,id);refreshed();},
   updateZoomKeyframe(id,patch){
    if(!original||exporting)throw Error('Load video and stop export to edit camera');

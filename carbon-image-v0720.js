@@ -134,7 +134,7 @@
  }
  dialog.addEventListener('keydown',e=>{if(e.key==='Escape'&&!e.isComposing){e.preventDefault();e.stopPropagation();dialog.close();}},true);
  dialog.addEventListener('close',()=>{if(frame)root.cancelAnimationFrame(frame);frame=0;session=null;renderOK=false;apply.disabled=true;returnFocus?.focus?.();returnFocus=null;refresh();});
- const precision=action('Precision…',open);precision.id='ci-open-v0720';precision.title='Draft rotation, opacity and shadow/glow using the real image compositor';buttons.append(precision);quick.prepend(buttons);
+ const precision=action('Precision dials…',open);precision.id='ci-open-v0720';precision.title='Open Precision Studio: rotation, opacity and shadow/glow dials with real preview';buttons.append(precision);quick.prepend(buttons);
  function refresh(){
   syncDock();const s=root.MangoImageActions?.state();precision.disabled=!s?.ready||!s.layerSelected||s.locked||s.visible===false||s.selectionCount!==1;
   if(!precision.disabled)precision.disabled=!selected();

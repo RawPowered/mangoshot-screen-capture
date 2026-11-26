@@ -1,0 +1,20 @@
+body.studio .zs38-dialog{width:min(1050px,calc(100vw - 24px));max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);padding:0;overflow:auto;background:var(--carbon-panel,#20262c);color:var(--carbon-text,#e2e8ee);border:1px solid var(--carbon-line-strong,#4b5660);box-sizing:border-box}
+.zs38-head,.zs38-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;background:var(--carbon-shell,#14181c);border-bottom:1px solid var(--carbon-line,#434b54)}
+.zs38-head h2{font-size:15px;letter-spacing:.08em;margin:0 0 3px}.zs38-head small,.zs38-note,.zs38-status,.zs38-empty{font-size:11px;color:var(--carbon-secondary,#bec9d1);line-height:1.4;margin:0}
+.zs38-layout{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px;padding:14px}
+.zs38-previews,.zs38-controls{display:flex;flex-direction:column;gap:10px;min-width:0}
+.zs38-preview-wrap{background:#13181d;border:1px solid #404950;padding:7px;display:grid;gap:5px;justify-items:center;min-width:0}
+.zs38-preview-wrap strong,.zs38-controls>strong,.zs38-graphic-knobs>strong,.zs38-advanced-link strong{font:650 10px system-ui;letter-spacing:.07em;color:var(--carbon-secondary,#b8c6ce)}
+.zs38-canvas{display:block;width:auto;max-width:100%;height:auto;max-height:26vh;object-fit:contain;background:#13181d;touch-action:none}
+#zs38-source{cursor:crosshair}.zs38-knobs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.zs38-knob{display:flex;flex-direction:column;align-items:center;gap:6px;background:var(--carbon-shell,#171b20);border:1px solid var(--carbon-line,#424b54);padding:8px 4px;min-width:0;font-size:11px}
+.zs38-knob label,.zs38-knob span{text-align:center;line-height:1.2;font-size:11px}.zs38-knob input{width:100%;min-width:0;box-sizing:border-box;text-align:center}
+.zs38-knob .co36-dial{width:54px;height:54px}.zs38-knob .co36-dial-face{width:44px;height:44px}.zs38-knob .co36-dial-needle{height:30px}
+.zs38-presets,.zs38-actions,.zs38-times{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.zs38-presets{grid-template-columns:repeat(6,minmax(0,1fr))}
+.zs38-presets button,.zs38-actions button,.zs38-list button{font-size:11px;padding:6px;min-width:0;white-space:normal}
+.zs38-time{display:grid;gap:4px;font-size:11px}.zs38-time input{width:100%;box-sizing:border-box;min-width:0}.zs38-check{display:flex;gap:6px;align-items:center;font-size:12px}
+.zs38-list{display:grid;gap:4px;max-height:130px;overflow:auto}.zs38-list button{text-align:left}.zs38-list button[aria-pressed=true]{border-color:var(--carbon-accent,#b9f35d);color:var(--carbon-accent,#b9f35d)}
+.zs38-foot{border-top:1px solid var(--carbon-line,#434b54);border-bottom:0;position:sticky;bottom:0;z-index:1}.zs38-foot button{white-space:nowrap}.zs38-empty{padding:18px}
+.zs38-dialog [hidden]{display:none!important}.zs38-launch{display:block;width:100%;margin-bottom:8px}
+.zs38-graphic-knobs,.zs38-advanced-link{display:grid;gap:6px;margin-bottom:8px;padding:7px;border:1px solid var(--carbon-line,#424b54);font-size:11px}.zs38-graphic-knobs .zs38-knobs{grid-template-columns:repeat(2,minmax(0,1fr))}.zs38-graphic-knobs .co36-dial{width:38px;height:38px}.zs38-graphic-knobs .co36-dial-face{width:30px;height:30px}.zs38-graphic-knobs .co36-dial-needle{height:19px}.zs38-note a,.zs38-advanced-link a{color:var(--carbon-accent,#b9f35d)}
+@media(max-width:760px){.zs38-layout{grid-template-columns:1fr}.zs38-previews{display:grid;grid-template-columns:1fr 1fr}.zs38-previews .zs38-note{grid-column:1/-1}.zs38-canvas{max-height:22vh}}

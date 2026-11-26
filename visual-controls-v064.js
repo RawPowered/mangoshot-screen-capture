@@ -35,7 +35,7 @@
   function setMarker(id,output){
    const position=view()?.sequencePosition?.(),duration=view()?.outputDuration?.()||0;
    if(!view()?.original?.()||view()?.exporting?.())return notice('Import a recording to set camera timing.');
-   const value=clamp(position??0,0,duration);el(id).value=value.toFixed(2);output.textContent=time(value);
+   const value=clamp(position??0,0,Math.max(0,duration-.01));el(id).value=value.toFixed(2);output.textContent=time(value);
   }
   startInput?.addEventListener('change',updateTimes);endInput?.addEventListener('change',updateTimes);
   const advanced=mk('details','v064-tech-details');advanced.id='v064-camera-advanced';

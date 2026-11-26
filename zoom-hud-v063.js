@@ -114,7 +114,7 @@
   percent.textContent='X '+Math.round(draft.x*100)+'% · Y '+Math.round(draft.y*100)+'%';
   active.setAttribute('aria-valuenow',String(Math.round(draft.x*100)));
   active.setAttribute('aria-valuetext','Horizontal '+Math.round(draft.x*100)+' percent, vertical '+Math.round(draft.y*100)+' percent');
-  if(!initialized&&view()?.original?.()){start.value=pos().toFixed(2);end.value=Math.min(view().outputDuration(),pos()+3).toFixed(2);initialized=true;}
+  if(!initialized&&view()?.original?.()){start.value=pos().toFixed(2);end.value=Math.max(0,Math.min(view().outputDuration()-.01,pos()+3)).toFixed(2);initialized=true;}
   const key=view()?.zoomFrames?.()?.find(z=>z.id===selectedId);
   if(selectedId&&!key)selectedId=null;
   save.disabled=!selectedId||!!view()?.exporting?.();
@@ -184,8 +184,8 @@
  range.addEventListener('click',()=>{
   const m=mode(),at=Number(start.value),until=Number(end.value),ease=Number(el('v061-zoom-duration').value);
   if(!view()?.original?.()||view()?.exporting?.())return;
-  if(!Number.isFinite(at)||!Number.isFinite(until)||at<0||until<=at+ease||until>view().outputDuration()+.001){
-   const status=el('status');if(status)status.textContent='Zoom Out must be after Zoom In + transition and inside the sequence.';return;
+  if(!Number.isFinite(at)||!Number.isFinite(until)||at<0||until<=at+ease||until>=view().outputDuration()-.005){
+   const status=el('status');if(status)status.textContent='Return must start after Zoom In + transition and before the sequence ends. Open Zoom Studio for automatic fitting.';return;
   }
   try{view().addZoomRange(at,until,m.scale,m.x,m.y,ease);refresh();}
   catch(e){const status=el('status');if(status)status.textContent=e.message;}
