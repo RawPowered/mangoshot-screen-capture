@@ -9,7 +9,7 @@
  const angle=(a,b,t)=>((a+((((b-a)+180)%360+360)%360-180)*t+180)%360+360)%360-180;
  const hex=(a,b,t)=>'#'+[1,3,5].map(i=>Math.round(lerp(parseInt(a.slice(i,i+2),16),parseInt(b.slice(i,i+2),16),t)).toString(16).padStart(2,'0')).join('');
  function checkSegment(a,b){
-  if(a.points.length!==b.points.length)throw Error('Motion keys must share the same point count. Disable motion to change topology.');
+  if(a.points.length!==b.points.length||!!a.bezier!==!!b.bezier)throw Error('Motion keys must share the same point count. Disable motion to change topology.');
   // Analytic minimum of the squared length of each interpolated adjacent edge.
   // Prevent a valid endpoint pair from collapsing a tube mid-animation.
   for(let i=1;i<a.points.length;i++){const d=S.sub(a.points[i],a.points[i-1]),e=S.sub(b.points[i],b.points[i-1]),v=S.sub(e,d),den=S.dot(v,v),t=den?clamp(-S.dot(d,v)/den,0,1):0;if(S.length(S.add(d,S.mul(v,t)))<MIN_SEPARATION-1e-10)throw Error('Adjacent path points would collide between keys. Add an intermediate pose or change the path.');}
@@ -19,13 +19,13 @@
   const keys=v.keys.map((k,i)=>{if(!exact(k,keyed?['at','pose','reveal','ease','masks']:['at','pose','reveal','ease'])||!finite(k.at,0,1)||!finite(k.reveal,0,1)||!['linear','smooth','hold'].includes(k.ease)||i&&k.at-v.keys[i-1].at<.009999999||Object.hasOwn(k.pose||{},'occlusion'))throw Error('Invalid motion key. Times must be at least 1% apart.');return {...k,pose:pose(k.pose),...(keyed?{masks:S.checkOcclusion(k.masks)}:{})};});
   if(keys[0].at!==0||keys.at(-1).at!==1)throw Error('Motion needs keys at 0% and 100%.');
   if(base&&JSON.stringify(pose(base))!==JSON.stringify(keys[0].pose))throw Error('Base arrow must match its first pose.');if(keyed&&base&&JSON.stringify(base.occlusion||[])!==JSON.stringify(keys[0].masks))throw Error('Base foreground polygons must match the first key.');
-  for(let i=1;i<keys.length;i++){if(keys[i].pose.shape!==keys[0].pose.shape||keys[i].pose.points.length!==keys[0].pose.points.length)throw Error('Motion keys must share path topology.');if(keys[i-1].ease!=='hold')checkSegment(keys[i-1].pose,keys[i].pose);}
+  for(let i=1;i<keys.length;i++){if(keys[i].pose.shape!==keys[0].pose.shape||keys[i].pose.points.length!==keys[0].pose.points.length||!!keys[i].pose.bezier!==!!keys[0].pose.bezier)throw Error('Motion keys must share path topology.');if(keys[i-1].ease!=='hold')checkSegment(keys[i-1].pose,keys[i].pose);}
   return {keys,...(keyed?{maskMode:'keyed'}:{})};
  }
  function defaults(base,grow=false){const p=pose(base);return {keys:[{at:0,pose:copy(p),reveal:grow?0:1,ease:'smooth'},{at:1,pose:copy(p),reveal:1,ease:'linear'}]};}
  function interpolate(a,b,t){if(t<=0)return copy(a);if(t>=1)return copy(b);
   const c={...a,camera:{...a.camera}};
-  c.points=a.points.map((p,i)=>vector(p,b.points[i],t));for(const k of ['radius','headRadius','headLength'])c[k]=lerp(a[k],b[k],t);
+  c.points=a.points.map((p,i)=>vector(p,b.points[i],t));if(a.bezier&&b.bezier)c.bezier=a.bezier.map((h,i)=>({in:vector(h.in,b.bezier[i].in,t),out:vector(h.out,b.bezier[i].out,t)}));for(const k of ['radius','headRadius','headLength'])c[k]=lerp(a[k],b[k],t);
   c.light=angle(a.light,b.light,t);c.color=hex(a.color,b.color,t);
   for(const k of ['elevation','distance','fov'])c.camera[k]=lerp(a.camera[k],b.camera[k],t);
   c.camera.azimuth=angle(a.camera.azimuth,b.camera.azimuth,t);if(a.camera.roll||b.camera.roll)c.camera.roll=angle(a.camera.roll||0,b.camera.roll||0,t);c.camera.target=vector(a.camera.target,b.camera.target,t);

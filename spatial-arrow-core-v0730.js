@@ -13,10 +13,10 @@
  function checkCamera(c){const keys=['azimuth','elevation','distance','fov','projection','target'];if(c&&Object.hasOwn(c,'roll'))keys.push('roll');if(!exact(c,keys)||!finite(c.azimuth,-180,180)||!finite(c.elevation,-89.5,89.5)||!finite(c.distance,2,18)||!finite(c.fov,15,90)||!['perspective','orthographic'].includes(c.projection)||!vector(c.target,LIMIT)||Object.hasOwn(c,'roll')&&!finite(c.roll,-180,180))throw Error('Invalid spatial camera.');const out={...c,target:c.target.slice()};if(!out.roll)delete out.roll;return out;}
  function checkOcclusion(a){if(!Array.isArray(a)||a.length>4)throw Error('Use at most four foreground polygons.');return a.map(poly=>{if(!Array.isArray(poly)||poly.length<3||poly.length>64||!poly.every(p=>Array.isArray(p)&&p.length===2&&p.every(n=>finite(n,0,1)))||new Set(poly.map(p=>p.join(':'))).size<3)throw Error('Foreground polygons require 3–64 normalized points.');return poly.map(p=>p.slice());});}
  function check(v){
-  const keys=Object.keys(defaults());if(v&&Object.hasOwn(v,'occlusion'))keys.push('occlusion');
+  const keys=Object.keys(defaults());if(v&&Object.hasOwn(v,'occlusion'))keys.push('occlusion');if(v&&Object.hasOwn(v,'bezier'))keys.push('bezier');
   if(!exact(v,keys)||v.mode!=='spatial'||!SHAPES.includes(v.shape)||!Array.isArray(v.points)||v.points.length<2||v.points.length>MAX_NODES||!isPath(v.shape)&&v.points.length!==2||!v.points.every(p=>vector(p,LIMIT))||typeof v.smooth!=='boolean'||typeof v.color!=='string'||!/^#[0-9a-f]{6}$/i.test(v.color)||!['matte','metal','gloss'].includes(v.material)||!finite(v.radius,.025,.25)||!finite(v.headRadius,.05,.5)||v.headRadius<v.radius*1.2||!finite(v.headLength,.12,1.2)||!finite(v.light,-180,180))throw Error('Invalid spatial arrow geometry or material.');
   if(v.points.some((p,i)=>i&&length(sub(p,v.points[i-1]))<.045))throw Error('Adjacent path points must be at least 0.045 world units apart.');
-  const out={...v,color:v.color.toLowerCase(),points:v.points.map(p=>p.slice()),camera:checkCamera(v.camera)};if(Object.hasOwn(v,'occlusion')){const masks=checkOcclusion(v.occlusion);if(masks.length)out.occlusion=masks;else delete out.occlusion;}return out;
+  const out={...v,color:v.color.toLowerCase(),points:v.points.map(p=>p.slice()),camera:checkCamera(v.camera)};if(Object.hasOwn(v,'bezier')){if(!isPath(v.shape)||!v.smooth||!Array.isArray(v.bezier)||v.bezier.length!==v.points.length||!v.bezier.every(h=>exact(h,['in','out'])&&vector(h.in,LIMIT)&&vector(h.out,LIMIT)))throw Error('Invalid cubic Bezier tangents. Use bounded XYZ offsets at every path point.');out.bezier=v.bezier.map(h=>({in:h.in.slice(),out:h.out.slice()}));}if(Object.hasOwn(v,'occlusion')){const masks=checkOcclusion(v.occlusion);if(masks.length)out.occlusion=masks;else delete out.occlusion;}return out;
  }
  function camera(c,w,h){c=checkCamera(c);const a=rad(c.azimuth),e=rad(c.elevation),offset=[c.distance*Math.sin(a)*Math.cos(e),c.distance*Math.sin(e),c.distance*Math.cos(a)*Math.cos(e)],eye=add(c.target,offset),forward=unit(mul(offset,-1)),r0=unit(cross(forward,[0,1,0])),u0=cross(r0,forward),roll=rad(c.roll||0),right=add(mul(r0,Math.cos(roll)),mul(u0,Math.sin(roll))),up=add(mul(u0,Math.cos(roll)),mul(r0,-Math.sin(roll))),t=Math.tan(rad(c.fov)/2);return {eye,forward,right,up,t,aspect:w/h,ortho:c.projection==='orthographic',distance:c.distance};}
  function project(p,c,w,h){const v=camera(c,w,h),d=sub(p,v.eye),z=dot(d,v.forward);if(z<=NEAR||z>=FAR)return null;const s=v.t*(v.ortho?v.distance:z);return {x:w/2*(1+dot(d,v.right)/(s*v.aspect)),y:h/2*(1-dot(d,v.up)/s),z};}
@@ -24,11 +24,31 @@
  function axisDelta(p,c,w,h,axis,dx,dy){const a=project(p,c,w,h),b=project(add(p,mul(axis,.5)),c,w,h);if(!a||!b)return null;const x=b.x-a.x,y=b.y-a.y,d=x*x+y*y;if(d<36)return null;return mul(axis,.5*(dx*x+dy*y)/d);}
  // Catmull-Rom cubic interpolation through actual XYZ points. Straight mode keeps
  // polyline segments; smoothing uses bounded sampling, not a screen-space bend.
+ // Tangents are relative world-space offsets: moving a node retains its
+ // tangent geometry. Explicit conversion from the legacy spline is exact.
+ function toBezier(value){
+  const v=check(value);if(!isPath(v.shape))throw Error('Bezier paths require an arrow, tube or ribbon.');if(v.bezier)return v;
+  const p=v.points;v.bezier=p.map((a,i)=>{
+   if(v.smooth){const tangent=mul(sub(p[Math.min(p.length-1,i+1)],p[Math.max(0,i-1)]),1/6);return {in:i?mul(tangent,-1):[0,0,0],out:i<p.length-1?tangent:[0,0,0]};}
+   return {in:i?mul(sub(p[i-1],a),1/3):[0,0,0],out:i<p.length-1?mul(sub(p[i+1],a),1/3):[0,0,0]};
+  });v.smooth=true;return check(v);
+ }
+ function controls(v,i){return [v.points[i],add(v.points[i],v.bezier[i].out),add(v.points[i+1],v.bezier[i+1].in),v.points[i+1]];}
+ function cubic(a,b,c,d,t){const ab=lerp(a,b,t),bc=lerp(b,c,t),cd=lerp(c,d,t);return lerp(lerp(ab,bc,t),lerp(bc,cd,t),t);}
+ function splitBezier(value,index,t=.5){
+  const v=check(value);if(!v.bezier||!Number.isInteger(index)||index<0||index>=v.points.length-1||v.points.length>=MAX_NODES||!finite(t,.05,.95))throw Error('Cannot split this Bezier segment.');
+  const [a,b,c,d]=controls(v,index),ab=lerp(a,b,t),bc=lerp(b,c,t),cd=lerp(c,d,t),abc=lerp(ab,bc,t),bcd=lerp(bc,cd,t),mid=lerp(abc,bcd,t);
+  v.bezier[index].out=sub(ab,a);v.bezier[index+1].in=sub(cd,d);
+  v.points.splice(index+1,0,mid);v.bezier.splice(index+1,0,{in:sub(abc,mid),out:sub(bcd,mid)});return check(v);
+ }
+ function handlePoint(v,i,side){return side==='in'||side==='out'?add(v.points[i],v.bezier[i][side]):v.points[i].slice();}
+ function moveHandle(v,i,side,p,mirror=false){const n=copy(v);if(!n.bezier||!['in','out'].includes(side)||!n.points[i]||side==='in'&&i===0||side==='out'&&i===n.points.length-1)throw Error('Choose an existing tangent handle.');n.bezier[i][side]=sub(p,n.points[i]);if(mirror&&i>0&&i<n.points.length-1)n.bezier[i][side==='in'?'out':'in']=mul(n.bezier[i][side],-1);return check(n);}
+ function curveMode(value,kind){const v=check(value);if(kind==='bezier')return toBezier(v);if(!['polyline','catmull'].includes(kind))throw Error('Invalid curve mode.');delete v.bezier;v.smooth=kind==='catmull';return check(v);}
  function centerline(value){
   const v=check(value),p=v.points,out=[p[0].slice()];
   for(let i=0;i<p.length-1;i++){
    const a=p[Math.max(0,i-1)],b=p[i],c=p[i+1],d=p[Math.min(p.length-1,i+2)];
-   for(let j=1;j<=12;j++){const t=j/12,t2=t*t,t3=t2*t,q=j===12?c.slice():v.smooth?b.map((x,k)=>.5*(2*x+(-a[k]+c[k])*t+(2*a[k]-5*x+4*c[k]-d[k])*t2+(-a[k]+3*x-3*c[k]+d[k])*t3)):lerp(b,c,t);if(length(sub(q,out.at(-1)))>EPS)out.push(q);}
+   const count=v.bezier?16:12,cp=v.bezier?controls(v,i):null;for(let j=1;j<=count;j++){const t=j/count,t2=t*t,t3=t2*t,q=j===count?c.slice():cp?cubic(...cp,t):v.smooth?b.map((x,k)=>.5*(2*x+(-a[k]+c[k])*t+(2*a[k]-5*x+4*c[k]-d[k])*t2+(-a[k]+3*x-3*c[k]+d[k])*t3)):lerp(b,c,t);if(length(sub(q,out.at(-1)))>EPS)out.push(q);}
   }return out;
  }
  function frame(t,old){let n=old?sub(old,mul(t,dot(old,t))):[0,0,0];if(length(n)<.001)n=cross(t,Math.abs(t[1])<.85?[0,1,0]:[1,0,0]);n=unit(n);return {n,b:unit(cross(t,n))};}
@@ -94,9 +114,10 @@
   const a=(index+1)%3,b=(index+2)%3;return Array.from({length:65},(_,i)=>{const t=i/64*Math.PI*2,v=p.slice();v[a]+=radius*Math.cos(t);v[b]+=radius*Math.sin(t);return project(v,c,w,h);});
  }
  function ringDistance(ring,p){let best=Infinity;for(let i=1;i<ring.length;i++){const a=ring[i-1],b=ring[i];if(!a||!b)continue;const dx=b.x-a.x,dy=b.y-a.y,d=dx*dx+dy*dy,t=d?clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/d,0,1):0;best=Math.min(best,Math.hypot(p.x-a.x-t*dx,p.y-a.y-t*dy));}return best;}
- function scaledValue(v,factor){const n=copy(v);n.points=scalePoints(n.points,factor);if(n.shape!=='sphere'&&n.shape!=='cone')n.radius*=factor;if(n.shape==='arrow'||n.shape==='cone')n.headRadius*=factor;if(n.shape==='arrow')n.headLength*=factor;if(n.headRadius<n.radius*1.2)n.headRadius=n.radius*1.2;return check(n);}
+ function scaledValue(v,factor){const n=copy(v);n.points=scalePoints(n.points,factor);if(n.bezier)n.bezier=n.bezier.map(h=>({in:mul(h.in,factor),out:mul(h.out,factor)}));if(n.shape!=='sphere'&&n.shape!=='cone')n.radius*=factor;if(n.shape==='arrow'||n.shape==='cone')n.headRadius*=factor;if(n.shape==='arrow')n.headLength*=factor;if(n.headRadius<n.radius*1.2)n.headRadius=n.radius*1.2;return check(n);}
  function scalePoints(points,factor){const center=mul(points.reduce(add,[0,0,0]),1/points.length);return points.map(p=>add(center,mul(sub(p,center),factor)));}
+ function rotateValue(value,axis,degrees){const v=copy(value);v.points=rotatePoints(v.points,axis,degrees);if(v.bezier){const a=rad(degrees),s=Math.sin(a),c=Math.cos(a),u=[0,0,0];u[axis]=1;const rotate=p=>add(add(mul(p,c),mul(cross(u,p),s)),mul(u,dot(u,p)*(1-c)));v.bezier=v.bezier.map(h=>({in:rotate(h.in),out:rotate(h.out)}));}return check(v);}
  function rotatePoints(points,axis,degrees){const a=rad(degrees),s=Math.sin(a),c=Math.cos(a),center=mul(points.reduce(add,[0,0,0]),1/points.length),u=[0,0,0];u[axis]=1;return points.map(p=>{const v=sub(p,center);return add(center,add(add(mul(v,c),mul(cross(u,v),s)),mul(u,dot(u,v)*(1-c))));});}
- const api=Object.freeze({LIMIT,MAX_NODES,SIDES,NEAR,FAR,SHAPES,isPath,shapePoints,copy,defaults,defaultCamera,check,checkCamera,checkOcclusion,add,sub,mul,dot,length,camera,project,viewDelta,axisDelta,centerline,revealSamples,mesh,rotatePoints,scalePoints,pivot,rayAt,axisPlanePoint,rotationDelta,rotationRing,ringDistance,scaledValue});
+ const api=Object.freeze({LIMIT,MAX_NODES,SIDES,NEAR,FAR,SHAPES,isPath,shapePoints,copy,defaults,defaultCamera,check,checkCamera,checkOcclusion,add,sub,mul,dot,length,camera,project,viewDelta,axisDelta,centerline,toBezier,controls,cubic,splitBezier,handlePoint,moveHandle,curveMode,revealSamples,mesh,rotatePoints,rotateValue,scalePoints,pivot,rayAt,axisPlanePoint,rotationDelta,rotationRing,ringDistance,scaledValue});
  root.MangoSpatialArrowV0730=api;if(typeof module==='object'&&module.exports)module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

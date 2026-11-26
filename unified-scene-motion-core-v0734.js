@@ -22,7 +22,7 @@
    const keys=keysCheck(track.keys,['at','ease','geometry','reveal'],k=>{
     if(!finite(k.reveal,0,1))throw Error('Reveal must be 0–100%.');
     const geometry=Q.geometry(Q.pose(k.geometry,scene.camera));
-    if(geometry.shape!==o.geometry.shape||geometry.points.length!==o.geometry.points.length)throw Error('Animated objects must retain primitive and point topology.');
+    if(geometry.shape!==o.geometry.shape||geometry.points.length!==o.geometry.points.length||!!geometry.bezier!==!!o.geometry.bezier)throw Error('Animated objects must retain primitive and point topology.');
     return {geometry,reveal:k.reveal};
    });
    if(!same(keys[0].geometry,o.geometry))throw Error('Object base geometry must match its first key.');
