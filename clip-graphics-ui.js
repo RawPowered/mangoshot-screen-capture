@@ -144,7 +144,7 @@
     input.disabled=layer.locked||st.exporting()||(layer.kind==='shape'&&['text','font','weight','fontSize','align','tailX','tailLength','color'].includes(field));
    }
    for(const [id,value] of [['graphic-shape-height',layer.shape?.height*100],['graphic-shape-rotation',layer.shape?.rotation],['graphic-shape-fill-opacity',layer.kind==='shape'?rootShape().fillOpacity(layer.background):0]]){const n=el(id);if(n){n.disabled=layer.kind!=='shape'||layer.locked||st.exporting();n.value=Number.isFinite(value)?String(Math.round(value*100)/100):'0';}}
-   const weightField=el('graphic-weight'),font=globalThis.MangoCreativeV079?.font(layer.font);for(const option of weightField.options)option.disabled=font?Number(option.value)<font.min||Number(option.value)>font.max:!['400','500','600','700','800'].includes(option.value);
+   const weightField=el('graphic-weight'),font=globalThis.MangoCreativeV079?.font(layer.font);for(const option of Array.from(weightField.options||[]))option.disabled=font?Number(option.value)<font.min||Number(option.value)>font.max:!['400','500','600','700','800'].includes(option.value);
    el('graphic-preset').value=layer.preset;el('graphic-preset').disabled=layer.locked||st.exporting()||layer.kind==='shape';
    el('graphic-duplicate').disabled=st.exporting();el('graphic-delete').disabled=st.exporting()||layer.locked;
    el('graphic-duration').textContent=`G${layer.track} · In ${fmt(layer.start)} · Out ${fmt(layer.end)} · Duration ${fmt(layer.end-layer.start)}`;
