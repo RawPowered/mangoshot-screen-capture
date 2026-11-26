@@ -19,7 +19,7 @@
   const s=H.state();if(d.querySelector('dialog[open]')||mode==='save'&&!s.ready||mode==='open'&&!s.canOpen)return false;
   returnFocus=d.activeElement;session={...s,mode};working=false;title.textContent=mode==='save'?'SAVE EDITABLE IMAGE PROJECT':'OPEN IMAGE PROJECT';
   nameInput.value=name;fileInput.value='';saveSection.hidden=mode!=='save';openSection.hidden=mode!=='open';confirm.textContent=mode==='save'?'Save .mangoimage':'Open & replace';
-  details.textContent=mode==='save'?s.width+' × '+s.height+' px · '+s.layers.length+' layers · embedded source assets and masks':'Version 1 local project · maximum 96 MiB · source dimensions and references validated';
+  details.textContent=mode==='save'?s.width+' × '+s.height+' px · '+s.layers.length+' layers · embedded source assets and masks':'Version 1 or 2 local project · maximum 96 MiB · source dimensions and references validated';
   status.textContent='Local only';dialog.showModal();sync();return true;
  }
  function download(blob,filename){const url=URL.createObjectURL(blob),a=el('a');a.href=url;a.download=filename;d.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}

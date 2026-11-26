@@ -1,0 +1,18 @@
+const assert=require('node:assert/strict'),A=require('../advanced-compositor-core-v0724.js'),F=require('../compositor-core-v0714.js');
+const C={checkStack:F.checkStack,requireSupport:F.checkStack},layers=['a','b','c','d','e'].map(id=>({id,type:'shape'}));
+const g=(id,members)=>({id,name:id,members,opacity:.5,blend:'source-over',visible:true});
+const adj={id:'grade',name:'Gray',kind:'monochrome',value:1,enabled:true};
+const comp=A.check({groups:[g('inner',['a','b']),g('outer',['a','b','c'])],adjustments:[adj]},layers,1920,1080,C);
+assert.equal(A.depth(A.tree(comp.groups,layers)),2);
+assert.deepEqual(A.move(comp,layers,'outer',1),['d','a','b','c','e']);
+assert.deepEqual(A.move(comp,layers,'inner',1),['c','a','b','d','e']);
+assert.equal(A.afterGroup(comp,layers,0),3);assert.equal(A.canOrder(comp,[layers[0],layers[3],layers[1],layers[2],layers[4]]),false);
+assert.equal(A.visible({...comp,groups:[{...comp.groups[0],visible:false},comp.groups[1]]},layers[0]),false);
+assert.throws(()=>A.check({groups:[g('gap',['a','c'])],adjustments:[]},layers,100,100,C),/contiguous/);
+assert.throws(()=>A.check({groups:[g('x',['a','b']),g('y',['b','c'])],adjustments:[]},layers,100,100,C),/nested/);
+assert.throws(()=>A.check({groups:[g('x',['a','b'])],adjustments:[]},[{...layers[0],type:'redact'},...layers.slice(1)],100,100,C),/redaction/);
+assert.throws(()=>A.check(comp,layers,4000,4000,C),/budget/);
+assert.throws(()=>A.check({groups:[],adjustments:[{...adj,kind:'blur'}]},layers,100,100,C));
+assert.deepEqual(A.reconcile(comp,layers.slice(1)).groups.map(g=>g.members),[['b','c']]);
+assert.equal(A.sourceFilter(comp,F),'grayscale(1)');
+console.log('Advanced compositor nested ranges, group order, protected layers and adjustment contracts passed');

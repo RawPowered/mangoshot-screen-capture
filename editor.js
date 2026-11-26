@@ -12,6 +12,8 @@ const call=(fn,...args)=>new Promise((resolve,reject)=>{
   catch(error){reject(error);}
 });
 let documentLoadPending=true;
+const advancedComp=globalThis.MangoAdvancedCompositorV0724;
+let composition={groups:[],adjustments:[]},adjustedSource=null,sourceGeneration=0,sourceKey='';
 let meta,frames=[],ready=false,drawing=false,active=null,strokes=[],renderPending=false,history=[],redoHistory=[];
 const editorCore=globalThis.MangoImageEditorCore;
 const layerCore=globalThis.MangoImageLayersV0612;
@@ -35,6 +37,7 @@ function activate(){call(api.tabs.getCurrent.bind(api.tabs)).then(tab=>
   tab?.id&&call(api.tabs.update.bind(api.tabs),tab.id,{active:true})).catch(()=>{});}
 function setReady(value){
  automationRevisionV075++;ready=value;
+ if(advancedComp&&composition.groups.length)composition=advancedComp.reconcile(composition,strokes);
  for(const id of ['png','pdf','clear','copy-image']){const button=document.getElementById(id);if(button)button.disabled=!value;}
  document.getElementById('undo').disabled=!value||!history.length;
  const redo=document.getElementById('redo');if(redo)redo.disabled=!value||!redoHistory.length;
@@ -124,14 +127,14 @@ async function begin(){
  * User click and Ctrl+V event are both permitted; no blanket clipboardRead permission. */
 async function loadClipboardImage(blob){
  if(!captureOutput?.blobImage)throw Error('Image clipboard module is unavailable.');
- if(ready&&strokes.length)throw Error('Finish or export the current annotated image before replacing it.');
+ if(ready&&(strokes.length||advancedComp?.active(composition)))throw Error('Finish or export the current edited image before replacing it.');
  const next=await captureOutput.blobImage(blob);
  if(next.width*next.height>48000000)throw Error('The clipboard image is too large.');
  base.width=next.width;base.height=next.height;
  ink.width=next.width;ink.height=next.height;
  ctx.clearRect(0,0,next.width,next.height);ctx.drawImage(next,0,0);
  meta={width:next.width,height:next.height,pageHeight:next.height,dpr:1,frames:1,full:false};
- clearBatch();strokes=[];history=[];redoHistory=[];selectedText=-1;selectedImage=-1;selectedObject=-1;
+ clearBatch();strokes=[];history=[];redoHistory=[];composition={groups:[],adjustments:[]};sourceGeneration++;selectedText=-1;selectedImage=-1;selectedObject=-1;
  const landing=document.getElementById('image-clipboard-landing');
  if(landing)landing.hidden=true;
  setReady(true);zoom();redraw();
@@ -265,23 +268,43 @@ function draftTextLayer(){
    fontSize:visibleSize,scaleX:1,scaleY:1,styleId:textPreset,
    fontFamily:textFontFamily?.value||'sans',color:color.value,effects:typeEffects?.initial?.()};
 }
+function effectiveLayerVisible(l){return advancedComp?advancedComp.visible(composition,l):l.visible!==false;}
+function composedSource(){
+ if(!advancedComp||!composition.adjustments.length){if(adjustedSource){adjustedSource.hidden=true;adjustedSource.width=adjustedSource.height=1;base.style.visibility='';sourceKey='';}return base;}
+ const key=sourceGeneration+':'+base.width+':'+base.height+':'+JSON.stringify(composition.adjustments);
+ if(!adjustedSource){adjustedSource=document.createElement('canvas');adjustedSource.id='adjusted-source-v0724';adjustedSource.setAttribute('aria-hidden','true');base.after(adjustedSource);}
+ if(key!==sourceKey){adjustedSource.width=base.width;adjustedSource.height=base.height;advancedComp.paintSource(adjustedSource.getContext('2d'),base,composition,globalThis.MangoCompositorV0714);sourceKey=key;}
+ adjustedSource.hidden=false;base.style.visibility='hidden';return adjustedSource;
+}
+function paintComposedLayers(target,layers,comp=composition,scale=1){
+ const paint=(g,l)=>{
+  if(!l||l.visible===false)return;let x=l;
+  if(scale!==1&&l.layerFx){const f=MangoLayerStudioV0712.appearance(l);x={...l,layerFx:{...f,blur:f.blur*scale,offsetX:f.offsetX*scale,offsetY:f.offsetY*scale}};}
+  paintCompositorStroke(g,x,scale);
+ };
+ if(advancedComp&&comp.groups.length)advancedComp.paintLayers(target,layers,comp,paint);else{advancedComp?.clearBuffers(target);for(const l of layers)paint(target,l);}
+}
 function redraw(){
- pen.clearRect(0,0,ink.width,ink.height);
+ pen.clearRect(0,0,ink.width,ink.height);composedSource();
  const preview=draftTextLayer();
- for(let i=0;i<strokes.length;i++){
-  // Replacing the existing text in-place preserves its layer order as the user types.
-  if(textDraft?.index===i){if(preview)drawStroke(preview);}
-  else drawStroke(strokes[i]);
+ if(advancedComp&&composition.groups.length){
+  const layers=strokes.map((l,i)=>textDraft?.index===i?(preview||{...l,visible:false}):l);
+  paintComposedLayers(pen,layers);
+ }else{
+  advancedComp?.clearBuffers(pen);
+  for(let i=0;i<strokes.length;i++){if(textDraft?.index===i){if(preview)drawStroke(preview);}else drawStroke(strokes[i]);}
  }
  if(textDraft?.index===-1&&preview)drawStroke(preview);
  drawStroke(active);updateSelectionBox();updateImageSelectionBox();updateVectorSelectionBox();updateInkRotationBox();paintBatchOverlay();
 }
 function cloneStrokes(value){return JSON.parse(JSON.stringify(value));}
-function snapshot(){ensureLayerIds();automationRevisionV075++;history.push(cloneStrokes(strokes));if(history.length>80)history.shift();redoHistory=[];}
-function undo(){if(!history.length)return;clearBatch();automationRevisionV075++;redoHistory.push(cloneStrokes(strokes));strokes=history.pop();
+function historyImageState(){const value=cloneStrokes(strokes);value.composition=JSON.parse(JSON.stringify(composition));return value;}
+function restoreImageState(value){composition=value.composition||{groups:[],adjustments:[]};delete value.composition;strokes=value;}
+function snapshot(){ensureLayerIds();automationRevisionV075++;history.push(historyImageState());if(history.length>80)history.shift();redoHistory=[];}
+function undo(){if(!history.length)return;clearBatch();automationRevisionV075++;redoHistory.push(historyImageState());restoreImageState(history.pop());
  selectedText=Math.min(selectedText,strokes.length-1);selectedImage=Math.min(selectedImage,strokes.length-1);
  selectedObject=Math.min(selectedObject,strokes.length-1);redraw();setReady(ready);syncSelectedText();syncLayerProperties();}
-function redo(){if(!redoHistory.length)return;clearBatch();automationRevisionV075++;history.push(cloneStrokes(strokes));strokes=redoHistory.pop();
+function redo(){if(!redoHistory.length)return;clearBatch();automationRevisionV075++;history.push(historyImageState());restoreImageState(redoHistory.pop());
  selectedText=Math.min(selectedText,strokes.length-1);selectedImage=Math.min(selectedImage,strokes.length-1);
  selectedObject=Math.min(selectedObject,strokes.length-1);redraw();setReady(ready);syncSelectedText();syncLayerProperties();}
 function selectedStroke(){return selectedText>=0&&strokes[selectedText]?.type==='text'?strokes[selectedText]:null;}
@@ -328,7 +351,7 @@ function selectImage(index){
 
 function textIndexAt(x,y){
  if(!editorCore?.hitText)return -1;
- for(let i=strokes.length-1;i>=0;i--){const l=strokes[i];if(l.visible===false||l.type!=='text')continue;const p=rotationLocal(l,{x,y});if(typeEffects?.hit?.(pen,l,p.x,p.y,10)??editorCore.hitText(pen,l,p.x,p.y,10))return i;}
+ for(let i=strokes.length-1;i>=0;i--){const l=strokes[i];if(!effectiveLayerVisible(l)||l.type!=='text')continue;const p=rotationLocal(l,{x,y});if(typeEffects?.hit?.(pen,l,p.x,p.y,10)??editorCore.hitText(pen,l,p.x,p.y,10))return i;}
  return -1;
 }
 function updateSelectionBox(){
@@ -500,6 +523,7 @@ function removeLayerAt(index){
 function moveLayerAt(index,delta){
  if(index<0||index>=strokes.length||strokes[index].locked)return false;
  const target=index+delta;if(target<0||target>=strokes.length)return false;
+ const trial=strokes.slice();const [moving]=trial.splice(index,1);trial.splice(target,0,moving);if(advancedComp&&!advancedComp.canOrder(composition,trial)){label('Move the complete isolated group or ungroup first.');return false;}
  snapshot();const [l]=strokes.splice(index,1);strokes.splice(target,0,l);
  if(selectedText===index)selectedText=target;else if(selectedText===target)selectedText=index;
  if(selectedImage===index)selectedImage=target;else if(selectedImage===target)selectedImage=index;
@@ -512,10 +536,10 @@ function duplicateSelectedLayer(){
  layer.id=(layer.id||'annotation')+'-copy-'+Math.floor(Math.random()*1e7);
  layer.name=(layer.name||layer.type)+' copy';
  layer.points=(layer.points||[]).map(p=>({...p,x:p.x+20,y:p.y+20}));
- strokes.splice(i+1,0,layer);
- if(layer.type==='text'){selectedText=i+1;selectedImage=-1;selectedObject=-1;}
- else if(layer.type==='image'){selectedImage=i+1;selectedText=-1;selectedObject=-1;}
- else{selectedObject=i+1;selectedText=-1;selectedImage=-1;}
+ const target=advancedComp?advancedComp.afterGroup(composition,strokes,i):i+1;strokes.splice(target,0,layer);
+ if(layer.type==='text'){selectedText=target;selectedImage=-1;selectedObject=-1;}
+ else if(layer.type==='image'){selectedImage=target;selectedText=-1;selectedObject=-1;}
+ else{selectedObject=target;selectedText=-1;selectedImage=-1;}
  redraw();setReady(ready);syncSelectedText();syncLayerProperties();return true;
 }
 /* Layer operations remain in the same undoable annotation model.
@@ -550,7 +574,7 @@ function pasteCopiedLayer(){
  if(!copy)return false;
  snapshot();
  const position=selectedAnyIndex();
- const index=position>=0?position+1:strokes.length;
+ const index=advancedComp?advancedComp.afterGroup(composition,strokes,position):position>=0?position+1:strokes.length;
  strokes.splice(index,0,copy);
  selectLayerAt(index);setReady(true);
  label('Layer pasted · drag it to reposition · Ctrl+Z to undo.');
@@ -579,6 +603,7 @@ function reorderLayerTo(from,to){
  if(!Number.isInteger(from)||!Number.isInteger(to)||from===to||
     from<0||from>=strokes.length||to<0||to>=strokes.length)return false;
  // Reordering locked layers is allowed; locking protects their content.
+ const trial=strokes.slice();const [moving]=trial.splice(from,1);trial.splice(to,0,moving);if(advancedComp&&!advancedComp.canOrder(composition,trial)){label('Move the complete isolated group or ungroup first.');return false;}
  snapshot();
  const [layer]=strokes.splice(from,1);strokes.splice(to,0,layer);
  selectLayerAt(to);setReady(true);return true;
@@ -896,7 +921,7 @@ function paintBatchOverlay(){
  if(marqueeDrag)box(ts.rect(marqueeDrag.start,marqueeDrag.end),true);
  if(snapGuides)for(const axis of ['x','y'])if(snapGuides[axis]!=null){const e=document.createElement('div');e.className='ts-guide-v0711';e.dataset.axis=axis;e.style[axis==='x'?'left':'top']=100*snapGuides[axis]/(axis==='x'?ink.width:ink.height)+'%';overlay.append(e);}
 }
-function batchAllowed(){const a=batchLayers();return ready&&a.length>1&&a.every(l=>!l.locked&&l.visible!==false&&!!tsBounds(l)&&!['erase-brush','eraser','erase-stroke'].includes(l.type));}
+function batchAllowed(){const a=batchLayers();return ready&&a.length>1&&a.every(l=>!l.locked&&effectiveLayerVisible(l)&&!!tsBounds(l)&&!['erase-brush','eraser','erase-stroke'].includes(l.type));}
 function batchCommit(mode,dx=0,dy=0){
  const a=batchLayers();if(!ready||a.length<2||drawing||textDraft||layerDrag||batchDrag||resizeDrag||maskDraw)return false;
  const ids=new Set(a.map(l=>l.id));let next=strokes;
@@ -1405,7 +1430,7 @@ function vectorIndexAt(x,y){
 }
 function topLayerAt(x,y){
  for(let i=strokes.length-1;i>=0;i--){
-  const l=strokes[i];if(l.visible===false)continue;
+  const l=strokes[i];if(!effectiveLayerVisible(l))continue;
   if(layerOps?.hit?.(l,x,y,penInput,vectorCore,layerCore,typeEffects,pen))return i;
   if(l.type==='text'){const p=rotationLocal(l,{x,y});if(editorCore?.hitText?.(pen,l,p.x,p.y,8))return i;}
  }
@@ -1415,7 +1440,7 @@ function imageIndexAt(x,y){
  if(!layerCore)return -1;
  for(let i=strokes.length-1;i>=0;i--){
   const l=strokes[i];
-  if(l.visible!==false&&l.type==='image'){const p=rotationLocal(l,{x,y});if(layerCore.hit(l,p.x,p.y))return i;}
+  if(effectiveLayerVisible(l)&&l.type==='image'){const p=rotationLocal(l,{x,y});if(layerCore.hit(l,p.x,p.y))return i;}
  }
  return -1;
 }
@@ -1442,9 +1467,9 @@ function eraseEntireAt(p){
  for(const sample of samples){
   const textHit=(stroke,x,y,pad)=>typeEffects?.hit?.(pen,stroke,x,y,pad)||editorCore?.hitText?.(pen,stroke,x,y,pad);
   const matches=strokes.some(l=>rotationCore?.rotation(l))?strokes.map((l,i)=>penInput.intersectIndices([l],rotationLocal(l,sample),radius,vectorCore,textHit).length?i:-1).filter(i=>i>=0).reverse():penInput.intersectIndices(strokes,sample,radius,vectorCore,textHit);
-  if(!matches.length)continue;
+  const visibleMatches=matches.filter(i=>effectiveLayerVisible(strokes[i]));if(!visibleMatches.length)continue;
   if(!entireErase.changed){snapshot();entireErase.changed=true;}
-  for(const i of matches){strokes.splice(i,1);removed++;}
+  for(const i of visibleMatches){strokes.splice(i,1);removed++;}
  }
  entireErase.last=p;
  if(removed){
@@ -1560,7 +1585,7 @@ ink.addEventListener('pointermove',event=>{
    if(d.clone){
     const newLayer=layerOps.cloneLayer(d.original,0);
     if(!newLayer){layerDrag=null;return;}
-    d.index=d.sourceIndex+1;
+    d.index=advancedComp?advancedComp.afterGroup(composition,strokes,d.sourceIndex):d.sourceIndex+1;
     strokes.splice(d.index,0,newLayer);
     d.original=cloneStrokes([newLayer])[0];
     selectLayerAt(d.index);
@@ -1721,9 +1746,10 @@ window.addEventListener('keydown',event=>{
  else if(event.key.toLowerCase()==='y'){event.preventDefault();redo();}
 },true);
 function flatten(includeInk=true){
- if(editorCore?.merge)return editorCore.merge(base,ink,includeInk);
+ const sourceImage=includeInk?composedSource():base;
+ if(editorCore?.merge)return editorCore.merge(sourceImage,ink,includeInk);
  const canvas=document.createElement('canvas');canvas.width=base.width;canvas.height=base.height;
- const merged=canvas.getContext('2d');merged.drawImage(base,0,0);
+ const merged=canvas.getContext('2d');merged.drawImage(sourceImage,0,0);
  if(includeInk)merged.drawImage(ink,0,0);
  return canvas;
 }
@@ -1939,6 +1965,31 @@ globalThis.MangoToolImageV0711=Object.freeze({state:()=>({selection:batchLayers(
 
 /* Raster Lab reads the exact currently exported composition, never unredacted source. */
 /* Portable project adapter. Validation and decoding precede document replacement. */
+globalThis.MangoAdvancedImageV0724=Object.freeze({
+ state(){const s=globalThis.MangoLayerImageV0712.state();return {...s,width:base.width,height:base.height,composition:advancedComp.reconcile(composition,strokes),order:strokes.map(l=>l.id)};},
+ resolve(order){if(!Array.isArray(order)||order.length!==strokes.length||new Set(order).size!==order.length)throw Error('Invalid layer order.');const by=new Map(strokes.map(l=>[l.id,l]));if(order.some(id=>!by.has(id)))throw Error('Stale layer order.');return order.map(id=>by.get(id));},
+ validate(c,order,stamp){
+  const s=this.state();if(!s.ready||s.stamp!==stamp)throw Error('Image changed or is busy. Reopen Compositing Studio.');
+  const layers=this.resolve(order),next=advancedComp.check(c,layers,base.width,base.height,globalThis.MangoCompositorV0714);
+  const old=advancedComp.reconcile(composition,strokes),before=new Map(old.groups.map(g=>[g.id,g])),after=new Map(next.groups.map(g=>[g.id,g]));
+  for(const id of new Set([...before.keys(),...after.keys()])){
+   const a=before.get(id),b=after.get(id);if(JSON.stringify(a)===JSON.stringify(b))continue;
+   const ids=new Set([...(a?.members||[]),...(b?.members||[])]);if(layers.some(l=>ids.has(l.id)&&l.locked))throw Error('Unlock group members before changing group appearance or structure.');
+  }
+  return {layers,next};
+ },
+ preview(canvas,c,order,stamp){
+  const {layers,next}=this.validate(c,order,stamp),w=canvas.width,h=canvas.height,scale=Math.min(w/base.width,h/base.height),rw=Math.max(1,Math.round(base.width*scale)),rh=Math.max(1,Math.round(base.height*scale));
+  const bg=document.createElement('canvas'),off=document.createElement('canvas');bg.width=off.width=rw;bg.height=off.height=rh;
+  advancedComp.paintSource(bg.getContext('2d'),base,next,globalThis.MangoCompositorV0714);
+  const g=off.getContext('2d');g.scale(rw/base.width,rh/base.height);paintComposedLayers(g,layers,next,scale);
+  const q=canvas.getContext('2d');q.clearRect(0,0,w,h);q.fillStyle='#111315';q.fillRect(0,0,w,h);q.drawImage(bg,(w-rw)/2,(h-rh)/2);q.drawImage(off,(w-rw)/2,(h-rh)/2);advancedComp.clearBuffers(g);
+ },
+ apply(c,order,stamp){
+  const {layers,next}=this.validate(c,order,stamp);if(JSON.stringify(next)===JSON.stringify(advancedComp.reconcile(composition,strokes))&&order.every((id,i)=>id===strokes[i].id))return false;
+  snapshot();composition=next;strokes=layers;clearBatch();selectedText=selectedImage=selectedObject=-1;redraw();setReady(ready);syncSelectedText();syncLayerProperties();label('Compositing Studio applied · Ctrl+Z restores the previous composition.');return true;
+ }
+});
 globalThis.MangoImageDocumentV0723=Object.freeze({
  state(){const s=globalThis.MangoLayerImageV0712.state();return {ready:s.ready&&!documentLoadPending,canOpen:!documentLoadPending&&(!ready||s.ready),stamp:s.stamp,width:base.width,height:base.height,hasDocument:ready,layers:s.layers};},
  cores(){return {layer:globalThis.MangoLayerStudioV0712,compositor:globalThis.MangoCompositorV0714,material:rotationCore,text:typeEffects};},
@@ -1952,7 +2003,8 @@ globalThis.MangoImageDocumentV0723=Object.freeze({
     const c=document.createElement('canvas');c.width=a.width;c.height=a.height;c.getContext('2d').drawImage(a.image,0,0);assets.push({id:l.assetId,name:a.name,width:a.width,height:a.height,png:c.toDataURL('image/png')});c.width=c.height=1;assetIds.add(l.assetId);}
    if(l.cutoutKey&&!matteIds.has(l.cutoutKey)){const m=registry.get(l.cutoutKey);if(!m)throw Error('Missing image matte.');mattes.push({id:l.cutoutKey,width:m.width,height:m.height,alpha:D.encode(m.data)});matteIds.add(l.cutoutKey);}
   }
-  return D.check({format:'MangoShotImage',version:1,name,width:base.width,height:base.height,base:base.toDataURL('image/png'),layers,assets,mattes},this.cores());
+  const comp=advancedComp?.reconcile(composition,strokes),v2=advancedComp?.active(comp);
+  return D.check({format:'MangoShotImage',version:v2?2:1,name,width:base.width,height:base.height,base:base.toDataURL('image/png'),layers,assets,mattes,...(v2?{composition:comp}:{})},this.cores());
  },
  async open(raw,stamp){
   const D=globalThis.MangoImageDocumentCoreV0723,initial=this.state();if(!initial.canOpen||initial.stamp!==stamp)throw Error('Image editor is busy.');
@@ -1965,10 +2017,11 @@ globalThis.MangoImageDocumentV0723=Object.freeze({
   const now=this.state();if(!now.canOpen||now.stamp!==stamp)throw Error('Image changed while opening the project.');
   // Render staged content with its own registry. No document pixels/history are touched until successful.
   const oldAssets=new Map(layerCore.assets),oldMattes=layerCore.projectMattes(),staged=document.createElement('canvas');staged.width=p.width;staged.height=p.height;
-  const g=staged.getContext('2d');try{layerCore.replaceProjectRegistry(nextAssets,nextMattes);for(const l of p.layers)paintCompositorStroke(g,l);}
+  const nextComp=p.composition||{groups:[],adjustments:[]};
+  const g=staged.getContext('2d');try{layerCore.replaceProjectRegistry(nextAssets,nextMattes);paintComposedLayers(g,p.layers,nextComp);}
   catch(e){layerCore.replaceProjectRegistry(oldAssets,oldMattes);throw e;}
   base.width=ink.width=p.width;base.height=ink.height=p.height;ctx.drawImage(source,0,0);pen.drawImage(staged,0,0);staged.width=staged.height=1;
-  clearBatch();strokes=p.layers;history=[];redoHistory=[];selectedText=selectedImage=selectedObject=-1;layerClipboard=styleClipboard=null;
+  clearBatch();strokes=p.layers;composition=nextComp;sourceGeneration++;history=[];redoHistory=[];selectedText=selectedImage=selectedObject=-1;layerClipboard=styleClipboard=null;composedSource();
   meta={width:p.width,height:p.height,pageHeight:p.height,dpr:1,frames:1,full:false};frames=[];
   const landing=document.getElementById('image-clipboard-landing');if(landing)landing.hidden=true;
   tool.value='select';syncTool();switchInspectorTab('layers');document.getElementById('zoom').value='fit';
@@ -1999,7 +2052,7 @@ globalThis.MangoRasterImageV0722=Object.freeze({
   const sw=mode==='detail'?Math.min(s.width,840):s.width,sh=mode==='detail'?Math.min(s.height,520):s.height;
   const sx=Math.floor((s.width-sw)/2),sy=Math.floor((s.height-sh)/2),c=document.createElement('canvas');
   c.width=Math.max(1,Math.round(sw*scale));c.height=Math.max(1,Math.round(sh*scale));
-  const g=c.getContext('2d');g.drawImage(base,sx,sy,sw,sh,0,0,c.width,c.height);g.drawImage(ink,sx,sy,sw,sh,0,0,c.width,c.height);
+  const g=c.getContext('2d');g.drawImage(composedSource(),sx,sy,sw,sh,0,0,c.width,c.height);g.drawImage(ink,sx,sy,sw,sh,0,0,c.width,c.height);
   return c;
  }
 });
@@ -2014,6 +2067,7 @@ globalThis.MangoLayerImageV0712=Object.freeze({
   const r=MangoLayerStudioV0712.plan('image',strokes,ids,command,args,()=>crypto.randomUUID());
   if(!r.changed)return {changed:false,selection:r.selection};
   globalThis.MangoCompositorV0714?.requireProject(r.layers,[],ink.width,ink.height);
+  if(advancedComp&&!advancedComp.canOrder(composition,r.layers))throw Error('Move the complete isolated group or ungroup first.');
   snapshot();strokes=r.layers;setBatch(r.selection);redraw();setReady(ready);syncSelectedText();syncLayerProperties();label('Layer Studio edit applied. Ctrl+Z to undo.');
   return {changed:true,selection:r.selection};
  },
@@ -2024,11 +2078,8 @@ globalThis.MangoLayerImageV0712=Object.freeze({
   const w=canvas.width,h=canvas.height,scale=Math.min(w/base.width,h/base.height),rw=Math.max(1,Math.round(base.width*scale)),rh=Math.max(1,Math.round(base.height*scale));
   const off=document.createElement('canvas');off.width=rw;off.height=rh;const p=off.getContext('2d'),out=canvas.getContext('2d');
   p.scale(rw/base.width,rh/base.height);
-  for(const l of draft){if(l.visible===false)continue;let x=l;
-   if(l.layerFx){const f=MangoLayerStudioV0712.appearance(l);x={...l,layerFx:{...f,blur:f.blur*scale,offsetX:f.offsetX*scale,offsetY:f.offsetY*scale}};}
-   paintCompositorStroke(p,x,scale);
-  }
-  out.clearRect(0,0,w,h);out.fillStyle='#111315';out.fillRect(0,0,w,h);const left=(w-rw)/2,top=(h-rh)/2;out.drawImage(base,left,top,rw,rh);out.drawImage(off,left,top);
+  paintComposedLayers(p,draft,composition,scale);
+  out.clearRect(0,0,w,h);out.fillStyle='#111315';out.fillRect(0,0,w,h);const left=(w-rw)/2,top=(h-rh)/2;out.drawImage(composedSource(),left,top,rw,rh);out.drawImage(off,left,top);
  }
 });
 

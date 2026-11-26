@@ -63,8 +63,8 @@
   return n;
  }
  function check(p,cores){
-  keys(p,['format','version','name','width','height','base','layers','assets','mattes']);
-  if(p.format!=='MangoShotImage'||p.version!==1||!text(p.name,120)||!p.name.trim())fail('Unsupported image project format or version.');
+  keys(p,p?.version===2?['format','version','name','width','height','base','layers','assets','mattes','composition']:['format','version','name','width','height','base','layers','assets','mattes']);
+  if(p.format!=='MangoShotImage'||![1,2].includes(p.version)||!text(p.name,120)||!p.name.trim())fail('Unsupported image project format or version.');
   dimensions(p.width,p.height);pngHeader(p.base,p.width,p.height);
   if(!Array.isArray(p.layers)||p.layers.length>MAX_LAYERS||!Array.isArray(p.assets)||p.assets.length>128||!Array.isArray(p.mattes)||p.mattes.length>128)fail('Project layer or asset limit exceeded.');
   const budget={n:0},layers=p.layers.map(l=>layer(l,budget,cores)),ids=new Set(),assets=new Map(),mattes=new Map();let total=p.width*p.height,encoded=p.base.length;
@@ -76,7 +76,8 @@
   const used=new Set(),usedMattes=new Set();for(const l of layers)if(l.type==='image'){if(!assets.has(l.assetId))fail('Missing image asset.');used.add(l.assetId);if(l.cutoutKey){if(!mattes.has(l.cutoutKey))fail('Missing cutout matte.');usedMattes.add(l.cutoutKey);}}
   if(used.size!==assets.size||usedMattes.size!==mattes.size)fail('Unreferenced project assets are not permitted.');
   cores.compositor.requireProject(layers,[],p.width,p.height);
-  return {...p,layers,assets:[...assets.values()],mattes:[...mattes.values()]};
+  const composition=p.version===2?root.MangoAdvancedCompositorV0724.check(p.composition,layers,p.width,p.height,cores.compositor):null;
+  return {...p,layers,assets:[...assets.values()],mattes:[...mattes.values()],...(p.version===2?{composition}:{})};
  }
  const api=Object.freeze({MAX_FILE,MAX_PIXELS,MAX_TOTAL_PIXELS,MAX_LAYERS,MAX_POINTS,dimensions,pngHeader,encode,decode,check});
  root.MangoImageDocumentCoreV0723=api;if(typeof module==='object'&&module.exports)module.exports=api;
