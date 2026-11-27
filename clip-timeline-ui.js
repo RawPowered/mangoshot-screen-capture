@@ -12,7 +12,7 @@
  function reflowThumbnails(){
   const st=state(),frameStrip=ui('thumbnail-strip');if(!frameStrip)return;
   const duration=st?.outputDuration()||0;
-  frameStrip.replaceChildren();if(!generated||!duration)return;
+  frameStrip.replaceChildren();if(!generated||!duration){if(duration){const hint=document.createElement('span');hint.className='frame-thumb-label';hint.textContent='Generate thumbnails to inspect source frames';frameStrip.appendChild(hint);}return;}
   const plan=globalThis.MangoSequenceMedia.thumbnailPlan(st.segments(),thumbCount(duration));
   for(const frame of plan){
    const node=document.createElement('span');node.className='frame-thumb';
@@ -310,5 +310,5 @@
   else if(event.altKey&&key==='backspace'){rippleSelection();event.preventDefault();}
  });
  globalThis.MangoClipTimeline={render,isGenerating:()=>!!activeGeneration,markers:()=>markers.map(m=>({...m})),loadMarkers(items){markers=items.map(m=>({...m}));render();},onSequenceChange(){const signature=JSON.stringify(state()?.segments()||[]);if(signature===sequenceSignature)return;sequenceSignature=signature;++generation;reflowThumbnails();redrawWaveform();scheduleRegeneration();},setProfile(next){profile=next==='high'?'high':'balanced';reflowThumbnails();scheduleRegeneration();},reset(){tool='select';setTool('select');generation++;activeGeneration=0;ui('make-thumbnails').textContent='Generate thumbnails';markers=[];draggingPlayhead=false;draggingRange=false;generated=false;waveformPeaks=null;waveformDuration=0;sourceUrl=null;sequenceSignature=JSON.stringify(state()?.segments()||[]);clearTimeout(renderTimer);thumbnailCache=[];
-  for(const url of thumbnailUrls)if(url.startsWith('blob:'))try{URL.revokeObjectURL(url);}catch{}thumbnailUrls=[];ui('thumbnail-strip').replaceChildren();const hint=document.createElement('span');hint.className='frame-thumb-label';hint.textContent='Generate thumbnails to inspect source frames';ui('thumbnail-strip').appendChild(hint);const wave=ui('audio-waveform');wave?.getContext?.('2d')?.clearRect(0,0,wave.width,wave.height);render();},playhead};
+  for(const url of thumbnailUrls)if(url.startsWith('blob:'))try{URL.revokeObjectURL(url);}catch{}thumbnailUrls=[];ui('thumbnail-strip').replaceChildren();const hint=document.createElement('span');hint.className='frame-thumb-label';hint.textContent='Generate thumbnails to inspect source frames';ui('thumbnail-strip').appendChild(hint);const wave=ui('audio-waveform');wave?.getContext?.('2d')?.clearRect(0,0,wave.width,wave.height);render();state()?.updateControls?.();},playhead};
 })();
