@@ -1,7 +1,7 @@
 //! Experimental visible desktop overlay, composite recordings only.
 //! No capture exclusion; never enable on the clean-master path.
 use mangoshot_cursor_host::{Monitor,overlay_model::{dimensions,raster,OverlayStyle}};
-use std::{ffi::c_void,io,ptr::{null,null_mut},time::{Duration,Instant}};
+use std::{ffi::c_void,io,ptr::null_mut,time::{Duration,Instant}};
 type Handle=*mut c_void;
 #[repr(C)] #[derive(Default)] struct Point{x:i32,y:i32}
 #[repr(C)] struct Size{cx:i32,cy:i32}
