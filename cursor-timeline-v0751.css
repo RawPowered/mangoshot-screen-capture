@@ -1,0 +1,7 @@
+/* Carbon timeline telemetry. Full-width lanes align with the existing ruler. */
+.studio-clip .ct51-lane{position:relative;height:44px;min-height:44px;background:#20262b;border-top:1px solid #444c54;cursor:crosshair;overflow:hidden}
+.studio-clip .ct51-lane[hidden]{display:none!important}
+.ct51-lane canvas{display:block;width:100%;height:100%;pointer-events:none}
+.ct51-lane>span{position:absolute;bottom:0;left:4px;padding:1px 4px;font:650 9px system-ui;background:#1a1e22;color:#e4e9ed;pointer-events:none}
+.ct51-lane:focus-visible{outline:2px solid #c3e88c;outline-offset:-2px}
+#cursor-detail-v0751{font-size:12px;line-height:1.5;color:var(--carbon-text);margin:6px 0;padding:8px;background:var(--carbon-panel-alt);border:1px solid var(--carbon-line)}
