@@ -148,9 +148,12 @@
   return path.some(node=>editable(node)||(
    ['INPUT','TEXTAREA','SELECT'].includes(node?.tagName)&&node?.type!=='hidden'));
  }
- function focusedControlAllows(event,{image=false,selectedLayer=false}={}){
+ function focusedControlAllows(event,{image=false,selectedLayer=false,pointerOwned=false}={}){
   const control=event?.target?.closest?.('button,a,summary,[role="button"],[role="menuitem"]');
   if(!control||event.ctrlKey||event.metaKey||event.altKey)return true;
+  // Clip Studio mouse-selected controls yield to editor commands; Tab/keyboard
+  // focus still owns native button activation. Enter is never intercepted.
+  if(!image&&pointerOwned)return event.key!=='Enter';
   if(!image||!selectedLayer)return false;
   return ![' ','Spacebar','Enter'].includes(event.key);
  }
