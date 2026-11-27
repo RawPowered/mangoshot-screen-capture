@@ -369,6 +369,7 @@ function waitFrame(video,request){
 }
 async function switchSource(){
  if(!active()||pendingSwitch||forwardBusy||!get('source-dialog-v0710').open)return;
+ globalThis.MangoNativeCursorV0753?.stop?.('Native tracking disconnected before source selection. Reconnect after switching.');
  const old=screen,session=activeSession,kind=captureSource,request={stream:null,video:null,nodes:[],cancel:null};
  pendingSwitch=request;get('source-choose-v0710').disabled=true;get('switch-source-v0710').disabled=true;
  const message=t=>{get('source-switch-status-v0710').textContent=t;};
