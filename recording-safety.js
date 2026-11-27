@@ -4,7 +4,7 @@
  * enough container metadata. No cloud service or background recorder is used. */
 (function(root){
   const DB='MangoShotRecordingRecoveryV1';
-  const VERSION=1;
+  const VERSION=2;
   function open(){return new Promise((resolve,reject)=>{
     if(!root.indexedDB){reject(new Error('IndexedDB is unavailable'));return;}
     const req=root.indexedDB.open(DB,VERSION);
@@ -12,6 +12,7 @@
       const db=req.result;
       if(!db.objectStoreNames.contains('sessions'))db.createObjectStore('sessions',{keyPath:'id'});
       if(!db.objectStoreNames.contains('chunks'))db.createObjectStore('chunks',{keyPath:['id','index']});
+      if(!db.objectStoreNames.contains('cursor'))db.createObjectStore('cursor',{keyPath:'id'});
     };
     req.onerror=()=>reject(req.error||new Error('Recording storage unavailable'));
     req.onsuccess=()=>resolve(req.result);
@@ -35,10 +36,11 @@
     if(!session?.id||!Number.isInteger(number)||number<0||!(blob instanceof Blob)||!blob.size)return;
     await transaction(['chunks'],'readwrite',tx=>tx.objectStore('chunks').put({id:session.id,index:number,blob}));
   }
-  async function mark(session,status){
+  async function mark(session,status,cursorTrace=null){
     if(!session)return;
-    await transaction(['sessions'],'readwrite',tx=>tx.objectStore('sessions').put({...session,status,updated:Date.now()}));
+    await transaction(['sessions','cursor'],'readwrite',tx=>{tx.objectStore('sessions').put({...session,status,updated:Date.now()});const store=tx.objectStore('cursor');if(status==='finished'&&cursorTrace)store.put({id:session.id,trace:cursorTrace});else store.delete(session.id);});
   }
+  async function restoreCursor(session){if(!session?.id||session.status!=='finished')return null;return transaction(['cursor'],'readonly',(tx,set)=>{const req=tx.objectStore('cursor').get(session.id);req.onsuccess=()=>set(req.result?.trace||null);});}
   async function list(){
     return transaction(['sessions'],'readonly',(tx,set)=>{
       const req=tx.objectStore('sessions').getAll();
@@ -62,8 +64,8 @@
   }
   async function discard(session){
     if(!session?.id)return;
-    await transaction(['sessions','chunks'],'readwrite',tx=>{
-      tx.objectStore('sessions').delete(session.id);
+    await transaction(['sessions','chunks','cursor'],'readwrite',tx=>{
+      tx.objectStore('sessions').delete(session.id);tx.objectStore('cursor').delete(session.id);
       const store=tx.objectStore('chunks');
       const req=store.openCursor();req.onsuccess=()=>{
         const cursor=req.result;if(!cursor)return;
@@ -71,8 +73,8 @@
       };
     });
   }
-  async function clearAll(){await transaction(['sessions','chunks'],'readwrite',tx=>{
-    tx.objectStore('sessions').clear();tx.objectStore('chunks').clear();
+  async function clearAll(){await transaction(['sessions','chunks','cursor'],'readwrite',tx=>{
+    tx.objectStore('cursor').clear();tx.objectStore('sessions').clear();tx.objectStore('chunks').clear();
   });}
-  root.MangoRecovery={begin,append,mark,list,latest,restore,discard,clearAll};
+  root.MangoRecovery={begin,append,mark,list,latest,restore,restoreCursor,discard,clearAll};
 })(typeof globalThis!=='undefined'?globalThis:this);
