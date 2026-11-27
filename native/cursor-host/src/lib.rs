@@ -3,6 +3,8 @@
 use serde::{Deserialize, Serialize};
 use std::io::{self, Read, Write};
 
+pub mod overlay_model;
+
 pub const PROTOCOL: u32 = 1;
 pub const MAX_MESSAGE: usize = 16 * 1024;
 pub const LEASE_MS: u64 = 15_000;
@@ -30,7 +32,8 @@ impl Monitor {
 #[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Command {
     Hello { protocol: u32 },
-    Start { protocol: u32, session: String, monitor_id: String },
+    Start { protocol: u32, session: String, monitor_id: String, #[serde(default)] desktop_overlay: bool, #[serde(default)] shortcuts: bool },
+    Effects { session: String, style: overlay_model::OverlayStyle },
     Heartbeat { session: String },
     Stop { session: String },
 }
