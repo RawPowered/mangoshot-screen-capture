@@ -184,9 +184,9 @@ function supportedRecorder(output){for(const mimeType of mimeCandidates){if(!Med
  try{return new MediaRecorder(output,{mimeType,videoBitsPerSecond:4500000});}catch{}}
  throw new Error('No supported video encoder for this browser.');}
 function showResult(blob,partial=false,sessionId=null,capture=null){if(!blob?.size){label('No encoded data received. Check Recover recording before closing.');return;}
- lastBlob=blob;lastSessionId=sessionId;lastCapture=capture;get('result').hidden=false;
+ lastBlob=blob;lastSessionId=sessionId;lastCapture=capture;get('result').hidden=false;get('save-cursor-v0751').disabled=!lastCursorTrace;
  get('result-meta').textContent=(blob.size/1048576).toFixed(1)+' MiB · '+(blob.type.includes('mp4')?'MP4':'WebM')+
- (partial?' · INCOMPLETE, attempt recovery':' · source capture stopped')+(capture?' · '+capture.seconds.toFixed(1)+'s elapsed · '+capture.frames+' submitted frames · '+capture.driver:'');
+ (partial?' · INCOMPLETE, attempt recovery':' · source capture stopped')+(capture?' · '+capture.seconds.toFixed(1)+'s elapsed · '+capture.frames+' submitted frames · '+capture.driver:'')+(lastCursorTrace?' · cursor data retained'+(lastCursorTrace.truncated||lastCursorTrace.capture?.truncated?' (truncated)':''):'');
  if(!partial)saveBlob(blob,'Video finalized. Original download requested; confirm it in your Downloads folder.');
  else label('Encoder delayed: the flushed chunks are available for emergency saving; file may be incomplete.');
 }
@@ -205,8 +205,8 @@ function queueChunkFor(session,blob){
   });
  }
 }
-async function markRecovered(session,queue,status){if(!session)return;
- try{await queue;await MangoRecovery.mark(session,status);}catch(error){warnings.push('Recovery state update failed: '+error.message);}
+async function markRecovered(session,partial){if(!session?.storage)return;
+ try{await session.queue;const complete=!partial&&!session.storageError;await MangoRecovery.mark(session.storage,complete?'finished':'interrupted',complete?session.cursorTrace||null:null);}catch(error){warnings.push('Recovery state update failed: '+error.message);}
 }
 function captureSummary(session){if(!session?.startedAt||activeSession!==session)return session?.capture||null;const stats=frameDriver?.stats()||{frames:0,inputFrames:0,driver:'legacy preview clock'};const seconds=Math.max(0,((pausedAt||Date.now())-session.startedAt-pausedTotal)/1000);return {schema:'mangoshot.capture.v1',seconds,frames:stats.frames,inputFrames:stats.inputFrames,driver:stats.driver};}
 function finishSession(session,partial=false){
@@ -224,7 +224,7 @@ function finishSession(session,partial=false){
   // Recovery storage also retains this result even if the automatic download is blocked.
   saveBlob(blob,null);
  }
- void markRecovered(session.storage,session.queue,partial?'interrupted':'finished').then(()=>refreshRecovery());
+ void markRecovered(session,partial).then(()=>refreshRecovery());
 }
 function stopCapture(reason='Stopped by user'){
  const session=activeSession;
@@ -436,8 +436,9 @@ get('recover').addEventListener('click',async()=>{
  try{const sessions=typeof MangoRecovery.list==='function'?await MangoRecovery.list():[await MangoRecovery.latest()].filter(Boolean);
   const target=sessions.find(item=>item.id===get('recovery-select')?.value)||sessions[0];
   if(!target)throw new Error('No recording selected.');
-  const blob=await MangoRecovery.restore(target);lastBlob=blob;lastSessionId=target.id;lastCursorTrace=null;lastCapture=target.capture||null;get('result').hidden=false;
-  get('result-meta').textContent=(blob.size/1048576).toFixed(1)+' MiB · '+(target.status==='finished'?'finalized':'INCOMPLETE')+' · '+(blob.type.includes('mp4')?'MP4':'WebM');
+  const blob=await MangoRecovery.restore(target);lastBlob=blob;lastSessionId=target.id;lastCursorTrace=null;lastCapture=target.status==='finished'?target.capture||null:null;get('result').hidden=false;
+  try{if(target.status==='finished'){const raw=await MangoRecovery.restoreCursor(target);if(raw)lastCursorTrace=globalThis.MangoCursorCoreV073.trace(raw);}}catch(e){warnings.push('Recovered cursor data unavailable: '+e.message);}get('save-cursor-v0751').disabled=!lastCursorTrace;
+  get('result-meta').textContent=(blob.size/1048576).toFixed(1)+' MiB · '+(target.status==='finished'?'finalized':'INCOMPLETE')+' · '+(blob.type.includes('mp4')?'MP4':'WebM')+(lastCursorTrace?' · cursor data restored':'');
   label('Recovered local fragments. Save original to download; interrupted MP4 may lack final playback metadata.');
  }catch(error){label('Cannot recover: '+error.message);}finally{button.disabled=false;}
 });
@@ -534,6 +535,7 @@ pause.addEventListener('click',()=>{
    pause.textContent='Pause';light.className='record-dot active';label('Recording resumed');}
 });
 get('save-raw').addEventListener('click',()=>saveBlob(lastBlob,'Saved original recording.'));
+get('save-cursor-v0751').addEventListener('click',()=>{if(!lastCursorTrace)return;const url=URL.createObjectURL(new Blob([JSON.stringify(lastCursorTrace)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='MangoShot-'+(lastSessionId||'recording')+'-cursor.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);});
 get('discard').addEventListener('click',()=>{lastBlob=null;lastSessionId=null;lastCursorTrace=null;get('result').hidden=true;label('Recording removed from memory; local recovery remains until cleared.');});
 get('edit').addEventListener('click',async()=>{
  if(!lastBlob)return;get('edit').disabled=true;label('Opening Clip Studio…');
