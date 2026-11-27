@@ -32,7 +32,7 @@ const btn=(label,fn)=>{const b=doc.createElement('button');b.type='button';b.tex
 function choose(id,at){const r=regions().find(x=>x.id===id);if(!r)return;selected=id;putStyle(r.style);ui('preset').value='custom';ui('source-start').value=r.start;ui('source-end').value=r.end;ui('enabled').checked=r.enabled;page('effects');root.MangoWorkspaceV062?.activate?.('cursor');if(Number.isFinite(at))view().seekOutput(at);lastStamp=null;refresh();}
 function renderProposal(){const host=ui('proposals');host.replaceChildren();if(proposal)for(const i of proposal.items){const row=doc.createElement('div');row.className='cd-row-v074';const label=doc.createElement('label'),check=doc.createElement('input');check.type='checkbox';check.checked=true;check.dataset.proposal=i.id;label.append(check,doc.createTextNode(i.start.toFixed(2)+'s · '+i.reason+' · '+i.scale+'×'));row.append(label,btn('Seek',()=>view().seekOutput(i.start)));host.append(row);}ui('apply').disabled=!proposal?.items.length||!!view()?.exporting?.();}
 function refresh(){
- const v=view(),t=trace(),list=regions(),loaded=!!v?.original?.(),busy=!!v?.exporting?.();ui('source').textContent=t?t.samples.length+' samples · '+(t.clicks?.length||0)+' clicks'+(t.baked?' · baked live effects':''):'No cursor path';
+ const v=view(),t=trace(),list=regions(),loaded=!!v?.original?.(),busy=!!v?.exporting?.();ui('source').textContent=t?t.samples.filter(s=>s[1]!==null).length+' frame samples · '+(t.clicks?.length||0)+' clicks'+(t.truncated||t.capture?.truncated?' · TRUNCATED':'')+(t.baked?' · recorded pixels contain baked changes':''):'No cursor path';
  for(const k of ['add','use-range','propose','update','remove','run'])ui(k).disabled=!loaded||!t||busy;
  if(proposal&&(proposal.stamp!==stamp()||proposal.trace!==t)){proposal=null;renderProposal();}
  ui('apply').disabled=busy||!proposal?.items.length;if(!list.some(x=>x.id===selected))selected=null;ui('edit').hidden=!selected;
@@ -56,7 +56,7 @@ ui('import-preset').addEventListener('click',()=>ui('preset-file').click());
 ui('preset-file').addEventListener('change',async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;try{if(file.size>4096)throw Error('Preset exceeds 4 KB');savePreset(d.presetFile(JSON.parse(await file.text())));report('Preset imported.');}catch(err){report(err.message);}});
 ui('run').addEventListener('click',safe(()=>{if(ui('recipe').value.length>8192)throw Error('Recipe exceeds 8 KB');ui('result').value=JSON.stringify(run(JSON.parse(ui('recipe').value)),null,2);}));
 ui('recipe').value=JSON.stringify({schema:d.RECIPE,action:'smartZoom.propose',settings:{mode:'auto',scale:1.75,transition:.4,hold:1.2}},null,2);
-const title=doc.querySelector('.clip-timeline-panel > .panel-heading span');if(title)title.textContent='TIMELINE · G3 / G2 / V1+A1 / CAM / CUR / A2';
+const title=doc.querySelector('.clip-timeline-panel > .panel-heading span');if(title)title.textContent='TIMELINE · G3 / G2 / V1+A1 / CAM / CUR PATH / LIVE / POST FX / A2';
 putStyle(d.preset('spotlight'));renderProfiles();refresh();
 root.MangoCursorDirectorV074=Object.freeze({run,refresh,inspect:()=>({regions:regions(),proposal:proposal?{id:proposal.id,items:copy(proposal.items)}:null})});
 })(typeof globalThis!=='undefined'?globalThis:this);
