@@ -1,0 +1,16 @@
+/* Render integrity hotfix: restore V1 image visibility and provide monitor focus. */
+body.studio-clip.v062-workspace #timeline .clip-segment{background-color:rgba(39,48,56,.12)!important}
+body.studio-clip.v062-workspace #timeline .clip-segment:hover{background-color:rgba(87,111,125,.21)!important}
+body.studio-clip.v062-workspace #timeline .clip-segment.is-selected{background-color:rgba(181,236,108,.12)!important;outline:2px solid var(--carbon-accent);outline-offset:-2px}
+body.studio-clip.v062-workspace #timeline .thumbnail-strip .frame-thumb{flex:1 1 0;min-width:0;display:block;overflow:hidden}
+body.studio-clip.v062-workspace #timeline .thumbnail-strip .frame-thumb img{width:100%;height:100%;display:block;object-fit:cover;pointer-events:none}
+#ms55-render-summary{font-size:11px;line-height:1.45;color:var(--carbon-muted,#bcc5ce);padding:5px 8px;border-left:2px solid var(--carbon-line-strong,#65717f);overflow-wrap:anywhere}
+#ms55-render-summary[data-warning=true]{border-left-color:#e0a75d;color:#f3d09b}
+#ms55-monitor-focus{margin-left:auto;font-size:11px;white-space:nowrap;min-height:25px}
+body.studio-clip.ms55-monitor-focus .clip-layout{grid-template-rows:minmax(0,1fr)!important}
+body.studio-clip.ms55-monitor-focus .clip-program{grid-row:1!important;max-height:none!important;min-height:0}
+body.studio-clip.ms55-monitor-focus .clip-properties{grid-row:1!important}
+body.studio-clip.ms55-monitor-focus .v06-rail{grid-row:1!important}
+body.studio-clip.ms55-monitor-focus :is(.clip-timeline-panel,.v062-media-dock,.v066-splitter-top,.v066-splitter-dock){display:none!important}
+body.studio-clip.ms55-monitor-focus .clip-preview{min-height:0!important;flex:1 1 0!important}
+#cd-tracked-v0755{width:100%;margin:5px 0}
