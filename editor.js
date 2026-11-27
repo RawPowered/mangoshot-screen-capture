@@ -13,7 +13,7 @@ const call=(fn,...args)=>new Promise((resolve,reject)=>{
 });
 let documentLoadPending=true;
 const advancedComp=globalThis.MangoAdvancedCompositorV0724;
-let composition={groups:[],adjustments:[]},adjustedSource=null,sourceGeneration=0,sourceKey='';
+let composition={groups:[],adjustments:[]},adjustedSource=null,sourceGeneration=0,sourceKey='',cropFrame=null;
 let meta,frames=[],ready=false,drawing=false,active=null,strokes=[],renderPending=false,history=[],redoHistory=[];
 const editorCore=globalThis.MangoImageEditorCore;
 const layerCore=globalThis.MangoImageLayersV0612;
@@ -44,14 +44,15 @@ function setReady(value){
  document.getElementById('undo').disabled=!value||!history.length;
  const redo=document.getElementById('redo');if(redo)redo.disabled=!value||!redoHistory.length;
  renderStrokeList();updateEditorControls();
- globalThis.MangoPixelUIV0741?.refresh?.();globalThis.MangoTextLayoutUIV0746?.refresh?.();
+ globalThis.MangoPixelUIV0741?.refresh?.();globalThis.MangoTextLayoutUIV0746?.refresh?.();globalThis.MangoPrecisionCanvasUIV0748?.refresh?.();
 }
 function image(dataUrl){return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error('Screenshot image failed to decode.'));img.src=dataUrl;});}
 function zoom(){if(!base.width)return;const selected=document.querySelector('#zoom').value;
   // Fit the entire image inside the stationary canvas viewport. Images taller
   // than the editor are navigated by canvas panning, never document scrolling.
-  const availableWidth=Math.max(24,workspace.clientWidth-24);
-  const availableHeight=Math.max(24,workspace.clientHeight-24);
+  const margin=workspace.classList?.contains('pc48-rulers-on')?44:24;
+  const availableWidth=Math.max(24,workspace.clientWidth-margin);
+  const availableHeight=Math.max(24,workspace.clientHeight-margin);
   const factor=selected==='fit'?Math.max(.01,Math.min(1,availableWidth/base.width,availableHeight/base.height)):
     selected==='fit-width'?Math.max(.01,Math.min(1,availableWidth/base.width)):Number(selected);
   wrap.style.width=Math.max(1,Math.round(base.width*factor))+'px';
@@ -123,21 +124,21 @@ async function begin(){
     // Do not leave sensitive screenshot copies in the transfer database after
     // they have been successfully assembled in Image Studio.
     await globalThis.MangoCaptureStore.remove(stored).catch(()=>{});
-  }catch(error){label('Capture failed: '+error.message);}finally{documentLoadPending=false;globalThis.MangoImageDocumentUIV0723?.refresh();globalThis.MangoPixelUIV0741?.refresh?.();globalThis.MangoTextLayoutUIV0746?.refresh?.();}
+  }catch(error){label('Capture failed: '+error.message);}finally{documentLoadPending=false;globalThis.MangoImageDocumentUIV0723?.refresh();globalThis.MangoPixelUIV0741?.refresh?.();globalThis.MangoTextLayoutUIV0746?.refresh?.();globalThis.MangoPrecisionCanvasUIV0748?.refresh?.();}
 }
 
 /* Explicit clipboard import: never read in the background or on page load.
  * User click and Ctrl+V event are both permitted; no blanket clipboardRead permission. */
 async function loadClipboardImage(blob){
  if(!captureOutput?.blobImage)throw Error('Image clipboard module is unavailable.');
- if(ready&&(strokes.length||advancedComp?.active(composition)))throw Error('Finish or export the current edited image before replacing it.');
+ if(ready&&(strokes.length||cropFrame||advancedComp?.active(composition)))throw Error('Finish or export the current edited image before replacing it.');
  const next=await captureOutput.blobImage(blob);
  if(next.width*next.height>48000000)throw Error('The clipboard image is too large.');
  base.width=next.width;base.height=next.height;
  ink.width=next.width;ink.height=next.height;
  ctx.clearRect(0,0,next.width,next.height);ctx.drawImage(next,0,0);
  meta={width:next.width,height:next.height,pageHeight:next.height,dpr:1,frames:1,full:false};
- clearBatch();strokes=[];history=[];redoHistory=[];composition={groups:[],adjustments:[]};sourceGeneration++;selectedText=-1;selectedImage=-1;selectedObject=-1;
+ clearBatch();strokes=[];history=[];redoHistory=[];composition={groups:[],adjustments:[]};cropFrame=null;sourceGeneration++;selectedText=-1;selectedImage=-1;selectedObject=-1;
  const landing=document.getElementById('image-clipboard-landing');
  if(landing)landing.hidden=true;
  setReady(true);zoom();redraw();
@@ -303,8 +304,8 @@ function redraw(){
  drawStroke(active);updateSelectionBox();updateImageSelectionBox();updateVectorSelectionBox();updateInkRotationBox();paintBatchOverlay();
 }
 function cloneStrokes(value){return JSON.parse(JSON.stringify(value));}
-function historyImageState(){const value=cloneStrokes(strokes);value.composition=JSON.parse(JSON.stringify(composition));return value;}
-function restoreImageState(value){composition=value.composition||{groups:[],adjustments:[]};delete value.composition;strokes=value;}
+function historyImageState(){const value=cloneStrokes(strokes);value.composition=JSON.parse(JSON.stringify(composition));value.crop=cropFrame?{...cropFrame}:null;return value;}
+function restoreImageState(value){composition=value.composition||{groups:[],adjustments:[]};cropFrame=value.crop||null;delete value.composition;delete value.crop;strokes=value;}
 function snapshot(){ensureLayerIds();automationRevisionV075++;history.push(historyImageState());if(history.length>80)history.shift();redoHistory=[];}
 function undo(){if(!history.length)return;clearBatch();automationRevisionV075++;redoHistory.push(historyImageState());restoreImageState(history.pop());
  selectedText=Math.min(selectedText,strokes.length-1);selectedImage=Math.min(selectedImage,strokes.length-1);
@@ -904,6 +905,7 @@ function ensureLayerIds(){
 function clearBatch(){batchIds.clear();batchAnchor=null;batchDrag=null;marqueeDrag=null;snapGuides=null;}
 function batchLayers(){if(!ts)return [];return strokes.filter(l=>batchIds.has(l.id));}
 function tsBounds(l){const b=rawLayerBounds(l);return rotationCore?.aabb(b,rotationCore.rotation(l))||b;}
+function precisionSnap(box,dx,dy,excluded){const targets=strokes.filter(l=>!excluded.has(l.id)&&effectiveLayerVisible(l)&&!['eraser','erase-brush','erase-stroke'].includes(l.type)).map(tsBounds);if(cropFrame)targets.push(cropFrame);return ts.snap(box,dx,dy,targets,ink.width,ink.height,6*ink.width/Math.max(1,ink.getBoundingClientRect().width),globalThis.MangoPrecisionCanvasUIV0748?.guides?.());}
 function filteredLayers(){
  const query=(document.getElementById('ts-layer-search-v0711')?.value||'').trim().toLowerCase(),kind=document.getElementById('ts-layer-kind-v0711')?.value||'all';
  return strokes.filter(l=>(kind==='all'||kind==='vector'&&vectorCore?.isVector?.(l)||kind==='ink'&&!['image','text'].includes(l.type)&&!vectorCore?.isVector?.(l)||kind===l.type)&&(!query||[l.name,l.text,l.type,vectorCore?.kindOf?.(l)].some(x=>String(x||'').toLowerCase().includes(query))));
@@ -1584,7 +1586,7 @@ ink.addEventListener('pointermove',event=>{
   const d=batchDrag;if(d.pointerId!==event.pointerId)return;let dx=p.x-d.start.x,dy=p.y-d.start.y;
   if(!d.moved&&Math.hypot(dx,dy)<3)return;if(!d.moved){d.oldHistory=history.slice();d.oldRedo=redoHistory.slice();snapshot();d.moved=true;}
   if(document.getElementById('ts-snap-v0711')?.checked&&!event.altKey){
-   snapGuides=ts.snap(d.bounds,dx,dy,strokes.filter(l=>!batchIds.has(l.id)&&l.visible!==false).map(tsBounds),ink.width,ink.height,6*ink.width/Math.max(1,ink.getBoundingClientRect().width));dx=snapGuides.dx;dy=snapGuides.dy;
+   snapGuides=precisionSnap(d.bounds,dx,dy,batchIds);dx=snapGuides.dx;dy=snapGuides.dy;
   }else snapGuides=null;
   strokes=strokes.map(l=>d.originals.has(l.id)?layerOps.translate(d.originals.get(l.id),dx,dy):l);redraw();event.preventDefault();return;
  }
@@ -1613,6 +1615,7 @@ ink.addEventListener('pointermove',event=>{
    ox=Math.max(-bounds.x,Math.min(ink.width-bounds.x-bounds.width,dx));
    oy=Math.max(-bounds.y,Math.min(ink.height-bounds.y-bounds.height,dy));
   }
+  if(ts&&bounds&&document.getElementById('ts-snap-v0711')?.checked&&!event.altKey){snapGuides=precisionSnap(bounds,ox,oy,new Set([strokes[d.index].id,...(d.clone?[strokes[d.sourceIndex]?.id]:[])]));ox=snapGuides.dx;oy=snapGuides.dy;if(['image','text'].includes(source.type)){const sx=ox,sy=oy;ox=Math.max(-bounds.x,Math.min(ink.width-bounds.x-bounds.width,ox));oy=Math.max(-bounds.y,Math.min(ink.height-bounds.y-bounds.height,oy));if(sx!==ox)snapGuides.x=null;if(sy!==oy)snapGuides.y=null;}}else snapGuides=null;
   strokes[d.index]=layerOps.translate(source,ox,oy);
   redraw();event.preventDefault();return;
  }
@@ -1678,12 +1681,12 @@ function finishStroke(event){
  if(layerDrag){
   const d=layerDrag;
   if(d.pointerId!=null&&event?.pointerId!=null&&d.pointerId!==event.pointerId)return;
-  layerDrag=null;
+  layerDrag=null;snapGuides=null;
   if(d.moved){
    redraw();setReady(true);syncLayerProperties();
    label(d.clone?'Layer cloned and moved · Ctrl+Z restores original.':
     'Layer moved · Ctrl+Z restores position.');
-  }
+  }else paintBatchOverlay();
   return;
  }
  if(entireErase){
@@ -1763,6 +1766,7 @@ window.addEventListener('keydown',event=>{
 function flatten(includeInk=true){
  if(includeInk&&strokes.some(l=>l.visible!==false&&['spatial','scene'].includes(l.callout3d?.mode)))globalThis.MangoSpatialRendererV0730.requireRenderer();
  const sourceImage=includeInk?composedSource():base;
+ if(includeInk&&cropFrame){const {x,y,width,height}=cropFrame,c=document.createElement('canvas');c.width=width;c.height=height;const g=c.getContext('2d');g.drawImage(sourceImage,x,y,width,height,0,0,width,height);g.drawImage(ink,x,y,width,height,0,0,width,height);return c;}
  if(editorCore?.merge)return editorCore.merge(sourceImage,ink,includeInk);
  const canvas=document.createElement('canvas');canvas.width=base.width;canvas.height=base.height;
  const merged=canvas.getContext('2d');merged.drawImage(sourceImage,0,0);
@@ -1801,7 +1805,7 @@ async function copyImage(includeInk=true){
   // even for large full-page screenshots that take time to encode.
   const png=toPng(composed);
   await navigator.clipboard.write([new ClipboardItem({'image/png':png})]);
-  label((includeInk?'Annotated screenshot':'Original screenshot')+' copied · '+base.width+' × '+base.height+' px. Paste into another application.');
+  label((includeInk?'Annotated screenshot':'Original screenshot')+' copied · '+composed.width+' × '+composed.height+' px. Paste into another application.');
   return true;
  }catch(error){
   label('Image copy failed: '+error.message+'. Use Export PNG if clipboard image access is blocked.');
@@ -2125,7 +2129,7 @@ globalThis.MangoImageDocumentV0723=Object.freeze({
    if(l.cutoutKey&&!matteIds.has(l.cutoutKey)){const m=registry.get(l.cutoutKey);if(!m)throw Error('Missing image matte.');mattes.push({id:l.cutoutKey,width:m.width,height:m.height,alpha:D.encode(m.data)});matteIds.add(l.cutoutKey);}
   }
   const comp=advancedComp?.reconcile(composition,strokes),v2=advancedComp?.active(comp),v3=layers.some(l=>l.brush),v4=layers.some(l=>l.creativeFx),v5=layers.some(l=>Array.isArray(l.rasterFx)),v6=layers.some(l=>l.selectionMask),v7=layers.some(l=>l.callout3d),v8=layers.some(l=>l.callout3d?.mode==='spatial'),v9=layers.some(l=>l.callout3d?.occlusion?.length),v10=layers.some(l=>l.callout3d?.mode==='spatial'&&(l.callout3d.shape!=='arrow'||l.callout3d.camera?.roll)),v11=layers.some(l=>l.callout3d?.mode==='scene'),v12=layers.some(l=>Object.hasOwn(l,'textLayout'));
-  return D.check({format:'MangoShotImage',version:v12?12:v11?11:v10?10:v9?9:v8?8:v7?7:v6?6:v5?5:v4?4:v3?3:v2?2:1,name,width:base.width,height:base.height,base:base.toDataURL('image/png'),layers,assets,mattes,...(v2||v3||v4||v5||v6||v7||v12?{composition:comp}:{})},this.cores());
+  return D.check({format:'MangoShotImage',version:cropFrame?13:v12?12:v11?11:v10?10:v9?9:v8?8:v7?7:v6?6:v5?5:v4?4:v3?3:v2?2:1,name,width:base.width,height:base.height,base:base.toDataURL('image/png'),layers,assets,mattes,...(v2||v3||v4||v5||v6||v7||v12||cropFrame?{composition:comp}:{}),...(cropFrame?{crop:{...cropFrame}}:{})},this.cores());
  },
  async open(raw,stamp){
   const D=globalThis.MangoImageDocumentCoreV0723,initial=this.state();if(!initial.canOpen||initial.stamp!==stamp)throw Error('Image editor is busy.');
@@ -2143,7 +2147,7 @@ globalThis.MangoImageDocumentV0723=Object.freeze({
   const g=staged.getContext('2d');try{layerCore.replaceProjectRegistry(nextAssets,nextMattes);paintComposedLayers(g,p.layers,nextComp);}
   catch(e){layerCore.replaceProjectRegistry(oldAssets,oldMattes);throw e;}
   base.width=ink.width=p.width;base.height=ink.height=p.height;ctx.drawImage(source,0,0);pen.drawImage(staged,0,0);staged.width=staged.height=1;
-  rasterLayers?.retain(nextAssets.values());clearBatch();strokes=p.layers;composition=nextComp;sourceGeneration++;history=[];redoHistory=[];selectedText=selectedImage=selectedObject=-1;layerClipboard=styleClipboard=null;composedSource();
+  rasterLayers?.retain(nextAssets.values());clearBatch();strokes=p.layers;composition=nextComp;cropFrame=p.crop||null;sourceGeneration++;history=[];redoHistory=[];selectedText=selectedImage=selectedObject=-1;layerClipboard=styleClipboard=null;composedSource();
   meta={width:p.width,height:p.height,pageHeight:p.height,dpr:1,frames:1,full:false};frames=[];
   const landing=document.getElementById('image-clipboard-landing');if(landing)landing.hidden=true;
   tool.value='select';syncTool();switchInspectorTab('layers');document.getElementById('zoom').value='fit';
@@ -2241,6 +2245,10 @@ globalThis.MangoLayerImageV0712=Object.freeze({
  }
 });
 
+globalThis.MangoPrecisionCanvasV0748=Object.freeze({
+ state(){const s=globalThis.MangoImageDocumentV0723.state();return {ready:s.ready,stamp:s.stamp,generation:sourceGeneration,width:base.width,height:base.height,crop:cropFrame?{...cropFrame}:null};},
+ apply(value,stamp){const s=this.state(),C=globalThis.MangoPrecisionCanvasCoreV0748;if(!s.ready||s.stamp!==stamp)throw Error('Image changed. Reopen crop controls.');const next=value===null?null:C.checkCrop(value,s.width,s.height);const normalized=next&&C.isFull(next,s.width,s.height)?null:next;if(JSON.stringify(normalized)===JSON.stringify(cropFrame))return false;snapshot();cropFrame=normalized;setReady(ready);label(cropFrame?'Export crop set · '+cropFrame.width+' × '+cropFrame.height+' px · original preserved.':'Full image restored.');return true;}
+});
 globalThis.MangoTextLayoutV0746=Object.freeze({
  state(){const l=selectedStroke(),cap=globalThis.MangoImageAutomationV075?.capture();return {ready:!!cap?.ready&&!documentLoadPending&&!l?.locked&&!!l&&!sizeGesture&&!textDraft,stamp:JSON.stringify([automationRevisionV075,selectedText]),layer:l?cloneStrokes(l):null,supported:'letterSpacing' in pen};},
  apply(value,stamp){const s=this.state();if(!s.ready||s.stamp!==stamp)throw Error('Text selection changed. Reopen or reset the layout controls.');const next=editorCore.checkTextLayout(value);if(next.tracking!==0&&!s.supported)throw Error('Text spacing is not supported by this browser.');const l=selectedStroke(),defaults=editorCore.defaultTextLayout(),previous=l.textLayout||defaults;if(Object.keys(defaults).every(k=>next[k]===previous[k]))return false;

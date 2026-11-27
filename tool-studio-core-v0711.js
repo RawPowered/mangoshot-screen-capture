@@ -8,7 +8,7 @@
   {id:'redact',label:'Privacy',items:['redact']},{id:'text',label:'Typography',items:['text']},{id:'mask',label:'Image masks',items:['mask-erase','mask-restore']}
  ].map(g=>Object.freeze({...g,items:Object.freeze(g.items)})));
  const actions=Object.freeze({
-  'pin-fonts':{name:'Fonts',icon:'text',target:'ux40-creative-open-v079'},'pin-styles':{name:'Text styles',icon:'text',target:'ux45-shelf-styles'},'pin-shapes':{name:'Shapes',icon:'rectangle',target:'ux42-shapes'},'pin-layer-styles':{name:'Layer styles',icon:'rectangle',target:'ce-open-v0726'},'pin-fx':{name:'Effects Studio',icon:'settings',target:'ux40-effects-studio-menu-v0712'},'pin-brush':{name:'Brush Studio',icon:'pen',target:'bs-open-v0725'},'pin-pixels':{name:'Pixel selection',icon:'marquee',target:'ps-open-v0728'},'pin-filters':{name:'Raster filters',icon:'settings',target:'rl-open-v0727'},'pin-clone':{name:'Clone Stamp',icon:'pen',target:'ux41-tool-clone'},'pin-dodge':{name:'Dodge',icon:'pen',target:'ux41-tool-dodge'},'pin-burn':{name:'Burn',icon:'pen',target:'ux41-tool-burn'},'pin-fill':{name:'Bucket Fill',icon:'rectangle',target:'ux41-tool-fill'},'pin-gradient':{name:'Gradient',icon:'rectangle',target:'ux41-tool-gradient'}
+  'pin-fonts':{name:'Fonts',icon:'text',target:'ux40-creative-open-v079'},'pin-styles':{name:'Text styles',icon:'text',target:'ux45-shelf-styles'},'pin-shapes':{name:'Shapes',icon:'rectangle',target:'ux42-shapes'},'pin-crop':{name:'Crop frame',icon:'rectangle',target:'pc48-crop'},'pin-layer-styles':{name:'Layer styles',icon:'rectangle',target:'ce-open-v0726'},'pin-fx':{name:'Effects Studio',icon:'settings',target:'ux40-effects-studio-menu-v0712'},'pin-brush':{name:'Brush Studio',icon:'pen',target:'bs-open-v0725'},'pin-pixels':{name:'Pixel selection',icon:'marquee',target:'ps-open-v0728'},'pin-filters':{name:'Raster filters',icon:'settings',target:'rl-open-v0727'},'pin-clone':{name:'Clone Stamp',icon:'pen',target:'ux41-tool-clone'},'pin-dodge':{name:'Dodge',icon:'pen',target:'ux41-tool-dodge'},'pin-burn':{name:'Burn',icon:'pen',target:'ux41-tool-burn'},'pin-fill':{name:'Bucket Fill',icon:'rectangle',target:'ux41-tool-fill'},'pin-gradient':{name:'Gradient',icon:'rectangle',target:'ux41-tool-gradient'}
  });
  const actionGroup=Object.freeze({id:'studios',label:'Creative studios & pixel tools',items:Object.freeze(Object.keys(actions))});
  const clipGroups=Object.freeze([{id:'edit',label:'Timeline editing',items:['tool-select','tool-razor','range-tool']},{id:'graphics',label:'Graphics',items:['add-text','add-callout']},{id:'automation',label:'Assisted editing',items:['autocut-toggle']}].map(g=>Object.freeze({...g,items:Object.freeze(g.items)})));
@@ -44,9 +44,9 @@
    else throw Error('Unknown alignment');return {id:i.id,dx,dy};
   });
  }
- function snap(box,dx,dy,targets,w,h,tolerance){
+ function snap(box,dx,dy,targets,w,h,tolerance,guides=null){
   if(!box)return {dx,dy,x:null,y:null};
-  const xs=[0,w/2,w],ys=[0,h/2,h];for(const t of targets){if(!t)continue;xs.push(t.x,t.x+t.width/2,t.x+t.width);ys.push(t.y,t.y+t.height/2,t.y+t.height);}
+  const xs=[0,w/2,w,...(guides?.x||[]).filter(Number.isFinite)],ys=[0,h/2,h,...(guides?.y||[]).filter(Number.isFinite)];for(const t of targets){if(!t)continue;xs.push(t.x,t.x+t.width/2,t.x+t.width);ys.push(t.y,t.y+t.height/2,t.y+t.height);}
   function nearest(origins,values,delta){let best=null;for(const o of origins)for(const v of values){const d=v-o-delta;if(Math.abs(d)<=tolerance&&(best===null||Math.abs(d)<Math.abs(best.d)))best={d,v};}return best;}
   const x=nearest([box.x,box.x+box.width/2,box.x+box.width],xs,dx),y=nearest([box.y,box.y+box.height/2,box.y+box.height],ys,dy);
   return {dx:dx+(x?.d||0),dy:dy+(y?.d||0),x:x?.v??null,y:y?.v??null};

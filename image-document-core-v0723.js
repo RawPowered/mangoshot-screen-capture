@@ -69,9 +69,9 @@
   return n;
  }
  function check(p,cores){
-  keys(p,p?.version>=2?['format','version','name','width','height','base','layers','assets','mattes','composition']:['format','version','name','width','height','base','layers','assets','mattes']);
-  if(p.format!=='MangoShotImage'||![1,2,3,4,5,6,7,8,9,10,11,12].includes(p.version)||!text(p.name,120)||!p.name.trim())fail('Unsupported image project format or version.');
-  dimensions(p.width,p.height);pngHeader(p.base,p.width,p.height);
+  keys(p,p?.version>=13?['format','version','name','width','height','base','layers','assets','mattes','composition','crop']:p?.version>=2?['format','version','name','width','height','base','layers','assets','mattes','composition']:['format','version','name','width','height','base','layers','assets','mattes']);
+  if(p.format!=='MangoShotImage'||![1,2,3,4,5,6,7,8,9,10,11,12,13].includes(p.version)||!text(p.name,120)||!p.name.trim())fail('Unsupported image project format or version.');
+  dimensions(p.width,p.height);pngHeader(p.base,p.width,p.height);if(p.version===13){const C=root.MangoPrecisionCanvasCoreV0748;if(!C)fail('Crop runtime unavailable.');C.checkCrop(p.crop,p.width,p.height);}
   if(!Array.isArray(p.layers)||p.layers.length>MAX_LAYERS||!Array.isArray(p.assets)||p.assets.length>128||!Array.isArray(p.mattes)||p.mattes.length>128)fail('Project layer or asset limit exceeded.');
   const budget={n:0},layers=p.layers.map(l=>layer(l,budget,cores)),ids=new Set(),assets=new Map(),mattes=new Map();let total=p.width*p.height,encoded=p.base.length;
   for(const l of layers){if(ids.has(l.id))fail('Duplicate layer ID.');ids.add(l.id);}
