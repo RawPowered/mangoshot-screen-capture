@@ -27,13 +27,17 @@
  function applyRecipe(raw){const checked=core.recipe(raw);if(checked.action!=='recorder.cursor.configure')throw Error('This recipe is for Clip Studio');
   hot.cancel();settings=checked.settings;clicked=null;clickAt=-Infinity;renderSettings();el('cursor-preset-v073').value='custom';return {...settings};}
  function clear(){const t=host.seconds?.();if(pointer&&session&&retain&&Number.isFinite(t)){trace?.add(t,null);capture?.gap(t);}pointer=null;clicked=null;clickAt=-Infinity;lastAt=-Infinity;}
- function disconnect(){const old=port;port=null;if(old)try{old.disconnect();}catch{}mode='preview';clear();
+ function disconnectLink(){const old=port;port=null;if(old)try{old.disconnect();}catch{}mode='preview';clear();
   el('cursor-link-v073').textContent='Connect linked tab';el('cursor-link-v073').setAttribute('aria-pressed','false');}
+ function disconnect(){root.MangoNativeCursorV0753?.stop?.('Native tracking disconnected. Reconnect for a new or resumed recording.');disconnectLink();}
+ function claimNative(){if(!session||!host.active()||host.surface()!=='monitor')return false;disconnectLink();el('cursor-consent-v073').checked=false;mode='native';setStatus('Native monitor tracking active. Cursor effects are rendered in the live preview.');return true;}
+ function releaseNative(){if(mode!=='native')return;hot.cancel();clear();mode='preview';setStatus('Native monitor tracking stopped. Preview tracking only.');}
+ function nativeSample(p,click){if(mode!=='native'||!session||!host.active())return false;if(p==null){clear();return true;}ingest(p,click===true);return true;}
  function enabled(){return retain||hot.effective()||settings.ring||settings.zoomMode!=='off';}
  function ingest(p,click=false){
   if(!session||!host.active())return;
   pointer=core.point(p);lastAt=now();
-  if(pointer&&click){clicked={...pointer};clickAt=lastAt;const t=host.seconds?.();if(retain&&Number.isFinite(t)){if(mode==='linked')capture?.click(t,pointer);const output=control.outFrame(host.cleanMaster?.()?pointer:core.outputPoint(pointer,lastCamera||host.camera()),host.frame());trace?.click(t,output);traceStarted=true;}}
+  if(pointer&&click){clicked={...pointer};clickAt=lastAt;const t=host.seconds?.();if(retain&&Number.isFinite(t)){if(mode==='linked'||mode==='native')capture?.click(t,pointer);const output=control.outFrame(host.cleanMaster?.()?pointer:core.outputPoint(pointer,lastCamera||host.camera()),host.frame());trace?.click(t,output);traceStarted=true;}}
  }
  function previewPoint(e,click=false){
   if(mode!=='preview'||!session||!host.active())return;
@@ -78,11 +82,11 @@
  }catch(e){setStatus(e.message);}});
  renderSettings();
  function begin(){disconnect();session=true;retain=!!el('cursor-retain-v073').checked;trace=core.createTrace();capture=captureCore?.create(core.config,host.cleanMaster?.()?'clean':'composite')||null;traceWarning=false;lastFrame=now();lastCamera=null;el('cursor-consent-v073').checked=false;
-  setStatus(retain?'Cursor path retention ON (local). Connect the same captured webpage for source tracking; display/window tracking is preview-only.':'Cursor path retention OFF. Enable it to preserve tracked movement.');}
+  setStatus(retain?'Cursor path retention ON (local). Connect the same captured webpage for source tracking; use the installed Windows companion for confirmed entire-screen tracking.':'Cursor path retention OFF. Enable it to preserve tracked movement.');}
  function end(){hot.cancel();let meta=null;try{if(traceStarted)meta=capture?.finish()||null;}catch(e){setStatus('Source telemetry could not be finalized; recorded-frame path retained.');}const result=trace?.finish(meta);trace=null;capture=null;session=false;disconnect();lastCamera=null;el('cursor-consent-v073').checked=false;setStatus(result&&(result.truncated||result.capture?.truncated)?'Cursor trace limit reached; recording retained but telemetry may be incomplete.':'Cursor tracking stopped.');return result&&(result.samples.some(s=>s[1]!==null)||result.clicks?.length||result.capture?.cameraFrames.length)?result:null;}
  function frame(ctx,media,base,w,h,seconds){
   const n=now(),dt=n-lastFrame;lastFrame=n;
-  if(mode==='linked'&&n-lastAt>1000)clear();
+  if((mode==='linked'||mode==='native')&&n-lastAt>1000)clear();
   const p=session&&enabled()?pointer:null,age=n-clickAt,effective={...settings,spotlight:hot.effective()};
   const c=core.advance(lastCamera,base,p,effective,dt,age,clicked);
   lastCamera=c;
@@ -101,6 +105,6 @@
  function manualCamera(){if(settings.zoomMode!=='off'){settings={...settings,zoomMode:'off'};el('cursor-preset-v073').value='custom';renderSettings();}lastCamera=null;}
  function suspend(){hot.cancel();disconnect();el('cursor-consent-v073').checked=false;setStatus('Tracking paused; reconfirm and reconnect linked tab after resuming if needed.');}
  function sourceChanged(){const t=host.seconds?.();if(Number.isFinite(t))capture?.sourceChanged(t);hot.cancel();disconnect();lastCamera=null;el('cursor-consent-v073').checked=false;setStatus('Source changed · preview tracking; reconnect the linked tab if appropriate.');}
- root.MangoRecorderCursorV073=Object.freeze({begin:resetSession,end,suspend,frame,manualCamera,sourceChanged,spotlightDown:hot.down,spotlightUp:hot.up,spotlightCancel:hot.cancel,focusTool:()=>focusTool&&enabled(),applyRecipe,
+ root.MangoRecorderCursorV073=Object.freeze({begin:resetSession,end,suspend,frame,manualCamera,sourceChanged,claimNative,releaseNative,nativeSample,spotlightDown:hot.down,spotlightUp:hot.up,spotlightCancel:hot.cancel,focusTool:()=>focusTool&&enabled(),applyRecipe,
   state:()=>({settings:{...settings},effectiveSpotlight:hot.effective(),spotlightHeld:hot.held(),mode,session,retain,focusTool,automationRevision:automationRevisionV075})});
 })(typeof globalThis!=='undefined'?globalThis:this);
