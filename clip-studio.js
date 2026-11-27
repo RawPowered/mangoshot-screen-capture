@@ -656,7 +656,7 @@ globalThis.MangoLayerClipV0712=Object.freeze({
 
 sequencePreview=MangoSequencePreview.create(video,playbackParts,
  output=>{previewSequenceTime=output;globalThis.MangoClipTimeline?.playhead?.();paintPreview();globalThis.MangoCreativeUI?.onPosition?.(output);try{multiPreviewMix?.sync(output,sequencePreview?.isPlaying()&&!video.paused);}catch(e){sequencePreview?.stop();label('Secondary audio preview failed: '+e.message);}},
- (playing,error)=>{if(!playing)stopMultiPreview();globalThis.MangoCreativeUI?.onPlayback?.(playing);byId('program-play').textContent=playing?'❚❚ Pause':'▶ Play';if(error)label('Preview paused: '+error);},{beforePlay:primeStreamPlayback,onPause:()=>{multiRuntime?.pauseStreams?.();multiPreviewMix?.stop();}});
+ (playing,error)=>{if(!playing)stopMultiPreview();globalThis.MangoCreativeUI?.onPlayback?.(playing);byId('program-play').textContent=playing?'❚❚ Pause':'▶ Play';if(error)label('Preview paused: '+error);globalThis.MangoMotionStudioV0750?.refresh?.();},{beforePlay:primeStreamPlayback,onPause:()=>{multiRuntime?.pauseStreams?.();multiPreviewMix?.stop();}});
 video.addEventListener('timeupdate',()=>{globalThis.MangoClipTimeline?.playhead?.();paintPreview();});
 video.addEventListener('pause',()=>{multiPreviewMix?.stop();if(!streamPriming)multiRuntime?.pauseStreams?.();});video.addEventListener('seeked',paintPreview);video.addEventListener('loadeddata',paintPreview);
 let cursorFramePending=false;
