@@ -16,3 +16,11 @@ body.studio-image .md-effect-items-v0723{display:grid;gap:4px;padding:3px 4px 5p
 body.studio-image .md-effect-items-v0723 span{white-space:normal;overflow-wrap:anywhere}
 body.studio-image #md-quick-open-v0723,body.studio-image #md-quick-save-v0723{white-space:nowrap;min-height:26px;padding:3px 5px!important;font-size:10px}
 @media(max-width:1120px){body.studio-image #md-quick-open-v0723,body.studio-image #md-quick-save-v0723{display:none}}
+
+body.studio-image .image-layer-row .md-thumb-v0723{width:46px;height:32px;flex:0 0 46px}
+body.studio-image .image-layer-row .md47-layer-actions{grid-column:1/-1;display:flex;gap:3px;padding:2px 0 1px;min-width:0;border-top:1px solid var(--carbon-line)}
+body.studio-image .image-layer-row .md47-layer-actions button{flex:1;min-width:0;min-height:23px;font-size:10px;padding:3px 4px!important;white-space:normal;background:var(--carbon-panel)!important;border:1px solid var(--carbon-line)!important}
+body.studio-image .image-layer-row .md47-layer-actions button:hover{border-color:var(--carbon-accent-edge)!important;color:var(--carbon-accent)}
+body.studio-image #md47-rename{width:min(400px,calc(100vw - 24px))}
+body.studio-image #md47-rename footer{justify-content:flex-end}
+body.studio-image .image-layer-row .md-thumb-v0723:not([hidden])~svg{display:none}

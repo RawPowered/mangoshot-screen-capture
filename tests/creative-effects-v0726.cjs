@@ -14,3 +14,11 @@ assert.throws(()=>E.requireBudget([{type:'pen',creativeFx:v}],100,100,{supports:
 assert.throws(()=>E.requireBudget(Array.from({length:65},()=>({type:'text',creativeFx:v})),100,100,C),/64 active/);
 assert.ok(E.gradientCSS(v.gradient).includes('linear-gradient'));
 console.log('Creative effects validation, gradient stops, protected layer and memory bounds passed');
+
+const R=require('../transform-material-core-v0715.js');
+assert.equal(E.presets.length,14);assert.equal(new Set(E.presets.map(p=>p.id)).size,14);
+const original={name:'Executive gold',appearance:v,material:R.presets.find(p=>p.id==='gold').material},library=E.savePreset([],original,R);
+assert.deepEqual(library[0],original);assert.notEqual(library[0].appearance,original.appearance);assert.throws(()=>E.savePreset(library,{...original,name:'EXECUTIVE GOLD'},R),/already exists/);
+assert.throws(()=>E.checkPreset({...original,name:'<unsafe>\n'},R));assert.throws(()=>E.checkPreset({...original,appearance:{...v,unknown:1}},R));assert.throws(()=>E.checkPreset({...original,material:{...original.material,strength:NaN}},R));
+assert.throws(()=>E.checkLibrary(Array.from({length:25},(_,i)=>({...original,name:'Style '+i})),R));assert.deepEqual(E.checkLibrary(JSON.parse(JSON.stringify(library)),R),library);
+console.log('14 validated gradient recipes and bounded local style library validation passed');
