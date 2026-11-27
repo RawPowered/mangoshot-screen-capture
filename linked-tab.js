@@ -27,7 +27,7 @@
       if(x<0||x>1||y<0||y>1){leave();return;}
       last={type:'point',x,y,click:false};
       const t=performance.now();
-      if(click||t-at>=33){at=t;send({...last,click});}
+      if(click||t-at>=16){at=t;send({...last,click});}
     }
     const pointer=e=>move(e),down=e=>{if(e.button===0)move(e,true);};
     const visibility=()=>{if(document.visibilityState!=='visible')leave();};
