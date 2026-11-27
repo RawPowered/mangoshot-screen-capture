@@ -271,8 +271,18 @@
   if(!isOpen(palette)){try{palette.showModal();}catch{palette.setAttribute('open','');}}
   paletteSearch?.focus?.();return true;
  }
+ // Remember actual pointer focus, not merely the presence of a focused button.
+ // Keyboard Tab navigation restores native activation and remains accessible.
+ const focusControl=target=>target?.closest?.('button,a,summary,[role="button"],[role="menuitem"]')||null;
+ let pointerOwner=null;
+ document.addEventListener('pointerdown',event=>{
+  pointerOwner=event.button===0&&['mouse','pen','touch'].includes(event.pointerType)?focusControl(event.target):null;
+ },true);
+ document.addEventListener('focusin',event=>{if(focusControl(event.target)!==pointerOwner)pointerOwner=null;},true);
+ root.addEventListener?.('blur',()=>{pointerOwner=null;});
  function dispatch(event){
   if(!event||event.defaultPrevented||event.isComposing)return;
+  if(event.key==='Tab')pointerOwner=null;
   if(capturing!==null){
    event.preventDefault?.();event.stopImmediatePropagation?.();
    if(event.key==='Escape'){capturing=null;banner('Rebinding cancelled.');paint();return;}
@@ -303,10 +313,14 @@
   // Layer rows may retain focus after canvas selection; preserve native
   // button activation with Space/Enter and route other tools as commands.
   const selected=image&&root.MangoImageActions?.state?.().layerSelected===true;
-  if(!core.focusedControlAllows(event,{image,selectedLayer:selected}))return;
+  const pointerOwned=!!pointerOwner&&focusControl(event.target)===pointerOwner;
+  if(!core.focusedControlAllows(event,{image,selectedLayer:selected,pointerOwned}))return;
   const id=core.resolve(keys,event);
   if(!id)return;
-  if(event.repeat&&!['jogBackward','jogForward','pause','brushSmaller','brushLarger'].includes(id))return;
+  if(event.repeat&&!['jogBackward','jogForward','pause','brushSmaller','brushLarger'].includes(id)){
+   if(!image&&pointerOwned){event.preventDefault?.();event.stopImmediatePropagation?.();}
+   return;
+  }
   if(run(id)){event.preventDefault?.();event.stopImmediatePropagation?.();}
  }
  document.addEventListener('keydown',dispatch,true);
