@@ -18,7 +18,8 @@ let sourceVideo=preview,audioDest=null,screenAudioNodes=[],sharedAudio=false,pen
 let scrollBusy=false,queuedScroll=0,warnings=[],startedAt=0,pausedAt=0,pausedTotal=0;
 let strokes=[],activeStroke=null,history=[],renderPending=false;
 // Every capture owns its own encoder/chunks/storage; late onstop cannot corrupt the next session.
-let activeSession=null,lastCursorTrace=null,lastCapture=null,frameDriver=null;
+let activeSession=null,lastCursorTrace=null,lastCapture=null,frameDriver=null,cleanMaster=false,priorRetention=true;
+const cleanControl=get('clean-master-v0752'),retainControl=get('cursor-retain-v073');
 const label=text=>{status.textContent=text;};
 function recordState(value){const el=get('record-state');if(!el)return;el.dataset.state=value;el.textContent=({ready:'Ready',recording:'Recording',stopped:'Capture stopped',finalizing:'Finalizing video',recovery:'Recovery available',complete:'Ready to edit',error:'Capture error'})[value]||value;}
 recordState('ready');
@@ -45,7 +46,7 @@ function normalized(event){const rect=ink.getBoundingClientRect();
  return {x:Math.max(0,Math.min(1,(event.clientX-rect.left)/Math.max(1,rect.width))),
    y:Math.max(0,Math.min(1,(event.clientY-rect.top)/Math.max(1,rect.height)))};
 }
-function zoom(value){if(active())globalThis.MangoRecorderCursorV073?.manualCamera?.();zoomState=MangoCamera.fit(value);get('zoomReadout').textContent=Math.round(zoomState.zoom*100)+'%';}
+function zoom(value){if(active())globalThis.MangoRecorderCursorV073?.manualCamera?.();zoomState=MangoCamera.fit(cleanMaster?{...value,zoom:Math.min(5,value.zoom)}:value);get('zoomReadout').textContent=Math.round(zoomState.zoom*100)+'%';}
 function resetZoom(){zoom(MangoCamera.camera());}
 function zoomBy(factor){if(active())zoom(MangoCamera.anchor(zoomState,zoomState.zoom*factor,{x:.5,y:.5}));}
 function updateMode(){
@@ -117,6 +118,7 @@ ink.addEventListener('pointerdown',event=>{
  if(event.ctrlKey||ctrlHeld){gesture={type:'dolly',startY:event.clientY,origin:zoomState,
    anchor:cameraPoint(normalized(event)),height:ink.getBoundingClientRect().height};
    const feedback=get('zoom-feedback');feedback.hidden=false;feedback.textContent='Drag ↑ Zoom in · ↓ Zoom out';return;}
+ if(cleanMaster){label('Clean master: ink is disabled; use the cursor tools or add annotations in Clip Studio.');return;}
  if(globalThis.MangoRecorderCursorV073?.focusTool?.())return;
  activeStroke={color:get('color').value,
    size:Number(get('size').value)*ink.width/Math.max(1,ink.getBoundingClientRect().width),points:[penPoint(event)]};
@@ -172,7 +174,7 @@ function cleanup(){globalThis.MangoRecorderCursorV073?.end?.();stopTracks();stop
  preview.srcObject=null;sourceVideo=preview;wrap.dataset.recording='false';wrap.style.aspectRatio='';wrap.style.removeProperty?.('--record-aspect');recorder=null;controller=null;captureSource='';scrollPermission=false;forwardingActive=false;sharedAudio=false;
  get('video-placeholder').hidden=false;composite.style.display='none';ink.style.opacity='1';
  get('enable-scroll').disabled=true;get('enable-scroll').textContent='Enable captured-tab wheel control';
- recording=false;stopping=false;resetControls();}
+ recording=false;stopping=false;if(cleanMaster){retainControl.checked=priorRetention;retainControl.disabled=false;retainControl.dispatchEvent(new Event('change'));}cleanMaster=false;cleanControl.disabled=false;get('clear').disabled=false;get('color').disabled=false;get('size').disabled=false;resetControls();}
 function saveBlob(blob,labelType){if(!blob?.size){label('No encoded video available.');return false;}
  const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;
  link.download='MangoShot-'+new Date().toISOString().replace(/[:.]/g,'-')+(blob.type.includes('mp4')?'.mp4':'.webm');
@@ -186,8 +188,8 @@ function supportedRecorder(output){for(const mimeType of mimeCandidates){if(!Med
 function showResult(blob,partial=false,sessionId=null,capture=null){if(!blob?.size){label('No encoded data received. Check Recover recording before closing.');return;}
  lastBlob=blob;lastSessionId=sessionId;lastCapture=capture;get('result').hidden=false;get('save-cursor-v0751').disabled=!lastCursorTrace;
  get('result-meta').textContent=(blob.size/1048576).toFixed(1)+' MiB · '+(blob.type.includes('mp4')?'MP4':'WebM')+
- (partial?' · INCOMPLETE, attempt recovery':' · source capture stopped')+(capture?' · '+capture.seconds.toFixed(1)+'s elapsed · '+capture.frames+' submitted frames · '+capture.driver:'')+(lastCursorTrace?' · cursor data retained'+(lastCursorTrace.truncated||lastCursorTrace.capture?.truncated?' (truncated)':''):'');
- if(!partial)saveBlob(blob,'Video finalized. Original download requested; confirm it in your Downloads folder.');
+ (partial?' · INCOMPLETE, attempt recovery':capture?.master==='clean'?' · CLEAN MASTER (effects separate)':' · composite capture stopped')+(capture?' · '+capture.seconds.toFixed(1)+'s elapsed · '+capture.frames+' submitted frames · '+capture.driver:'')+(lastCursorTrace?' · cursor data retained'+(lastCursorTrace.truncated||lastCursorTrace.capture?.truncated?' (truncated)':''):'');
+ if(!partial)saveBlob(blob,capture?.master==='clean'?'Clean master finalized. Open in Clip Studio to reconstruct editable effects; the downloaded video excludes MangoShot effects.':'Video finalized. Original download requested; confirm it in your Downloads folder.');
  else label('Encoder delayed: the flushed chunks are available for emergency saving; file may be incomplete.');
 }
 function createSession(token,mime,encoder){
@@ -208,7 +210,7 @@ function queueChunkFor(session,blob){
 async function markRecovered(session,partial){if(!session?.storage)return;
  try{await session.queue;const complete=!partial&&!session.storageError;await MangoRecovery.mark(session.storage,complete?'finished':'interrupted',complete?session.cursorTrace||null:null);}catch(error){warnings.push('Recovery state update failed: '+error.message);}
 }
-function captureSummary(session){if(!session?.startedAt||activeSession!==session)return session?.capture||null;const stats=frameDriver?.stats()||{frames:0,inputFrames:0,driver:'legacy preview clock'};const seconds=Math.max(0,((pausedAt||Date.now())-session.startedAt-pausedTotal)/1000);return {schema:'mangoshot.capture.v1',seconds,frames:stats.frames,inputFrames:stats.inputFrames,driver:stats.driver};}
+function captureSummary(session){if(!session?.startedAt||activeSession!==session)return session?.capture||null;const stats=frameDriver?.stats()||{frames:0,inputFrames:0,driver:'legacy preview clock'};const seconds=Math.max(0,((pausedAt||Date.now())-session.startedAt-pausedTotal)/1000);return {schema:'mangoshot.capture.v1',seconds,frames:stats.frames,inputFrames:stats.inputFrames,driver:stats.driver,master:session.cleanMaster?'clean':'composite'};}
 function finishSession(session,partial=false){
  if(!session||session.complete||partial&&session.partial)return;
  if(session.watchdog)clearTimeout(session.watchdog);session.watchdog=0;
@@ -451,7 +453,7 @@ start.addEventListener('click',async()=>{
  if(start.disabled)return;start.disabled=true;lastBlob=null;lastSessionId=null;lastCursorTrace=null;lastCapture=null;startedAt=0;pausedAt=0;pausedTotal=0;
  recording=false;stopping=false;finalized=false;partialShown=false;recordingToken++;const token=recordingToken;
  // Never overwrite a previous encoder's chunks or callbacks.
- activeSession=null;sourceChanges=0;interaction=false;sharedAudio=get('audio').checked;recordState('ready');
+ activeSession=null;sourceChanges=0;interaction=false;sharedAudio=get('audio').checked;cleanMaster=cleanControl.checked;cleanControl.disabled=true;priorRetention=retainControl.checked;if(cleanMaster){retainControl.checked=true;retainControl.disabled=true;get('clear').disabled=true;get('color').disabled=true;get('size').disabled=true;}recordState('ready');
  get('result').hidden=true;
  elapsed.textContent='00:00';warnings=[];resetZoom();history=[];strokes=[];activeStroke=null;redrawInk();get('undo').disabled=true;
  try{
@@ -478,18 +480,24 @@ start.addEventListener('click',async()=>{
   ink.width=w;ink.height=h;composite.width=w;composite.height=h;wrap.style.aspectRatio=w+' / '+h;wrap.style.setProperty?.('--record-aspect',String(w/h));wrap.dataset.recording='true';
   composite.style.display='block';ink.style.opacity='0';
   const ctx=composite.getContext('2d',{alpha:false});
+  // Capture a second, neutral fitted canvas only in clean mode. The preview always
+  // receives the original live compositor. This keeps encoder/audio ownership unchanged.
+  const recordingCanvas=cleanMaster?document.createElement('canvas'):composite;
+  recordingCanvas.width=w;recordingCanvas.height=h;const rawCtx=cleanMaster?recordingCanvas.getContext('2d',{alpha:false}):null;
+  if(!ctx||cleanMaster&&!rawCtx)throw Error('Recording canvas unavailable');
   const render=(media=sourceVideo)=>{if(!screen||stopping)return;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);
+    if(rawCtx){rawCtx.fillStyle='#000';rawCtx.fillRect(0,0,w,h);control.drawSource(rawCtx,media,MangoCamera.camera(),w,h);}
     const cursor=globalThis.MangoRecorderCursorV073;
     if(cursor&&recording){
       const seconds=recorder?.state==='recording'?Math.max(0,(Date.now()-startedAt-pausedTotal)/1000):null;
       const effective=cursor.frame(ctx,media,zoomState,w,h,seconds);
       get('zoomReadout').textContent=Math.round(effective.zoom*100)+'%';
     }else control.drawSource(ctx,media,zoomState,w,h);
-    ctx.drawImage(ink,0,0);};render();
+    if(!rawCtx)ctx.drawImage(ink,0,0);};render();
   const legacyRender=()=>{if(!screen||stopping)return;render();animation=requestAnimationFrame(legacyRender);};
-  if(globalThis.MangoRecordingFramesV0739){frameDriver=globalThis.MangoRecordingFramesV0739.create({canvas:composite,track:screen.getVideoTracks()[0],draw:render,fail:error=>{warnings.push('Video output failed: '+error.message);if(activeSession&&!activeSession.stopped)stopCapture('Video output failed');},warn:message=>{warnings.push(message);}});}
-  else if(typeof composite.captureStream!=='function')throw new Error('Canvas recording unsupported.');
-  const output=frameDriver?.stream||composite.captureStream(30);tracks.push(...output.getVideoTracks());if(!frameDriver)animation=requestAnimationFrame(legacyRender);
+  if(globalThis.MangoRecordingFramesV0739){frameDriver=globalThis.MangoRecordingFramesV0739.create({canvas:recordingCanvas,track:screen.getVideoTracks()[0],draw:render,fail:error=>{warnings.push('Video output failed: '+error.message);if(activeSession&&!activeSession.stopped)stopCapture('Video output failed');},warn:message=>{warnings.push(message);}});}
+  else if(typeof recordingCanvas.captureStream!=='function')throw new Error('Canvas recording unsupported.');
+  const output=frameDriver?.stream||recordingCanvas.captureStream(30);tracks.push(...output.getVideoTracks());if(!frameDriver)animation=requestAnimationFrame(legacyRender);
   const inputs=[...screen.getAudioTracks(),...(mic?.getAudioTracks()||[])];
   // Reserve a stable destination when shared audio is requested, even if this
   // particular monitor does not provide it. Later swaps can feed the same track.
@@ -501,7 +509,7 @@ start.addEventListener('click',async()=>{
     tracks.push(...audioDest.stream.getTracks());
    }catch(error){warnings.push('Audio mixing unavailable ('+error.name+').');disconnectNodes(screenAudioNodes);screenAudioNodes=[];stopStream(audioDest?.stream);audioDest=null;audio?.close().catch(()=>{});audio=null;}}
   recorder=supportedRecorder(output);recordingMime=recorder.mimeType||'video/webm';
-  const session=createSession(token,recordingMime,recorder);activeSession=session;
+  const session=createSession(token,recordingMime,recorder);session.cleanMaster=cleanMaster;activeSession=session;
   try{session.storage=await MangoRecovery.begin(recordingMime);}
   catch(error){warnings.push('Storage unavailable: download original immediately when finished.');}
   recorder.ondataavailable=event=>queueChunkFor(session,event.data);
@@ -522,7 +530,7 @@ start.addEventListener('click',async()=>{
   get('enable-scroll').title='Enable Interaction first. Native forwarding is available only for a captured browser tab.';
   startedAt=Date.now();session.startedAt=startedAt;pausedAt=0;pausedTotal=0;globalThis.MangoRecorderCursorV073?.begin?.();frameDriver?.start();light.className='record-dot active';
   timer=setInterval(()=>{const now=pausedAt||Date.now();elapsed.textContent=clock(now-startedAt-pausedTotal);const stats=frameDriver?.stats();if(stats&&get('chunk-info'))get('chunk-info').textContent=session.chunks.length+' fragments · '+stats.frames+' submitted frames · '+stats.driver+(stats.lagMs>2000&&recorder?.state==='recording'?' · VIDEO STALLED — preserve recovery':'');if(stats?.lagMs>5000&&recorder?.state==='recording'&&!session.stopped){warnings.push('Capture stopped because the encoder input stalled. Preserve recovery.');stopCapture('Encoder input stalled');}},200);
-  label('Recording '+w+'×'+h+' · '+(captureSource||'display')+' · '+(audio?(inputs.length?'audio':'audio track reserved · no granted source audio yet'):'NO AUDIO TRACK — waveform unavailable')+
+  label('Recording '+w+'×'+h+' · '+(cleanMaster?'CLEAN MASTER / LIVE PREVIEW':'COMPOSITE')+' · '+(captureSource||'display')+' · '+(audio?(inputs.length?'audio':'audio track reserved · no granted source audio yet'):'NO AUDIO TRACK — waveform unavailable')+
     (warnings.length?' · '+warnings.join(' '):''));
   if(controller?.setFocusBehavior)try{controller.setFocusBehavior('focus-capturing-application');}catch{}
  }catch(error){cleanup();recordState('error');label('Could not record: '+(error.name==='NotAllowedError'?'Permission denied or picker closed.':error.message));}
@@ -552,5 +560,5 @@ window.addEventListener('pagehide',()=>{globalThis.MangoRecorderCursorV073?.end?
 if(!navigator.mediaDevices?.getDisplayMedia||typeof MediaRecorder==='undefined'){
  label('Screen capture APIs unavailable here.');start.disabled=true;
 }
-globalThis.MangoRecorderCursorHostV073=Object.freeze({active:()=>active()&&recorder?.state==='recording',seconds:()=>startedAt&&!stopping?Math.max(0,((pausedAt||Date.now())-startedAt-pausedTotal)/1000):null,camera:()=>({...zoomState}),frame:()=>control.fitFrame(sourceVideo.videoWidth||composite.width,sourceVideo.videoHeight||composite.height,composite.width,composite.height),surface:()=>captureSource,linked:()=>linkedAvailable,source:()=>source,automationCapture:()=>({ready:!stopping&&(!start.disabled||recording)&&(!recording||recorder?.state==='recording'||recorder?.state==='paused'),reason:'Capture is starting or finalizing.',identity:recordingToken,phase:recorder?.state||get('record-state').dataset.state||'ready'})});
+globalThis.MangoRecorderCursorHostV073=Object.freeze({active:()=>active()&&recorder?.state==='recording',cleanMaster:()=>cleanMaster,seconds:()=>startedAt&&!stopping?Math.max(0,((pausedAt||Date.now())-startedAt-pausedTotal)/1000):null,camera:()=>({...zoomState}),frame:()=>control.fitFrame(sourceVideo.videoWidth||composite.width,sourceVideo.videoHeight||composite.height,composite.width,composite.height),surface:()=>captureSource,linked:()=>linkedAvailable,source:()=>source,automationCapture:()=>({ready:!stopping&&(!start.disabled||recording)&&(!recording||recorder?.state==='recording'||recorder?.state==='paused'),reason:'Capture is starting or finalizing.',identity:recordingToken,phase:recorder?.state||get('record-state').dataset.state||'ready'})});
 void checkRecovery();
