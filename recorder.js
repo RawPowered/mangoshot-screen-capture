@@ -529,7 +529,7 @@ start.addEventListener('click',async()=>{
 stop.addEventListener('click',()=>stopCapture());
 pause.addEventListener('click',()=>{
  if(!recorder||stopping)return;
- if(recorder.state==='recording'){recorder.pause();globalThis.MangoRecorderCursorV073?.suspend?.();pausedAt=Date.now();pause.textContent='Resume';light.className='record-dot idle';label('Recording paused');}
+ if(recorder.state==='recording'){pausedAt=Date.now();recorder.pause();globalThis.MangoRecorderCursorV073?.suspend?.();pause.textContent='Resume';light.className='record-dot idle';label('Recording paused');}
  else if(recorder.state==='paused'){recorder.resume();pausedTotal+=Date.now()-pausedAt;pausedAt=0;
    pause.textContent='Pause';light.className='record-dot active';label('Recording resumed');}
 });
@@ -550,5 +550,5 @@ window.addEventListener('pagehide',()=>{globalThis.MangoRecorderCursorV073?.end?
 if(!navigator.mediaDevices?.getDisplayMedia||typeof MediaRecorder==='undefined'){
  label('Screen capture APIs unavailable here.');start.disabled=true;
 }
-globalThis.MangoRecorderCursorHostV073=Object.freeze({active:()=>active()&&recorder?.state==='recording',camera:()=>({...zoomState}),frame:()=>control.fitFrame(sourceVideo.videoWidth||composite.width,sourceVideo.videoHeight||composite.height,composite.width,composite.height),surface:()=>captureSource,linked:()=>linkedAvailable,source:()=>source,automationCapture:()=>({ready:!stopping&&(!start.disabled||recording)&&(!recording||recorder?.state==='recording'||recorder?.state==='paused'),reason:'Capture is starting or finalizing.',identity:recordingToken,phase:recorder?.state||get('record-state').dataset.state||'ready'})});
+globalThis.MangoRecorderCursorHostV073=Object.freeze({active:()=>active()&&recorder?.state==='recording',seconds:()=>startedAt&&!stopping?Math.max(0,((pausedAt||Date.now())-startedAt-pausedTotal)/1000):null,camera:()=>({...zoomState}),frame:()=>control.fitFrame(sourceVideo.videoWidth||composite.width,sourceVideo.videoHeight||composite.height,composite.width,composite.height),surface:()=>captureSource,linked:()=>linkedAvailable,source:()=>source,automationCapture:()=>({ready:!stopping&&(!start.disabled||recording)&&(!recording||recorder?.state==='recording'||recorder?.state==='paused'),reason:'Capture is starting or finalizing.',identity:recordingToken,phase:recorder?.state||get('record-state').dataset.state||'ready'})});
 void checkRecovery();
