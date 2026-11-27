@@ -14,6 +14,7 @@
   ['workspaceTimeline','Workspace','Timeline workspace','Shift+3'],['importMedia','File','Import media','Alt+I'],
   ['mediaBin','Workspace','Show / Hide Media Library','Alt+B'],['addText','Graphics','Add title','T'],
   ['addCallout','Graphics','Add callout','G'],['toggleSnap','Graphics','Toggle snapping','S'],
+  ['motionStudio','Motion','Open Motion Studio',''],['motionAddKey','Motion','Add pose keyframe at playhead',''],['motionPrevKey','Motion','Previous transform keyframe',''],['motionNextKey','Motion','Next transform keyframe',''],
   ['exportVideo','File','Export / Render','Alt+E'],
   ['commandPalette','Help','Command search','Ctrl+Alt+K'],['showShortcuts','Help','Keyboard shortcut settings','Shift+/']
  ];
