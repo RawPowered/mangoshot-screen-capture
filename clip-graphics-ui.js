@@ -153,7 +153,7 @@
   const total=st.outputDuration();if(total){for(const item of items)el('graphic-track-'+item.track).appendChild(graphicChip(item,total));}
   globalThis.MangoTypeHUD?.sync?.();globalThis.MangoMotionUI?.sync?.();
  }
- function selectionOutline(ctx,seconds,w,h){const selected=activeLayer();
+ function selectionOutline(ctx,seconds,w,h,draft=null){const selected=draft||activeLayer();
   if(!selected||selected.locked||!selected.visible||seconds===null||seconds<selected.start||seconds>=selected.end)return;
   const r=MangoGraphics.animatedBounds?.(selected,w,h,ctx,seconds)||MangoGraphics.bounds(selected,w,h,ctx);ctx.save();ctx.globalAlpha=1;ctx.setLineDash([9,5]);
   ctx.lineWidth=Math.max(1.5,h/450);ctx.strokeStyle='#aee3fa';if(selected.kind==='shape'&&!selected.keyframes?.length){const g=rootShape().geometry(selected,w,h),size=Math.max(5,h/120);ctx.beginPath();for(const [i,p] of g.corners.entries())i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);ctx.closePath();ctx.stroke();ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(g.top.x,g.top.y);ctx.lineTo(g.rotate.x,g.rotate.y);ctx.stroke();ctx.fillStyle='#aee3fa';ctx.beginPath();ctx.arc(g.rotate.x,g.rotate.y,size,0,Math.PI*2);ctx.fill();ctx.fillRect(g.resize.x-size,g.resize.y-size,size*2,size*2);}else{ctx.strokeRect(r.x,r.y,r.w,r.h);ctx.setLineDash([]);if(!selected.keyframes?.length){ctx.fillStyle='#aee3fa';ctx.fillRect(r.x+r.w-9,r.y+r.h-9,16,16);}}ctx.restore();
@@ -192,7 +192,7 @@
  });
  const canvas=el('graphics-preview');
  function canvasPoint(e){const rect=canvas.getBoundingClientRect();return {x:(e.clientX-rect.left)/rect.width,y:(e.clientY-rect.top)/rect.height};}
- canvas.addEventListener('pointerdown',e=>{if(e.button!==0)return;const st=current(),now=st?.outputAt(st.video().currentTime);
+ canvas.addEventListener('pointerdown',e=>{if(e.button!==0)return;const st=current(),now=st?.motionPosition?.()??st?.outputAt(st.video().currentTime);
   if(!st||now===null)return;
   const p=canvasPoint(e),w=canvas.width,h=canvas.height;
   const visible=MangoGraphics.at(st.layers(),now).reverse();
@@ -201,7 +201,12 @@
    return p.x>=r.x/w-.018&&p.x<=(r.x+r.w)/w+.018&&p.y>=r.y/h-.025&&p.y<=(r.y+r.h)/h+.025;});
   if(!clicked){return;}e.preventDefault();canvas.setPointerCapture?.(e.pointerId);
   select(clicked.id,true);
-  if(clicked.keyframes?.length){st.message('Animated layer selected. Edit transform keyframes in Professional Compositor.');return;}
+  if(clicked.keyframes?.length){
+   const M=globalThis.MangoMotionCoreV0750,s=st.automationCapture(),t=M?.snap(clicked,now);
+   if(!M||!s.ready||t==null){st.message('Pause playback and place the playhead inside the animated layer.');try{canvas.releasePointerCapture?.(e.pointerId);}catch{}return;}
+   movingCanvas={id:clicked.id,pointerId:e.pointerId,startX:p.x,startY:p.y,animated:true,keys:clicked.keyframes.map(k=>({...k})),t,expected:s,moved:false,draft:null};
+   return;
+  }
   const box=MangoGraphics.bounds(clicked,w,h),size=20;
   const onHandle=st.selectedLayer()===clicked.id&&Math.abs(p.x*w-(box.x+box.w))<size&&Math.abs(p.y*h-(box.y+box.h))<size;
   movingCanvas={id:clicked.id,startX:p.x,startY:p.y,x:clicked.x,y:clicked.y,width:clicked.width,
@@ -210,6 +215,13 @@
  canvas.addEventListener('pointermove',e=>{if(!movingCanvas)return;
   const st=current(),l=st.layers().find(x=>x.id===movingCanvas.id);if(!l)return;
   const p=canvasPoint(e),dx=p.x-movingCanvas.startX,dy=p.y-movingCanvas.startY;
+  if(movingCanvas.animated){
+   const g=movingCanvas;if(e.pointerId!==g.pointerId)return;
+   if(Math.hypot(dx*canvas.width,dy*canvas.height)<2&&!g.moved)return;
+   try{const next=globalThis.MangoMotionCoreV0750.move(g.keys,g.t,dx,dy);st.previewGraphicMotion(g.id,next,g.expected);g.draft=next;g.moved=true;}
+   catch(err){movingCanvas=null;st.cancelGraphicMotion(g.id);st.message(err.message);try{canvas.releasePointerCapture?.(g.pointerId);}catch{}}
+   return;
+  }
   if(movingCanvas.shape&&['rotate','resize'].includes(movingCanvas.mode)){const o=movingCanvas.shape,w=canvas.width,h=canvas.height,S=rootShape(),next=movingCanvas.mode==='rotate'?{shape:{...o.shape,rotation:S.rotateTo(o,w,h,p.x*w,p.y*h,e.shiftKey)}}:S.resizeFrom(o,w,h,dx*w,dy*h,e.shiftKey);if(JSON.stringify({x:l.x,y:l.y,width:l.width,shape:l.shape})===JSON.stringify({x:next.x??l.x,y:next.y??l.y,width:next.width??l.width,shape:next.shape}))return;if(!movingCanvas.moved){st.beginLayerMove(l.id);movingCanvas.moved=true;}st.moveShapeGeometry(l.id,next);return;}
   if(movingCanvas.mode==='resize'){
    const width=Math.max(.1,Math.min(1-l.x,movingCanvas.width+dx));
@@ -226,10 +238,20 @@
    st.moveLayer(l.id,x,y);
   }
  });
- function endCanvas(){if(!movingCanvas)return;
-  if(movingCanvas.moved)current()?.endLayerMove();else current()?.selectLayer(movingCanvas.id);
+ function endCanvas(event){if(!movingCanvas)return;
+  const g=movingCanvas;
+  if(g.animated){
+   if(event?.pointerId!=null&&event.pointerId!==g.pointerId)return;
+   movingCanvas=null;const st=current();
+   try{if(event?.type==='pointerup'&&g.moved&&g.draft){if(Math.abs(st.motionPosition()-(st.layers().find(l=>l.id===g.id).start+(st.layers().find(l=>l.id===g.id).end-st.layers().find(l=>l.id===g.id).start)*g.t))>.02)throw Error('Playhead changed during gesture.');st.commitGraphicMotion(g.id,g.draft,g.expected);}else{st.cancelGraphicMotion(g.id);if(event?.type==='pointerup')st.selectLayer(g.id);}}
+   catch(err){st.cancelGraphicMotion(g.id);st.message(err.message);}
+   try{if(canvas.hasPointerCapture?.(g.pointerId))canvas.releasePointerCapture(g.pointerId);}catch{}return;
+  }
+  if(g.moved)current()?.endLayerMove();else current()?.selectLayer(g.id);
   movingCanvas=null;
  }
  for(const ev of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(ev,endCanvas);
+ globalThis.addEventListener('keydown',e=>{if(e.key==='Escape'&&movingCanvas?.animated){e.preventDefault();e.stopImmediatePropagation();endCanvas({type:'cancel'});}},true);
+ globalThis.addEventListener('blur',()=>{if(movingCanvas?.animated)endCanvas({type:'cancel'});});
  globalThis.MangoLayerUI={render,selectionOutline};render();
 })();
