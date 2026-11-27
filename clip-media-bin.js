@@ -101,7 +101,7 @@
    const project=root.MangoProjectV2.create({assets,clips:[...converted.timeline.clips,...staged.filter(c=>!active.some(a=>a.id===c.id)),...active],legacyV1:current.legacy,multitrack:multi});
    project.creative={zoomFrames:view()?.zoomFrames?.()||[],cursorDirector:view()?.cursorDirectorState?.()||undefined};
    root.MangoProjectV2.check(project);
-   const blob=new Blob([JSON.stringify(project,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob);
+   const blob=new Blob([JSON.stringify(project)],{type:'application/json'});if(blob.size>16*1024*1024)throw Error('Project metadata exceeds 16 MiB. Export a shorter session or retain the original local recording.');const url=URL.createObjectURL(blob);
    const anchor=document.createElement('a');anchor.href=url;anchor.download='MangoShot-v2-Project-'+Date.now()+'.json';
    document.body.append(anchor);anchor.click();anchor.remove();setTimeout(()=>URL.revokeObjectURL(url),15000);
    label('Project v2 saved. Media files remain separate and must be relinked when reopened.');
@@ -109,7 +109,7 @@
  }
  el('v06-save-project').onclick=save;
  el('v06-open-project').addEventListener('change',async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;
-  try{if(file.size>3*1024*1024)throw new Error('Project metadata exceeds 3 MiB.');
+  try{if(file.size>16*1024*1024)throw new Error('Project metadata exceeds 16 MiB.');
    const p=root.MangoProjectV2.check(JSON.parse(await file.text()));
    if(view()?.exporting?.()||registry.snapshot().some(a=>view()?.secondaryReferences?.(a.id)))throw Error('Close this editor and open the other project in a fresh session; current undo history references local media.');
    registry.clear();selected=null;loadedProject=p;staged=p.timeline.clips.filter(c=>c.staged);
