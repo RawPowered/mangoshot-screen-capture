@@ -5,6 +5,7 @@ const SCHEMA='mangoshot.cursor.director.v1',RECIPE='mangoshot.cursor.director.re
 const num=(v,a,b,k)=>{if(typeof v!=='number'||!Number.isFinite(v)||v<a||v>b)throw Error('Invalid '+k);return v;};
 const obj=(v,keys)=>{if(!v||typeof v!=='object'||Array.isArray(v)||Object.keys(v).some(k=>!keys.includes(k)))throw Error('Unexpected director field');return v;};
 const defaults={spotlight:true,ring:false,pulse:false,marker:'none',radius:9,dim:.55,feather:.35,color:'#d0ff87',smooth:180,markerSize:1};
+const live=id=>typeof id==='string'&&id.startsWith('live-capture-');
 const presets={spotlight:{},highlight:{spotlight:false,ring:true},tutorial:{ring:true,pulse:true,marker:'dot'},presentation:{spotlight:false,ring:true,pulse:true,marker:'arrow',color:'#ffe38a'},minimal:{spotlight:false,marker:'dot',markerSize:.8}};
 function style(raw={}){obj(raw,Object.keys(defaults));const s={...defaults,...raw};
 for(const k of ['spotlight','ring','pulse'])if(typeof s[k]!=='boolean')throw Error('Invalid '+k);
@@ -12,11 +13,11 @@ if(!['none','dot','arrow'].includes(s.marker)||!/^#[a-f0-9]{6}$/i.test(s.color)|
 num(s.radius,3,25,'radius');num(s.dim,0,.85,'dim');num(s.feather,0,.9,'feather');num(s.smooth,0,600,'smoothing');num(s.markerSize,.5,3,'marker size');return s;}
 function preset(k){if(!Object.prototype.hasOwnProperty.call(presets,k))throw Error('Unknown preset');return style(presets[k]);}
 function presetFile(p){obj(p,['schema','name','style']);if(p.schema!==PRESET||typeof p.name!=='string'||!p.name.trim()||p.name.trim().length>48||/[\u0000-\u001f]/.test(p.name))throw Error('Invalid preset');return {schema:PRESET,name:p.name.trim(),style:style(p.style)};}
-function regions(list,d=86400){if(!Array.isArray(list)||list.length>120)throw Error('Maximum 120 cursor regions');const a=list.map(r=>{
+function regions(list,d=86400){if(!Array.isArray(list)||list.length>240||list.filter(r=>live(r?.id)).length>120||list.filter(r=>!live(r?.id)).length>120)throw Error('Maximum 120 cursor regions per live/post track');const a=list.map(r=>{
 obj(r,['id','start','end','enabled','style']);if(typeof r.id!=='string'||!/^[\w-]{1,90}$/.test(r.id)||typeof r.enabled!=='boolean')throw Error('Invalid effect region');
 num(r.start,0,d,'source in');num(r.end,0,d,'source out');if(r.end-r.start<.03999)throw Error('Effect region too short');return {...r,style:style(r.style)};
 }).sort((a,b)=>a.start-b.start);
-if(new Set(a.map(r=>r.id)).size!==a.length)throw Error('Duplicate effect ID');for(let i=1;i<a.length;i++)if(a[i].start<a[i-1].end-.00001)throw Error('Overlapping cursor regions');return a;}
+if(new Set(a.map(r=>r.id)).size!==a.length)throw Error('Duplicate effect ID');for(const group of [a.filter(r=>live(r.id)),a.filter(r=>!live(r.id))])for(let i=1;i<group.length;i++)if(group[i].start<group[i-1].end-.00001)throw Error('Overlapping cursor regions on the same track');return a;}
 function check(raw,d=86400){obj(raw,['schema','regions','trace']);if(raw.schema!==SCHEMA)throw Error('Invalid director schema');const trace=raw.trace==null?null:c.trace(raw.trace),list=regions(raw.regions,d);
 if(list.length&&!trace)throw Error('Cursor path required');if(trace&&(trace.samples.some(s=>s[0]>d+.5)||trace.clicks?.some(s=>s[0]>d+.5)||trace.capture&&['sourceSamples','sourceClicks','cameraFrames','states'].some(k=>trace.capture[k].some(s=>s[0]>d+.5))))throw Error('Trace exceeds source duration');
 return {schema:SCHEMA,regions:list,trace};}
@@ -30,7 +31,8 @@ return regions([...list,...merged.map((r,i)=>({...r,id:id+'-'+i,enabled:true,sty
 function smoothPoint(t,time,ms,floor){const p=c.sampleAt(t,time);if(!p||!ms)return p;let x=p.x*2,y=p.y*2,w=2;for(let i=1;i<=4;i++){const at=time-ms*i/4000;if(at<floor)break;const q=c.sampleAt(t,at);if(!q)break;const k=(5-i)/5;x+=q.x*k;y+=q.y*k;w+=k;}return {x:x/w,y:y/w};}
 function transform(p,z){return p?c.point({x:z.x+(p.x-z.x)*z.scale,y:z.y+(p.y-z.y)*z.scale}):null;}
 function clickAt(trace,t,floor){const a=trace.clicks||[];let lo=0,hi=a.length;while(lo<hi){const m=(lo+hi)>>1;if(a[m][0]<=t)lo=m+1;else hi=m;}const p=a[lo-1];return p&&p[0]>=floor&&t-p[0]<.45?{x:p[1],y:p[2],age:(t-p[0])*1000}:null;}
-function paint(ctx,trace,list,parts,t,z,w,h){if(!trace||!list.length)return false;const m=sourceAt(parts,t);if(!m)return false;const r=list.find(x=>x.enabled&&m.source>=x.start&&m.source<x.end);if(!r)return false;const s=r.style,floor=Math.max(m.floor,r.start),p=transform(smoothPoint(trace,m.source,s.smooth,floor),z);
+function paint(ctx,trace,list,parts,t,z,w,h){if(!trace||!list.length)return false;const m=sourceAt(parts,t);if(!m)return false;const active=list.filter(x=>x.enabled&&m.source>=x.start&&m.source<x.end).sort((a,b)=>Number(live(b.id))-Number(live(a.id)));let painted=false;for(const r of active)painted=paintRegion(ctx,trace,r,m,z,w,h)||painted;return painted;}
+function paintRegion(ctx,trace,r,m,z,w,h){const s=r.style,floor=Math.max(m.floor,r.start),p=transform(smoothPoint(trace,m.source,s.smooth,floor),z);
 if(p){c.draw(ctx,p,c.config({spotlight:s.spotlight,ring:s.ring,radius:s.radius,dim:s.dim,feather:s.feather,color:s.color}),w,h);if(s.marker!=='none'){const x=p.x*w,y=p.y*h,k=Math.max(3,Math.min(w,h)*.009*s.markerSize);ctx.save();ctx.fillStyle=s.color;ctx.strokeStyle='#121814';ctx.lineWidth=Math.max(1,k*.2);ctx.beginPath();if(s.marker==='dot')ctx.arc(x,y,k,0,Math.PI*2);else{ctx.moveTo(x,y);ctx.lineTo(x+k*.25,y+k*2.8);ctx.lineTo(x+k*.9,y+k*1.7);ctx.lineTo(x+k*1.5,y+k*2.5);ctx.lineTo(x+k*1.9,y+k*2.1);ctx.lineTo(x+k*1.2,y+k*1.4);ctx.lineTo(x+k*2.4,y+k*1.2);ctx.closePath();}ctx.fill();ctx.stroke();ctx.restore();}}
 const click=s.pulse?clickAt(trace,m.source,floor):null,q=click&&transform(click,z);if(q){const k=Math.min(w,h)*s.radius/100;ctx.save();ctx.strokeStyle=s.color;ctx.lineWidth=Math.max(2,Math.min(w,h)*.003);ctx.globalAlpha=1-click.age/450;ctx.beginPath();ctx.arc(q.x*w,q.y*h,k*(.25+.65*click.age/450),0,Math.PI*2);ctx.stroke();ctx.restore();}return !!(p||q);}
 function smart(raw={}){obj(raw,['scale','transition','hold','limit','mode']);const s={scale:1.75,transition:.4,hold:1.2,limit:12,mode:'auto',...raw};num(s.scale,1.1,4,'scale');num(s.transition,.1,2,'transition');num(s.hold,.3,8,'hold');num(s.limit,1,40,'limit');if(!Number.isInteger(s.limit)||!['auto','clicks','dwell'].includes(s.mode))throw Error('Invalid smart settings');return s;}
