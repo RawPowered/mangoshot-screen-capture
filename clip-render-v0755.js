@@ -3,10 +3,10 @@
 (function(root){'use strict';
  function compose({ctx,media,width:w,height:h,time,transition,zoom,grade,cursor,secondary,graphics,strict=false,running=false}){
   if(!ctx||!Number.isFinite(time)||time<0||!w||!h)throw Error('Invalid composition frame');
+  if(!media||media.readyState<2||media.seeking){if(strict)throw Error('Decoded primary frame unavailable; export stopped.');return {ready:false,cursor:false,zoom:false};}
   ctx.save();try{
    ctx.setTransform(1,0,0,1,0,0);ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';ctx.filter='none';
    ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);
-   if(!media||media.readyState<2||media.seeking){if(strict)throw Error('Decoded primary frame unavailable; export stopped.');return {ready:false,cursor:false,zoom:false};}
    const inTransition=transition?.(ctx,media,time,w,h)===true;
    const z=inTransition?null:zoom(ctx,media,time,w,h);
    grade?.(ctx,time,w,h);
