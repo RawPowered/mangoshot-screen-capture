@@ -7,7 +7,7 @@
  const controls=el('div','ms50-body'),head=el('div','ms50-heading'),time=el('output','ms50-time'),summary=el('summary','','Motion Studio'),notice=el('p','ms50-note'),rail=el('div','ms50-rail'),grid=el('div','ms50-grid'),actions=el('div','ms50-actions'),status=el('p','ms50-status');
  status.setAttribute('role','status');status.setAttribute('aria-live','polite');time.setAttribute('aria-label','Motion playhead');
  host.append(summary,controls);head.append(el('strong','','TRANSFORM KEYFRAMES'),time);controls.append(head,notice,rail,grid,actions,status);
- let clipboard=null,signature='',lastState=null,focused=null,buttons=[],inputs={};
+ let clipboard=null,signature='',focused=null,buttons=[],inputs={};
  const specs=[['x','Position X (%)'],['y','Position Y (%)'],['scale','Scale (%)'],['rotation','Rotation (°)'],['opacity','Opacity (%)']];
  function state(seconds){
   const layer=V.layers().find(l=>l.id===V.selectedLayer()),at=Number.isFinite(seconds)?seconds:V.motionPosition(),t=M.snap(layer,at);
@@ -19,7 +19,7 @@
  function safe(fn){try{return fn();}catch(e){report(e.message,true);return false;}}
  function button(label,title,fn){const b=el('button','',label);b.type='button';b.title=title;b.setAttribute('aria-label',title);b.addEventListener('click',()=>safe(fn));return b;}
  const prev=button('◀','Previous transform keyframe',()=>jump(-1)),add=button('◆ Add key','Add keyframe at playhead',()=>addKey()),next=button('▶','Next transform keyframe',()=>jump(1)),remove=button('Remove','Remove keyframe at playhead',()=>{const s=ready();commit(s,M.remove(s.keys,s.t),'Keyframe removed. Ctrl+Z to undo.');return true;});
- const copy=button('Copy pose','Copy transform pose at playhead',()=>{const s=ready();clipboard=M.posePatch(C.pose(s.keys,s.t));refresh();report('Motion pose copied locally.');return true;});
+ const copy=button('Copy pose','Copy transform pose at playhead',()=>{const s=ready();clipboard=M.posePatch(s.index>=0?s.keys[s.index]:C.pose(s.keys,s.t));refresh();report('Motion pose copied locally.');return true;});
  const paste=button('Paste pose','Paste transform pose at playhead',()=>{if(!clipboard)return false;const s=ready();commit(s,M.upsert(s.keys,s.t,clipboard),'Pose pasted. Ctrl+Z to undo.');return true;});
  buttons=[prev,add,next,remove,copy,paste];actions.append(...buttons);
  function bindField(name,node){node.addEventListener('focus',()=>{try{focused={name,...ready()};}catch{focused=null;}});node.addEventListener('blur',()=>{focused=null;refresh();});node.addEventListener('change',()=>safe(()=>{
@@ -32,11 +32,11 @@
  function addKey(){const s=ready();commit(s,M.upsert(s.keys,s.t),s.keys.length?'Pose key at playhead.':'First pose key set. Move the playhead and change a value or drag the layer.');return true;}
  function seekKey(layer,key){V.seekOutput(layer.start+(layer.end-layer.start)*key.t);refresh(layer.start+(layer.end-layer.start)*key.t);}
  function jump(direction){const s=state();if(!s.layer||!s.keys.length)return false;const t=s.t??(s.at<s.layer.start?-1:2),key=M.adjacent(s.keys,t,direction);if(!key)return false;seekKey(s.layer,key);return true;}
- function refresh(seconds){if(!host.open)return;const s=state(seconds);lastState=s;const l=s.layer;
+ function refresh(seconds){if(!host.open)return;const s=state(seconds);const l=s.layer;
   time.textContent=Number.isFinite(s.at)?s.at.toFixed(3)+' s':'—';notice.textContent=!l?'Select a graphic layer.':l.locked?'Layer locked.':s.t===null?'Move the playhead inside '+l.name+'.':V.isPlaying()?'Pause playback to edit keyframes.':s.keys.length?'Animated pose · drag the layer at the playhead to auto-key position.':'Set the first key, then move the playhead to animate.';
   const sig=JSON.stringify([l?.id,s.keys]);if(sig!==signature){signature=sig;rail.replaceChildren();if(!s.keys.length)rail.append(el('span','ms50-empty','No transform keys'));for(const [i,k] of s.keys.entries()){const b=button('◆ '+(l.start+(l.end-l.start)*k.t).toFixed(2)+'s','Go to transform keyframe '+(i+1),()=>{seekKey(l,k);return true;});b.dataset.index=String(i);rail.append(b);}}
   for(const b of rail.querySelectorAll('button'))b.setAttribute('aria-current',String(Number(b.dataset.index)===s.index));
-  if(l&&s.t!==null){const pose=C.pose(s.keys,s.t);for(const [name,n] of Object.entries(inputs)){if(d.activeElement===n&&focused?.name===name)continue;n.value=name==='ease'?pose.ease:String(Math.round(pose[name]*M.fields[name].factor*100)/100);}}else for(const n of Object.values(inputs))if(n!==d.activeElement)n.value='';
+  if(l&&s.t!==null){const pose=s.index>=0?s.keys[s.index]:C.pose(s.keys,s.t);for(const [name,n] of Object.entries(inputs)){if(d.activeElement===n&&focused?.name===name)continue;n.value=name==='ease'?pose.ease:String(Math.round(pose[name]*M.fields[name].factor*100)/100);}}else for(const n of Object.values(inputs))if(n!==d.activeElement)n.value='';
   for(const n of Object.values(inputs))n.disabled=!s.ready;
   add.disabled=!s.ready||(s.keys.length>=C.MAX_KEYS&&s.index<0);remove.disabled=!s.ready||s.index<0;copy.disabled=!s.ready;paste.disabled=!s.ready||!clipboard;
   prev.disabled=!l||!M.adjacent(s.keys,s.t??(s.at<l?.start?-1:2),-1);next.disabled=!l||!M.adjacent(s.keys,s.t??(s.at<l?.start?-1:2),1);
