@@ -157,7 +157,8 @@
  }
 
  async function generateFrames(automatic=false){
-  const st=state(),source=st?.url();if(!source||!st.duration())return;
+  const st=state(),source=st?.url();if(!source||!st.duration()||st.exporting())return;
+  if(sourceUrl&&sourceUrl!==source){for(const u of thumbnailUrls)if(u.startsWith('blob:'))URL.revokeObjectURL(u);thumbnailCache=[];thumbnailUrls=[];}
   const myGeneration=++generation,button=ui('make-thumbnails');
   generated=true;sourceUrl=source;activeGeneration=myGeneration;
   button.disabled=true;button.textContent='Generating…';reflowThumbnails();
@@ -182,7 +183,7 @@
     if(generation!==myGeneration||st.url()!==source)return;
     const sourceTime=Math.max(0,Math.min(st.duration()-.005,plan[i].source));
     const existing=thumbnailCache.find(c=>Math.abs(c.source-sourceTime)<.06);
-    if(existing)continue;
+    if(existing){button.textContent='Thumbnails '+(i+1)+'/'+plan.length;continue;}
     if(Math.abs(thumbVideo.currentTime-sourceTime)>.018){const done=wait(thumbVideo,'seeked');thumbVideo.currentTime=sourceTime;await done;}
     if(generation!==myGeneration||st.url()!==source)return;
     if(thumbVideo.readyState<2)await wait(thumbVideo,'loadeddata');if(thumbVideo.seeking||Math.abs(thumbVideo.currentTime-sourceTime)>.15)throw Error('Thumbnail frame not synchronized');
@@ -201,7 +202,7 @@
    }
    if(generation===myGeneration){reflowThumbnails();
     if(!automatic)st.message('Sequence-synchronized thumbnails ready. Cuts remain aligned after edits.');}
-  }catch(error){if(generation===myGeneration)st.message('Thumbnail analysis unavailable: '+error.message);}
+  }catch(error){if(generation===myGeneration){reflowThumbnails();st.message('Thumbnail analysis incomplete ('+thumbnailCache.length+' cached): '+error.message+' · Generate thumbnails to retry.');}}
   finally{thumbVideo?.pause?.();thumbVideo?.removeAttribute?.('src');thumbVideo?.load?.();thumbVideo?.remove?.();if(activeGeneration===myGeneration){activeGeneration=0;button.textContent='Generate thumbnails';st.updateControls?.();}}
  }
  function scheduleRegeneration(){
