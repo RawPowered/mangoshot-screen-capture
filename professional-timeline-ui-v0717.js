@@ -65,8 +65,8 @@
    const cancel=()=>{const g=down;down=null;if(keyCancel===cancel)keyCancel=null;mark.style.left=(100*k.t)+'%';try{if(g&&mark.hasPointerCapture?.(g.id))mark.releasePointerCapture(g.id);}catch{}};
    mark.addEventListener('pointercancel',cancel);mark.addEventListener('lostpointercapture',cancel);
    mark.addEventListener('pointerup',e=>{stop(e);const g=down;down=null;if(keyCancel===cancel)keyCancel=null;if(!g)return;if(!g.moved){V.selectLayer(layer.id,true);V.seekOutput(layer.start+(layer.end-layer.start)*k.t);return;}try{V.commitGraphicKeyTime(layer.id,index,g.value,g.stamp);}catch(err){mark.style.left=(100*k.t)+'%';V.message(err.message);}});
-   mark.addEventListener('click',e=>e.stopPropagation());mark.addEventListener('dblclick',e=>{stop(e);root.MangoCompositorUIV0714?.openAtKeyframe(layer.id,k.t);});
-   mark.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){stop(e);root.MangoCompositorUIV0714?.openAtKeyframe(layer.id,k.t);return;}if(['ArrowLeft','ArrowRight'].includes(e.key)&&!layer.locked){stop(e);try{V.commitGraphicKeyTime(layer.id,index,k.t+(e.key==='ArrowLeft'?-1:1)*(e.shiftKey?1:1/30)/(layer.end-layer.start),current().stamp);}catch(err){V.message(err.message);}}});
+   mark.addEventListener('click',e=>e.stopPropagation());mark.addEventListener('dblclick',e=>{stop(e);if(!root.MangoMotionStudioV0750?.openAtKeyframe(layer.id,k.t))root.MangoCompositorUIV0714?.openAtKeyframe(layer.id,k.t);});
+   mark.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){stop(e);if(!root.MangoMotionStudioV0750?.openAtKeyframe(layer.id,k.t))root.MangoCompositorUIV0714?.openAtKeyframe(layer.id,k.t);return;}if(['ArrowLeft','ArrowRight'].includes(e.key)&&!layer.locked){stop(e);try{V.commitGraphicKeyTime(layer.id,index,k.t+(e.key==='ArrowLeft'?-1:1)*(e.shiftKey?1:1/30)/(layer.end-layer.start),current().stamp);}catch(err){V.message(err.message);}}});
   }
  }
  root.addEventListener('keydown',e=>{if(e.key==='Escape'&&(gesture||keyCancel)){stop(e);e.stopImmediatePropagation();release(true);keyCancel?.();}},true);
