@@ -18,7 +18,7 @@ num(r.start,0,d,'source in');num(r.end,0,d,'source out');if(r.end-r.start<.03999
 }).sort((a,b)=>a.start-b.start);
 if(new Set(a.map(r=>r.id)).size!==a.length)throw Error('Duplicate effect ID');for(let i=1;i<a.length;i++)if(a[i].start<a[i-1].end-.00001)throw Error('Overlapping cursor regions');return a;}
 function check(raw,d=86400){obj(raw,['schema','regions','trace']);if(raw.schema!==SCHEMA)throw Error('Invalid director schema');const trace=raw.trace==null?null:c.trace(raw.trace),list=regions(raw.regions,d);
-if(list.length&&!trace)throw Error('Cursor path required');if(trace&&(trace.samples.some(s=>s[0]>d+.5)||trace.clicks?.some(s=>s[0]>d+.5)))throw Error('Trace exceeds source duration');
+if(list.length&&!trace)throw Error('Cursor path required');if(trace&&(trace.samples.some(s=>s[0]>d+.5)||trace.clicks?.some(s=>s[0]>d+.5)||trace.capture&&['sourceSamples','sourceClicks','cameraFrames','states'].some(k=>trace.capture[k].some(s=>s[0]>d+.5))))throw Error('Trace exceeds source duration');
 return {schema:SCHEMA,regions:list,trace};}
 function sections(parts){let t=0;return parts.map(p=>{const r={a:p.start,b:p.end,in:t,out:t+p.end-p.start};t=r.out;return r;});}
 function sourceAt(parts,t){const s=sections(parts);if(!Number.isFinite(t)||t<0||!s.length||t>s.at(-1).out+.00001)return null;const r=s.find(r=>t<r.out-.00001)||s.at(-1);return {source:Math.min(r.b,Math.max(r.a,r.a+t-r.in)),floor:r.a};}
