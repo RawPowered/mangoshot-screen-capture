@@ -96,7 +96,7 @@
   const b=rawBounds(ctx,layer),sc=scaleFor(layer),fx=merged(layer.effects);
   const style=b.style,baseColor=hex(layer.color,'#ffffff');
   ctx.save();ctx.translate(b.x,b.y);ctx.scale(sc.x,sc.y);
-  ctx.font=b.font;ctx.textBaseline='top';ctx.textAlign='left';
+  ctx.font=b.font;root.MangoImageEditorCore.spacing(ctx,b.layout.tracking,b.fontSize);ctx.textBaseline='top';ctx.textAlign='left';
   // Labels and callouts inherit their background plate; other text can enable one.
   const pane=style.panel||fx.panel.enabled;
   if(pane){
@@ -116,7 +116,7 @@
    grad.addColorStop(0,fx.gradient.from);grad.addColorStop(1,fx.gradient.to);fill=grad;
   }
   const glyphs=paint=>{
-   for(let i=0;i<b.lines.length;i++)paint(b.lines[i],b.padding,b.padding+i*b.lineHeight);
+   for(let i=0;i<b.lines.length;i++)paint(b.lines[i],b.padding+b.offsets[i],b.padding+i*b.lineHeight);
   };
   if(fx.glow.enabled){
    ctx.save();ctx.fillStyle=fx.glow.color;

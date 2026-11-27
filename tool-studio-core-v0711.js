@@ -7,12 +7,17 @@
   {id:'shapes',label:'Vector shapes',items:['rectangle','rounded-rectangle','ellipse','line','arrow','triangle','diamond','pentagon','hexagon','star','speech-bubble']},
   {id:'redact',label:'Privacy',items:['redact']},{id:'text',label:'Typography',items:['text']},{id:'mask',label:'Image masks',items:['mask-erase','mask-restore']}
  ].map(g=>Object.freeze({...g,items:Object.freeze(g.items)})));
+ const actions=Object.freeze({
+  'pin-fonts':{name:'Fonts',icon:'text',target:'ux40-creative-open-v079'},'pin-styles':{name:'Text styles',icon:'text',target:'ux45-shelf-styles'},'pin-shapes':{name:'Shapes',icon:'rectangle',target:'ux42-shapes'},'pin-fx':{name:'Effects Studio',icon:'settings',target:'ux40-effects-studio-menu-v0712'},'pin-brush':{name:'Brush Studio',icon:'pen',target:'bs-open-v0725'},'pin-pixels':{name:'Pixel selection',icon:'marquee',target:'ps-open-v0728'},'pin-filters':{name:'Raster filters',icon:'settings',target:'rl-open-v0727'},'pin-clone':{name:'Clone Stamp',icon:'pen',target:'ux41-tool-clone'},'pin-dodge':{name:'Dodge',icon:'pen',target:'ux41-tool-dodge'},'pin-burn':{name:'Burn',icon:'pen',target:'ux41-tool-burn'},'pin-fill':{name:'Bucket Fill',icon:'rectangle',target:'ux41-tool-fill'},'pin-gradient':{name:'Gradient',icon:'rectangle',target:'ux41-tool-gradient'}
+ });
+ const actionGroup=Object.freeze({id:'studios',label:'Creative studios & pixel tools',items:Object.freeze(Object.keys(actions))});
  const clipGroups=Object.freeze([{id:'edit',label:'Timeline editing',items:['tool-select','tool-razor','range-tool']},{id:'graphics',label:'Graphics',items:['add-text','add-callout']},{id:'automation',label:'Assisted editing',items:['autocut-toggle']}].map(g=>Object.freeze({...g,items:Object.freeze(g.items)})));
  const titles={select:'Select / Move',marquee:'Marquee selection',pen:'Pressure pen',highlighter:'Highlighter','erase-brush':'Brush eraser','erase-stroke':'Whole stroke eraser',rectangle:'Rectangle','rounded-rectangle':'Rounded rectangle',ellipse:'Ellipse',line:'Line',arrow:'Arrow',triangle:'Triangle',diamond:'Diamond',pentagon:'Pentagon',hexagon:'Hexagon',star:'Star','speech-bubble':'Speech bubble',redact:'Redact',text:'Text','mask-erase':'Mask erase','mask-restore':'Mask restore','tool-select':'Selection tool','tool-razor':'Razor tool','range-tool':'Range selection','add-text':'Add title','add-callout':'Add callout','autocut-toggle':'AutoCut'};
  const icons={'tool-select':'select','tool-razor':'razor','range-tool':'range','add-text':'text','add-callout':'callout','autocut-toggle':'autocut'};
+ for(const [id,a] of Object.entries(actions)){titles[id]=a.name;icons[id]=a.icon;}
  const valid=(g,id)=>g.items.includes(id);
  function preferences(raw={},studio='image'){
-  const gs=studio==='clip'?clipGroups:groups,all=gs.flatMap(g=>g.items);
+  const gs=studio==='clip'?clipGroups:groups,all=gs.flatMap(g=>g.items).concat(studio==='image'?actionGroup.items:[]);
   const last={};for(const g of gs)last[g.id]=valid(g,raw?.last?.[g.id])?raw.last[g.id]:g.items[0];
   const favorites=Array.isArray(raw?.favorites)?[...new Set(raw.favorites.filter(x=>all.includes(x)))].slice(0,12):[];
   return {last,favorites};
@@ -46,6 +51,6 @@
   const x=nearest([box.x,box.x+box.width/2,box.x+box.width],xs,dx),y=nearest([box.y,box.y+box.height/2,box.y+box.height],ys,dy);
   return {dx:dx+(x?.d||0),dy:dy+(y?.d||0),x:x?.v??null,y:y?.v??null};
  }
- const api=Object.freeze({groups,clipGroups,titles,icons,preferences,bounds,rect,intersects,align,snap});
+ const api=Object.freeze({groups,clipGroups,actions,actionGroup,titles,icons,preferences,bounds,rect,intersects,align,snap});
  root.MangoToolStudioV0711=api;if(typeof module==='object'&&module.exports)module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

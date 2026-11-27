@@ -22,7 +22,7 @@
  }
  function encode(bytes){let out='';for(let i=0;i<bytes.length;i+=32768)out+=String.fromCharCode(...bytes.subarray(i,i+32768));return btoa(out);}
  function decode(s){const raw=atob(s),a=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)a[i]=raw.charCodeAt(i);return a;}
- const common=['type','id','name','points','visible','locked','opacity','size','color','text','rotation','layerGroup','layerFx','effectStack','material','kind','vector','fontSize','fontFamily','fontWeight','scaleX','scaleY','styleId','effects','assetId','width','height','mask','cutoutKey','hardness','usePressure','brush','creativeFx','rasterFx','selectionMask','callout3d'];
+ const common=['type','id','name','points','visible','locked','opacity','size','color','text','rotation','layerGroup','layerFx','effectStack','material','kind','vector','fontSize','fontFamily','fontWeight','textLayout','scaleX','scaleY','styleId','effects','assetId','width','height','mask','cutoutKey','hardness','usePressure','brush','creativeFx','rasterFx','selectionMask','callout3d'];
  function points(a,unit,budget){if(!Array.isArray(a)||!a.length||a.length>32000)fail('Invalid layer points.');budget.n+=a.length;if(budget.n>MAX_POINTS)fail('Project point budget exceeded.');return a.map(p=>{keys(p,['x','y','p']);if(!finite(p.x,unit?0:-1000000,unit?1:1000000)||!finite(p.y,unit?0:-1000000,unit?1:1000000)||own(p,'p')&&!finite(p.p,0,1))fail('Invalid point coordinate.');return {...p};});}
  const checkOptional=(l,k,fn)=>{if(own(l,k)&&!fn(l[k]))fail('Invalid layer '+k+'.');};
  function layer(l,budget,cores){
@@ -34,7 +34,7 @@
   if(own(l,'creativeFx')){const E=root.MangoCreativeEffectsV0726;if(!E||!E.eligible(l))fail('Creative effects require a supported unprotected layer.');n.creativeFx=E.check(l.creativeFx);}
   if(own(l,'brush')){if(!['pen','highlighter'].includes(l.type)||!root.MangoBrushV0725)fail('Brush profile requires an advanced pen or highlighter stroke.');n.brush=root.MangoBrushV0725.check(l.brush);}
   if(l.type!=='image'&&['width','height'].some(k=>own(l,k)))fail('Image geometry requires an image layer.');
-  if(l.type!=='text'&&['fontSize','fontFamily','fontWeight','scaleX','scaleY','styleId'].some(k=>own(l,k)))fail('Text styling requires a text layer.');
+  if(l.type!=='text'&&['fontSize','fontFamily','fontWeight','textLayout','scaleX','scaleY','styleId'].some(k=>own(l,k)))fail('Text styling requires a text layer.');
   if(own(l,'kind')&&!shapes.has(l.kind))fail('Unsupported shape.');
   for(const k of ['name','text'])checkOptional(l,k,v=>text(v,k==='name'?200:1000));
   for(const k of ['visible','locked','usePressure'])checkOptional(l,k,v=>typeof v==='boolean');
@@ -56,6 +56,7 @@
    checkOptional(l,'fontSize',v=>finite(v,.1,10000));for(const k of ['scaleX','scaleY'])checkOptional(l,k,v=>finite(v,.08,25));
    checkOptional(l,'fontFamily',v=>text(v,80)&&/^[a-zA-Z0-9_-]+$/.test(v));checkOptional(l,'fontWeight',v=>(typeof v==='string'||typeof v==='number')&&['100','200','300','400','500','600','700','800','900'].includes(String(v)));
    checkOptional(l,'styleId',v=>['plain','title','label','callout'].includes(v));
+   if(own(l,'textLayout')){if(!root.MangoImageEditorCore?.checkTextLayout)fail('Text layout runtime unavailable.');n.textLayout=root.MangoImageEditorCore.checkTextLayout(l.textLayout);}
    if(l.effects!=null){const defaults=cores.text.initial();keys(l.effects,Object.keys(defaults));for(const [k,v] of Object.entries(l.effects)){keys(v,Object.keys(defaults[k]));for(const [f,val] of Object.entries(v)){const d=defaults[k][f];if(typeof d==='boolean'?typeof val!=='boolean':typeof d==='number'?!finite(val,-360,360):!rgb(val))fail('Invalid text effect.');}}n.effects=cores.text.merged(l.effects);}
   }else if(l.effects!=null)fail('Text effects require a text layer.');
   if(l.type==='image'){
@@ -69,7 +70,7 @@
  }
  function check(p,cores){
   keys(p,p?.version>=2?['format','version','name','width','height','base','layers','assets','mattes','composition']:['format','version','name','width','height','base','layers','assets','mattes']);
-  if(p.format!=='MangoShotImage'||![1,2,3,4,5,6,7,8,9,10,11].includes(p.version)||!text(p.name,120)||!p.name.trim())fail('Unsupported image project format or version.');
+  if(p.format!=='MangoShotImage'||![1,2,3,4,5,6,7,8,9,10,11,12].includes(p.version)||!text(p.name,120)||!p.name.trim())fail('Unsupported image project format or version.');
   dimensions(p.width,p.height);pngHeader(p.base,p.width,p.height);
   if(!Array.isArray(p.layers)||p.layers.length>MAX_LAYERS||!Array.isArray(p.assets)||p.assets.length>128||!Array.isArray(p.mattes)||p.mattes.length>128)fail('Project layer or asset limit exceeded.');
   const budget={n:0},layers=p.layers.map(l=>layer(l,budget,cores)),ids=new Set(),assets=new Map(),mattes=new Map();let total=p.width*p.height,encoded=p.base.length;
@@ -89,7 +90,8 @@
   if(layers.some(l=>l.callout3d?.mode==='spatial')&&p.version<8)fail('Spatial arrows require project version 8 or newer.');
   if(layers.some(l=>l.callout3d?.occlusion?.length)&&p.version<9)fail('Foreground masks require project version 9 or newer.');
   if(layers.some(l=>l.callout3d?.mode==='spatial'&&(l.callout3d.shape!=='arrow'||l.callout3d.camera?.roll))&&p.version<10)fail('Advanced spatial primitives and camera roll require project version 10 or newer.');
-  if(layers.some(l=>l.callout3d?.mode==='scene')&&p.version!==11)fail('Unified scenes require project version 11.');
+  if(layers.some(l=>l.callout3d?.mode==='scene')&&p.version<11)fail('Unified scenes require project version 11 or newer.');
+  if(layers.some(l=>own(l,'textLayout'))&&p.version<12)fail('Text layout requires project version 12 or newer.');
   root.MangoSelectionV0728?.requireProject(layers,l=>assets.get(l.assetId),cores.compositor);
   root.MangoRasterLayerV0727?.requireProject(layers,l=>assets.get(l.assetId));
   root.MangoCreativeEffectsV0726?.requireBudget(layers,p.width,p.height,cores.compositor);

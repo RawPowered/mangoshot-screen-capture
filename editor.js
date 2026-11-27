@@ -44,7 +44,7 @@ function setReady(value){
  document.getElementById('undo').disabled=!value||!history.length;
  const redo=document.getElementById('redo');if(redo)redo.disabled=!value||!redoHistory.length;
  renderStrokeList();updateEditorControls();
- globalThis.MangoPixelUIV0741?.refresh?.();
+ globalThis.MangoPixelUIV0741?.refresh?.();globalThis.MangoTextLayoutUIV0746?.refresh?.();
 }
 function image(dataUrl){return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error('Screenshot image failed to decode.'));img.src=dataUrl;});}
 function zoom(){if(!base.width)return;const selected=document.querySelector('#zoom').value;
@@ -384,7 +384,7 @@ function syncSelectedText(){
   button.setAttribute('aria-pressed',String(button.dataset.textPreset===textPreset));
  const out=document.getElementById('text-size-readout');
  if(out&&textFontSize)out.textContent=textFontSize.value+' px';
- syncTextEffects();updateEditorControls();updateSelectionBox();
+ syncTextEffects();updateEditorControls();updateSelectionBox();globalThis.MangoTextLayoutUIV0746?.refresh?.();
 }
 function syncTextEffects(){
  const layer=selectedStroke(),fx=typeEffects?.merged?.(layer?.effects);
@@ -2124,12 +2124,12 @@ globalThis.MangoImageDocumentV0723=Object.freeze({
     const c=document.createElement('canvas');c.width=a.width;c.height=a.height;c.getContext('2d').drawImage(a.image,0,0);assets.push({id:l.assetId,name:a.name,width:a.width,height:a.height,png:c.toDataURL('image/png')});c.width=c.height=1;assetIds.add(l.assetId);}
    if(l.cutoutKey&&!matteIds.has(l.cutoutKey)){const m=registry.get(l.cutoutKey);if(!m)throw Error('Missing image matte.');mattes.push({id:l.cutoutKey,width:m.width,height:m.height,alpha:D.encode(m.data)});matteIds.add(l.cutoutKey);}
   }
-  const comp=advancedComp?.reconcile(composition,strokes),v2=advancedComp?.active(comp),v3=layers.some(l=>l.brush),v4=layers.some(l=>l.creativeFx),v5=layers.some(l=>Array.isArray(l.rasterFx)),v6=layers.some(l=>l.selectionMask),v7=layers.some(l=>l.callout3d),v8=layers.some(l=>l.callout3d?.mode==='spatial'),v9=layers.some(l=>l.callout3d?.occlusion?.length),v10=layers.some(l=>l.callout3d?.mode==='spatial'&&(l.callout3d.shape!=='arrow'||l.callout3d.camera?.roll)),v11=layers.some(l=>l.callout3d?.mode==='scene');
-  return D.check({format:'MangoShotImage',version:v11?11:v10?10:v9?9:v8?8:v7?7:v6?6:v5?5:v4?4:v3?3:v2?2:1,name,width:base.width,height:base.height,base:base.toDataURL('image/png'),layers,assets,mattes,...(v2||v3||v4||v5||v6||v7?{composition:comp}:{})},this.cores());
+  const comp=advancedComp?.reconcile(composition,strokes),v2=advancedComp?.active(comp),v3=layers.some(l=>l.brush),v4=layers.some(l=>l.creativeFx),v5=layers.some(l=>Array.isArray(l.rasterFx)),v6=layers.some(l=>l.selectionMask),v7=layers.some(l=>l.callout3d),v8=layers.some(l=>l.callout3d?.mode==='spatial'),v9=layers.some(l=>l.callout3d?.occlusion?.length),v10=layers.some(l=>l.callout3d?.mode==='spatial'&&(l.callout3d.shape!=='arrow'||l.callout3d.camera?.roll)),v11=layers.some(l=>l.callout3d?.mode==='scene'),v12=layers.some(l=>Object.hasOwn(l,'textLayout'));
+  return D.check({format:'MangoShotImage',version:v12?12:v11?11:v10?10:v9?9:v8?8:v7?7:v6?6:v5?5:v4?4:v3?3:v2?2:1,name,width:base.width,height:base.height,base:base.toDataURL('image/png'),layers,assets,mattes,...(v2||v3||v4||v5||v6||v7||v12?{composition:comp}:{})},this.cores());
  },
  async open(raw,stamp){
   const D=globalThis.MangoImageDocumentCoreV0723,initial=this.state();if(!initial.canOpen||initial.stamp!==stamp)throw Error('Image editor is busy.');
-  const p=D.check(raw,this.cores());if(p.layers.some(l=>['spatial','scene'].includes(l.callout3d?.mode)))globalThis.MangoSpatialRendererV0730.requireRenderer();const source=await image(p.base),nextAssets=new Map(),nextMattes=new Map();
+  const p=D.check(raw,this.cores());if(p.layers.some(l=>l.textLayout?.tracking)&&!('letterSpacing' in pen))throw Error('This project requires Canvas text spacing support.');if(p.layers.some(l=>['spatial','scene'].includes(l.callout3d?.mode)))globalThis.MangoSpatialRendererV0730.requireRenderer();const source=await image(p.base),nextAssets=new Map(),nextMattes=new Map();
   if(source.naturalWidth!==p.width||source.naturalHeight!==p.height)throw Error('Base image decode dimensions differ.');
   for(const a of p.assets){const decoded=await image(a.png);if(decoded.naturalWidth!==a.width||decoded.naturalHeight!==a.height)throw Error('Asset decode dimensions differ.');nextAssets.set(a.id,{image:decoded,width:a.width,height:a.height,name:a.name,version:0});}
   for(const m of p.mattes)nextMattes.set(m.id,{width:m.width,height:m.height,data:D.decode(m.alpha)});
@@ -2241,6 +2241,11 @@ globalThis.MangoLayerImageV0712=Object.freeze({
  }
 });
 
+globalThis.MangoTextLayoutV0746=Object.freeze({
+ state(){const l=selectedStroke(),cap=globalThis.MangoImageAutomationV075?.capture();return {ready:!!cap?.ready&&!documentLoadPending&&!l?.locked&&!!l&&!sizeGesture&&!textDraft,stamp:JSON.stringify([automationRevisionV075,selectedText]),layer:l?cloneStrokes(l):null,supported:'letterSpacing' in pen};},
+ apply(value,stamp){const s=this.state();if(!s.ready||s.stamp!==stamp)throw Error('Text selection changed. Reopen or reset the layout controls.');const next=editorCore.checkTextLayout(value);if(next.tracking!==0&&!s.supported)throw Error('Text spacing is not supported by this browser.');const l=selectedStroke(),defaults=editorCore.defaultTextLayout(),previous=l.textLayout||defaults;if(Object.keys(defaults).every(k=>next[k]===previous[k]))return false;
+  snapshot();const changed={...l};if(Object.keys(defaults).every(k=>next[k]===defaults[k]))delete changed.textLayout;else changed.textLayout=next;strokes[selectedText]=changed;redraw();setReady(ready);syncSelectedText();syncLayerProperties();label('Text layout applied. Ctrl+Z restores it.');return true;}
+});
 globalThis.MangoCreativeImageV079=Object.freeze({
  state(){const l=selectedStroke();return {ready:globalThis.MangoImageAutomationV075?.capture().ready===true,selected:!!l&&!l.locked,font:l?.fontFamily||'sans',weight:l?.fontWeight||editorCore?.styles?.[l?.styleId]?.weight||'600',text:l?.text||''};},
  apply(kind,id,w){
