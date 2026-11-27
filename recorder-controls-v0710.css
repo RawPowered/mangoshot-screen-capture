@@ -61,3 +61,11 @@ body.studio-recorder .capture-context p{font-size:11px;line-height:1.4}
  body.studio-recorder .capture-context{max-height:86px}
  body.studio-recorder .studio-bottom{max-height:78px}
 }
+
+/* Explicit native monitor session, compact full-width controls. */
+.native-cursor-v0753{border-top:1px solid var(--carbon-line,#485058);margin-top:10px;padding-top:10px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.native-cursor-v0753 h4,.native-cursor-v0753 label,.native-cursor-v0753 p{grid-column:1/-1;margin:0;min-width:0}
+.native-cursor-v0753 h4{font-size:12px;color:var(--carbon-text,#e5e9ee)}
+.native-cursor-v0753 select{max-width:100%;width:100%}
+.native-cursor-v0753 #native-connect-v0753{grid-column:1/-1}
+.native-cursor-v0753 #native-status-v0753{font-size:12px;line-height:1.45;overflow-wrap:anywhere}
