@@ -20,3 +20,23 @@ body.studio-image #ux40-shelf .ux40-shelf-strip[hidden],body.studio-image #ux40-
 body.studio-image .ux46-shelf-actions button{padding:4px 6px;font-size:10px;white-space:nowrap;min-height:27px}
 body.studio-image .ux46-shelf-actions button[aria-pressed=true]{border-color:var(--carbon-accent-edge);color:var(--carbon-accent)}
 @media(max-width:720px){.ux46-shelf-actions{gap:2px;padding-left:3px}.ux46-shelf-actions button{font-size:10px}.ux46-pins .ux40-tool-label{display:none}}
+
+/* Keep the actual typography navigation visible while the pinned layer stack takes room. */
+body.studio-image #image-panel-type:has(.ty46-type-nav)>.image-pane-title,
+body.studio-image #image-panel-type:has(.ty46-type-nav)>p.inspector-hint{display:none!important}
+body.studio-image #text-properties .ty46-type-nav{position:sticky;top:-10px;z-index:5;background:var(--carbon-panel);padding:5px 0 4px;border-bottom:1px solid var(--carbon-line);min-width:0}
+body.studio-image #text-properties .ty46-type-nav .ty45-top{margin-bottom:4px}
+body.studio-image #text-properties .ty46-type-nav .ty45-tabs{margin-bottom:0}
+body.studio-image #text-properties #ty45-layout-panel{gap:5px}
+body.studio-image #ty45-layout-panel .ty46-preview-box{border:1px solid var(--carbon-line);padding:3px}
+body.studio-image #ty45-layout-panel .ty46-preview-box>summary{font-size:10px;font-weight:600;color:var(--carbon-secondary);cursor:pointer}
+body.studio-image #ty45-layout-panel .ty46-preview{height:76px;aspect-ratio:auto;object-fit:contain;border:0}
+body.studio-image #ty45-layout-panel .ty46-fields{gap:5px}
+body.studio-image #ty45-layout-panel .ty46-scalar{padding:3px 0;gap:2px 6px}
+body.studio-image #ty45-layout-panel .ty46-control .ty45-exact{height:27px;min-height:27px;max-width:55px;width:55px;padding:3px}
+body.studio-image #ty45-layout-panel .ty46-scalar>input[type=range]{height:14px}
+body.studio-image #ty45-layout-panel .ty46-choice{gap:3px}
+body.studio-image #ty45-layout-panel .ty46-segments button{min-height:27px;padding:4px 2px}
+body.studio-image #text-properties #ty45-layout-panel .ty46-segments button[aria-pressed=false]:not(:hover){color:var(--carbon-text)!important;background:var(--carbon-panel)!important;border-color:var(--carbon-line)!important;box-shadow:none!important}
+body.studio-image #text-properties #ty45-layout-panel .ty46-segments button[aria-pressed=true]{color:var(--carbon-accent)!important;background:var(--carbon-active)!important;border-color:var(--carbon-accent-edge)!important;box-shadow:inset 0 -2px 0 var(--carbon-accent)!important}
+body.studio-image #ty45-layout-panel .ty46-status:empty{display:none}
