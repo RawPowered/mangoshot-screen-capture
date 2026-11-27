@@ -188,7 +188,7 @@ function supportedRecorder(output){for(const mimeType of mimeCandidates){if(!Med
 function showResult(blob,partial=false,sessionId=null,capture=null){if(!blob?.size){label('No encoded data received. Check Recover recording before closing.');return;}
  lastBlob=blob;lastSessionId=sessionId;lastCapture=capture;get('result').hidden=false;get('save-cursor-v0751').disabled=!lastCursorTrace;
  get('result-meta').textContent=(blob.size/1048576).toFixed(1)+' MiB · '+(blob.type.includes('mp4')?'MP4':'WebM')+
- (partial?' · INCOMPLETE, attempt recovery':capture?.master==='clean'?' · CLEAN MASTER (effects separate)':' · composite capture stopped')+(capture?' · '+capture.seconds.toFixed(1)+'s elapsed · '+capture.frames+' submitted frames · '+capture.driver:'')+(lastCursorTrace?' · cursor data retained'+(lastCursorTrace.truncated||lastCursorTrace.capture?.truncated?' (truncated)':''):'');
+ (partial?' · INCOMPLETE, attempt recovery':capture?.master==='clean'?' · CLEAN MASTER (effects separate)':' · composite capture stopped')+(capture?' · '+capture.seconds.toFixed(1)+'s elapsed · '+capture.frames+' submitted frames · '+capture.driver:'')+(lastCursorTrace?' · '+lastCursorTrace.samples.filter(s=>s[1]!==null).length+' frame cursor samples · '+(lastCursorTrace.capture?.sourceSamples?.filter(s=>s[1]!==null).length||0)+' authorized source samples'+(lastCursorTrace.truncated||lastCursorTrace.capture?.truncated?' (truncated)':'')+(!lastCursorTrace.capture?.sourceSamples?.some(s=>s[1]!==null)?' · preview-only / legacy tracking':''):' · no cursor data');
  if(!partial)saveBlob(blob,capture?.master==='clean'?'Clean master finalized. Open in Clip Studio to reconstruct editable effects; the downloaded video excludes MangoShot effects.':'Video finalized. Original download requested; confirm it in your Downloads folder.');
  else label('Encoder delayed: the flushed chunks are available for emergency saving; file may be incomplete.');
 }
@@ -216,7 +216,7 @@ function finishSession(session,partial=false){
  if(session.watchdog)clearTimeout(session.watchdog);session.watchdog=0;
  if(partial)session.partial=true;else session.complete=true;
  const blob=new Blob(session.chunks,{type:session.mime||'video/webm'});
- const isCurrent=activeSession===session;session.capture=session.capture||captureSummary(session);if(session.storage&&session.capture)session.storage.capture=session.capture;
+ const isCurrent=activeSession===session;session.capture=session.capture||captureSummary(session);if(isCurrent&&!session.stopped&&!session.cursorTrace){try{session.cursorTrace=globalThis.MangoRecorderCursorV073?.end?.()||null;}catch(e){warnings.push('Cursor finalization failed: '+e.message);}}if(session.storage&&session.capture)session.storage.capture=session.capture;
  if(isCurrent){
   finalized=true;partialShown=partial;cleanup();recordState(partial?'recovery':'complete');
   lastCursorTrace=partial?null:session.cursorTrace||null;
@@ -231,7 +231,7 @@ function finishSession(session,partial=false){
 function stopCapture(reason='Stopped by user'){
  const session=activeSession;
  if(!session||session.stopped||!recorder)return;
- session.capture=captureSummary(session);session.cursorTrace=globalThis.MangoRecorderCursorV073?.end?.()||null;
+ session.capture=captureSummary(session);try{session.cursorTrace=globalThis.MangoRecorderCursorV073?.end?.()||null;}catch(e){warnings.push('Cursor finalization failed: '+e.message+'; video preserved.');session.cursorTrace=null;}
  session.stopped=true;stopping=true;recording=false;stop.disabled=true;pause.disabled=true;
  stopClock();recordState('stopped');label('Capture stopped. Finalizing video file separately…');
  try{if(session.encoder.state!=='inactive')session.encoder.stop();}
