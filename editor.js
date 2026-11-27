@@ -1739,6 +1739,7 @@ document.querySelector('#clear').addEventListener('click',()=>{if(strokes.length
  selectedText=-1;selectedImage=-1;selectedObject=-1;redraw();setReady(true);}});
 function isTyping(target){return !!target?.matches?.('input,textarea,select,[contenteditable],[role="textbox"],[role="slider"]');}
 window.addEventListener('keydown',event=>{
+ if(globalThis.MangoPrecisionCanvasUIV0748?.handleKey?.(event))return;
  if(rotationDrag){if(event.key==='Escape'){finishRotation(null,true);}event.preventDefault();event.stopImmediatePropagation?.();return;}
  if(document.getElementById('automation-dialog-v075')?.open||document.querySelector?.('dialog[open]')||event.target?.closest?.('dialog[open]')||!ready)return;
  if(event.key==='Escape'){
