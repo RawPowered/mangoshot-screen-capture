@@ -3,10 +3,12 @@ on:
   push:
     branches:
       - feature/v0.7.53-native-cursor-engine
+      - feature/v0.7.54-native-overlay-studio
     paths:
       - 'native/cursor-host/**'
       - 'native-cursor-*-v0753.js'
       - 'tests/native-cursor-v0753.cjs'
+      - 'tests/native-overlay-v0754.cjs'
       - 'cursor-recorder-v073.js'
       - 'cursor-capture-v0751.js'
       - 'recorder.js'
@@ -27,6 +29,7 @@ jobs:
           node --check cursor-recorder-v073.js
           node --check recorder.js
           node tests/native-cursor-v0753.cjs
+          if (Test-Path tests/native-overlay-v0754.cjs) { node tests/native-overlay-v0754.cjs; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } }
           node tests/cursor-capture-v0751.cjs
           node tests/clean-master-v0752.cjs
       - name: Rust unit tests and Windows compilation
