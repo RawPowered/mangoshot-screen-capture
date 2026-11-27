@@ -204,7 +204,7 @@
   if(clicked.keyframes?.length){
    const M=globalThis.MangoMotionCoreV0750,s=st.automationCapture(),t=M?.snap(clicked,now);
    if(!M||!s.ready||t==null){st.message('Pause playback and place the playhead inside the animated layer.');try{canvas.releasePointerCapture?.(e.pointerId);}catch{}return;}
-   movingCanvas={id:clicked.id,pointerId:e.pointerId,startX:p.x,startY:p.y,animated:true,keys:clicked.keyframes.map(k=>({...k})),t,expected:s,moved:false,draft:null};
+   movingCanvas={id:clicked.id,pointerId:e.pointerId,startX:p.x,startY:p.y,animated:true,keys:clicked.keyframes.map(k=>({...k})),t,at:now,expected:s,moved:false,draft:null};
    return;
   }
   const box=MangoGraphics.bounds(clicked,w,h),size=20;
@@ -217,8 +217,8 @@
   const p=canvasPoint(e),dx=p.x-movingCanvas.startX,dy=p.y-movingCanvas.startY;
   if(movingCanvas.animated){
    const g=movingCanvas;if(e.pointerId!==g.pointerId)return;
-   if(Math.hypot(dx*canvas.width,dy*canvas.height)<2&&!g.moved)return;
-   try{const next=globalThis.MangoMotionCoreV0750.move(g.keys,g.t,dx,dy);st.previewGraphicMotion(g.id,next,g.expected);g.draft=next;g.moved=true;}
+   const stationary=Math.hypot(dx*canvas.width,dy*canvas.height)<2;if(stationary&&!g.moved)return;
+   try{const next=stationary?g.keys:globalThis.MangoMotionCoreV0750.move(g.keys,g.t,dx,dy);st.previewGraphicMotion(g.id,next,g.expected);g.draft=next;g.moved=true;}
    catch(err){movingCanvas=null;st.cancelGraphicMotion(g.id);st.message(err.message);try{canvas.releasePointerCapture?.(g.pointerId);}catch{}}
    return;
   }
@@ -243,7 +243,7 @@
   if(g.animated){
    if(event?.pointerId!=null&&event.pointerId!==g.pointerId)return;
    movingCanvas=null;const st=current();
-   try{if(event?.type==='pointerup'&&g.moved&&g.draft){if(Math.abs(st.motionPosition()-(st.layers().find(l=>l.id===g.id).start+(st.layers().find(l=>l.id===g.id).end-st.layers().find(l=>l.id===g.id).start)*g.t))>.02)throw Error('Playhead changed during gesture.');st.commitGraphicMotion(g.id,g.draft,g.expected);}else{st.cancelGraphicMotion(g.id);if(event?.type==='pointerup')st.selectLayer(g.id);}}
+   try{if(event?.type==='pointerup'&&g.moved&&g.draft){if(!Number.isFinite(st.motionPosition())||Math.abs(st.motionPosition()-g.at)>.02)throw Error('Playhead changed during gesture.');st.commitGraphicMotion(g.id,g.draft,g.expected);}else{st.cancelGraphicMotion(g.id);if(event?.type==='pointerup')st.selectLayer(g.id);}}
    catch(err){st.cancelGraphicMotion(g.id);st.message(err.message);}
    try{if(canvas.hasPointerCapture?.(g.pointerId))canvas.releasePointerCapture(g.pointerId);}catch{}return;
   }
