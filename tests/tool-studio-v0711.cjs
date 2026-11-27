@@ -11,3 +11,5 @@ assert.deepEqual(C.snap(a.bounds,-8,-17,[],400,300,6),{dx:-10,dy:-20,x:0,y:0});
 const p=C.preferences({last:{select:'marquee',draw:'wrong'},favorites:['pen','pen','unknown','marquee']});assert.equal(p.last.select,'marquee');assert.equal(p.last.draw,'pen');assert.deepEqual(p.favorites,['pen','marquee']);
 assert.deepEqual(C.preferences({favorites:['pen','tool-razor']},'clip').favorites,['tool-razor']);
 console.log('Tool Studio preferences, alignment, spacing, marquee intersection and snap geometry passed');
+
+assert.deepEqual(C.preferences({favorites:['pin-clone','pin-fonts','pin-clone','pen','unknown']}).favorites,['pin-clone','pin-fonts','pen']);assert.deepEqual(C.preferences({favorites:['pin-clone','tool-razor']},'clip').favorites,['tool-razor']);assert.ok(C.actions['pin-clone'].target==='ux41-tool-clone');
