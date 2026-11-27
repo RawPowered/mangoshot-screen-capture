@@ -8,7 +8,7 @@
  status.setAttribute('role','status');status.setAttribute('aria-live','polite');time.setAttribute('aria-label','Motion playhead');
  host.append(summary,controls);head.append(el('strong','','TRANSFORM KEYFRAMES'),time);controls.append(head,notice,rail,grid,actions,status);
  let clipboard=null,signature='',focused=null,buttons=[],inputs={};
- const specs=[['x','Position X (%)'],['y','Position Y (%)'],['scale','Scale (%)'],['rotation','Rotation (°)'],['opacity','Opacity (%)']];
+ const specs=[['x','X offset (% frame)'],['y','Y offset (% frame)'],['scale','Scale (%)'],['rotation','Rotation (°)'],['opacity','Opacity (%)']];
  function state(seconds){
   const layer=V.layers().find(l=>l.id===V.selectedLayer()),at=Number.isFinite(seconds)?seconds:V.motionPosition(),t=M.snap(layer,at);
   return {layer,at,t,keys:layer?.keyframes||[],index:layer&&t!==null?M.nearest(layer.keyframes||[],t):-1,ready:!!layer&&!layer.locked&&!V.exporting()&&!V.isPlaying()&&!V.multitrackBusy()&&t!==null};
@@ -34,7 +34,7 @@
  function jump(direction){const s=state();if(!s.layer||!s.keys.length)return false;const t=s.t??(s.at<s.layer.start?-1:2),key=M.adjacent(s.keys,t,direction);if(!key)return false;seekKey(s.layer,key);return true;}
  function refresh(seconds){if(!host.open)return;const s=state(seconds);const l=s.layer;
   time.textContent=Number.isFinite(s.at)?s.at.toFixed(3)+' s':'—';notice.textContent=!l?'Select a graphic layer.':l.locked?'Layer locked.':s.t===null?'Move the playhead inside '+l.name+'.':V.isPlaying()?'Pause playback to edit keyframes.':s.keys.length?'Animated pose · drag the layer at the playhead to auto-key position.':'Set the first key, then move the playhead to animate.';
-  const sig=JSON.stringify([l?.id,s.keys]);if(sig!==signature){signature=sig;rail.replaceChildren();if(!s.keys.length)rail.append(el('span','ms50-empty','No transform keys'));for(const [i,k] of s.keys.entries()){const b=button('◆ '+(l.start+(l.end-l.start)*k.t).toFixed(2)+'s','Go to transform keyframe '+(i+1),()=>{seekKey(l,k);return true;});b.dataset.index=String(i);rail.append(b);}}
+  const sig=JSON.stringify([l?.id,l?.start,l?.end,s.keys]);if(sig!==signature){signature=sig;rail.replaceChildren();if(!s.keys.length)rail.append(el('span','ms50-empty','No transform keys'));for(const [i,k] of s.keys.entries()){const b=button('◆ '+(l.start+(l.end-l.start)*k.t).toFixed(2)+'s','Go to transform keyframe '+(i+1),()=>{seekKey(l,k);return true;});b.dataset.index=String(i);rail.append(b);}}
   for(const b of rail.querySelectorAll('button'))b.setAttribute('aria-current',String(Number(b.dataset.index)===s.index));
   if(l&&s.t!==null){const pose=s.index>=0?s.keys[s.index]:C.pose(s.keys,s.t);for(const [name,n] of Object.entries(inputs)){if(d.activeElement===n&&focused?.name===name)continue;n.value=name==='ease'?pose.ease:String(Math.round(pose[name]*M.fields[name].factor*100)/100);}}else for(const n of Object.values(inputs))if(n!==d.activeElement)n.value='';
   for(const n of Object.values(inputs))n.disabled=!s.ready;
