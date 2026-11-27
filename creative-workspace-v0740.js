@@ -29,7 +29,7 @@
   real(precision,'bs-open-v0725','pen','Brush','Precision Brush Studio');
   real(precision,'ps-open-v0728','marquee','Pixels','Pixel Selection and Mask Studio');
   real(precision,'rl-open-v0727','gradient','Filters','Editable Raster Filters');
-  const fx=group('Effects and design');proxy(fx,'effects-studio-menu-v0712','fx','FX','Effects Studio for selected layers',()=>root.MangoLayerStudioUIV0712?.open('effects'));real(fx,'ce-open-v0726','gradient','Style','Creative gradients and layer styles');real(fx,'ac-open-v0724','layers','Composite','Compositing Studio');real(fx,'us-image-open','cube','3D','3D Scene Studio');
+  const fx=group('Effects and design');proxy(fx,'effects-studio-menu-v0712','fx','FX','Effects Studio for selected layers',()=>root.MangoLayerStudioUIV0712?.open('effects'));real(fx,'ce-open-v0726','gradient','Layer style','Creative gradients, materials and saved layer styles');real(fx,'ac-open-v0724','layers','Composite','Compositing Studio');real(fx,'us-image-open','cube','3D','3D Scene Studio');
   const advanced=group('Additional creative tools');real(advanced,'sa-image-open','cube','Spatial','Spatial 3D object');real(advanced,'mc-image-open','cube','Extrude','Legacy 3D extrusions');real(advanced,'mr-open-v0722','wand','Raster','Raster Lab');
   const old=d.querySelector('.ci-studios-v0720');if(old){for(const b of [...old.querySelectorAll('button')]){const text=b.textContent.trim(),name=b.title||text;decorate(b,({Layers:'layers',Effects:'fx',Material:'gradient',Type:'text'})[text]||'settings',text,name);if(text==='Effects'||text==='Type'){b.hidden=true;continue;}advanced.append(b);}old.hidden=true;}
   // Original quick-access buttons remain accessible; the ribbon owns the moved nodes.

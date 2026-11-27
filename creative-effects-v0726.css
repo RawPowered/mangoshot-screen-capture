@@ -34,3 +34,34 @@ body.studio-image .ce-dialog-v0726{width:min(1000px,calc(100vw - 24px));max-heig
 .ce-dialog-v0726 output{font:11px ui-monospace,monospace;color:var(--carbon-text)}
 body.studio-image .image-layer-row .ce-mask-thumb-v0726{width:27px;height:23px;flex:0 0 27px;border:1px solid var(--carbon-line);background:#111}
 @media(max-width:700px){.ce-fields-v0726{grid-template-columns:repeat(2,minmax(0,1fr))}.ce-presets-v0726{grid-template-columns:repeat(3,minmax(0,1fr))}.ce-previews-v0726 canvas{max-height:22vh}}
+
+/* v0.7.47: live composition beside independently scrolling, focused controls. */
+body.studio-image #ce-dialog-v0726{width:min(1280px,calc(100vw - 24px));height:min(820px,calc(100dvh - 24px));max-height:calc(100dvh - 24px);overflow:hidden}
+body.studio-image #ce-dialog-v0726[open]{display:flex;flex-direction:column}
+body.studio-image #ce-dialog-v0726>header,body.studio-image #ce-dialog-v0726>footer{flex:0 0 auto;padding:8px 12px}
+.ce47-footer-actions{display:flex;flex-shrink:0;gap:5px}
+body.studio-image #ce-dialog-v0726 .ce-body-v0726{display:grid;grid-template-columns:minmax(0,1.07fr) minmax(0,1fr);flex:1;min-height:0;overflow:hidden;gap:12px;padding:9px 12px}
+.ce47-controls{min-width:0;min-height:0;overflow:auto;scrollbar-width:thin;overscroll-behavior:contain}
+body.studio-image #ce-dialog-v0726 .ce-tabs-v0726{grid-template-columns:repeat(4,minmax(0,1fr));position:sticky;top:0;z-index:3;background:var(--carbon-panel);padding-bottom:5px}
+body.studio-image #ce-dialog-v0726 .ce-tabs-v0726 button{min-width:0;padding:6px 3px;font-size:11px}
+body.studio-image #ce-dialog-v0726 .ce-previews-v0726{display:flex;flex-direction:column;gap:8px;min-height:0;overflow:auto;align-self:stretch;background:var(--carbon-shell);border:1px solid var(--carbon-line);padding:9px}
+.ce47-preview-buttons{display:flex;gap:4px}.ce47-preview-buttons button{flex:1;font-size:11px}
+body.studio-image #ce-dialog-v0726 .ce-previews-v0726 canvas{max-height:none}
+.ce-previews-v0726[data-view=after] figure:has(#ce-before-v0726),.ce-previews-v0726[data-view=before] figure:has(#ce-after-v0726){display:none!important}
+.ce-previews-v0726[data-view=both] canvas{max-height:28vh!important}
+body.studio-image #ce-dialog-v0726 .ce-panel-v0726{gap:7px;padding:8px}
+body.studio-image #ce-dialog-v0726 .ce-presets-v0726{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+.ce47-gallery>summary{cursor:pointer;font-weight:650;font-size:11px;padding:4px 0 7px;color:var(--carbon-secondary)}
+body.studio-image #ce-dialog-v0726 .ce47-material-card{width:100%;height:auto;display:block;background:var(--carbon-shell);border:1px solid var(--carbon-line)}
+body.studio-image #ce-dialog-v0726 .ce-fields-v0726{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px 8px}
+.ce47-dial-row{display:grid;grid-template-columns:32px minmax(0,1fr);gap:4px;align-items:center}
+.ce47-dial-row .co36-dial{width:32px;height:32px;grid-row:1}
+.ce47-dial-row input[type=number]{grid-column:2;grid-row:1}
+.ce47-dial-row input[type=range]{grid-column:1/-1;grid-row:2;height:15px}
+body.studio-image #ce-dialog-v0726 button[aria-pressed=true]{border-color:var(--carbon-accent-edge);color:var(--carbon-accent);box-shadow:inset 0 -2px 0 var(--carbon-accent)}
+.ce47-saver{display:flex;gap:6px;align-items:center}.ce47-saver input{flex:1;min-width:0;padding:6px;background:var(--carbon-field);color:var(--carbon-text);border:1px solid var(--carbon-line)}
+.ce47-saved-list{display:grid;gap:5px}.ce47-saved-card{display:flex;gap:5px;align-items:center;border:1px solid var(--carbon-line);padding:4px}
+.ce47-saved-card .ce47-load-style{flex:1;display:flex;align-items:center;gap:7px;text-align:left;white-space:normal;min-width:0}
+.ce47-saved-card canvas{width:70px;height:auto;flex:0 0 70px;background:var(--carbon-shell)}
+@media(max-width:780px){body.studio-image #ce-dialog-v0726 .ce-body-v0726{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:6px}body.studio-image #ce-dialog-v0726 .ce-presets-v0726{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:530px){body.studio-image #ce-dialog-v0726 .ce-body-v0726{grid-template-columns:1fr;grid-template-rows:minmax(80px,.75fr) minmax(0,1.25fr)}body.studio-image #ce-dialog-v0726 .ce-previews-v0726 canvas{max-height:18vh}}

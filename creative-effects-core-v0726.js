@@ -34,6 +34,15 @@
   ['carbon','Carbon steel',[stop(0,'#15191e'),stop(.25,'#46515c'),stop(.55,'#a6b2bd'),stop(.72,'#41484f'),stop(1,'#171b20')]],
   ['aurora','Aurora',[stop(0,'#243b9d'),stop(.4,'#17c9b2'),stop(.7,'#b0ef81'),stop(1,'#6b3bb4')]],
   ['glass','Glass sheen',[stop(0,'#d8f3ff',.85),stop(.35,'#87b9dd',.25),stop(.49,'#ffffff',.7),stop(.54,'#334a68',.25),stop(1,'#c2e2ff',.7)]]
+,
+  ['champagne','Champagne',[stop(0,'#5b4432'),stop(.28,'#bd9871'),stop(.48,'#fff2d5'),stop(.68,'#c7a07a'),stop(1,'#70503b')]],
+  ['emerald','Emerald jewel',[stop(0,'#072e24'),stop(.28,'#167b5b'),stop(.51,'#baf3c9'),stop(.74,'#168d68'),stop(1,'#052d22')]],
+  ['sapphire','Sapphire',[stop(0,'#0b163f'),stop(.3,'#2867be'),stop(.56,'#7be9ff'),stop(.78,'#3150ad'),stop(1,'#141c50')]],
+  ['copper','Copper foil',[stop(0,'#69321e'),stop(.25,'#c67e51'),stop(.46,'#ffe1b8'),stop(.62,'#a85432'),stop(1,'#e5ac85')]],
+  ['midnight','Midnight',[stop(0,'#111829'),stop(.55,'#2e4362'),stop(1,'#7897b8')]],
+  ['sunset','Sunset',[stop(0,'#482b83'),stop(.4,'#d04474'),stop(.75,'#ff8f55'),stop(1,'#ffdf8e')]],
+  ['polar','Polar glass',[stop(0,'#d6faff',.95),stop(.32,'#d1e0ff',.5),stop(.6,'#5e7dc4',.2),stop(1,'#e5f6ff',.8)]],
+  ['mono','Monochrome',[stop(0,'#121418'),stop(.5,'#7c8790'),stop(1,'#f5f7fa')]]
  ].map(([id,name,stops])=>({id,name,gradient:{kind:'linear',angle:0,opacity:1,stops}}));
  const shadow=kind=>kind==='glow'?{kind:'glow',enabled:true,color:'#a7efce',opacity:.8,blur:15,x:0,y:0}:{kind:'shadow',enabled:true,color:'#000000',opacity:.7,blur:12,x:14,y:14};
  function requireBudget(layers,w,h,C=root.MangoCompositorV0714){
@@ -81,6 +90,11 @@
   r.drawImage(source,0,0);
   ctx.save();try{ctx.setTransform(1,0,0,1,0,0);ctx.filter='none';ctx.shadowColor='transparent';ctx.shadowBlur=ctx.shadowOffsetX=ctx.shadowOffsetY=0;ctx.globalCompositeOperation=legacy?.blend||'source-over';ctx.drawImage(result,0,0);}finally{ctx.restore();}
  }
- const api=Object.freeze({MAX_PIXELS,MAX_STOPS,MAX_SHADOWS,MAX_LAYERS,copy,empty,eligible,check,active,content,presets,shadow,requireBudget,gradientCSS,paint});
+ // A local preset stores only validated recipes; never a document, image, or executable content.
+ const MAX_PRESETS=24;
+ function checkPreset(p,R=root.MangoTransformMaterialV0715){if(!exact(p,['name','appearance','material'])||typeof p.name!=='string'||p.name!==p.name.trim()||!p.name||p.name.length>60||/[\u0000-\u001f\u007f]/.test(p.name)||!R)throw Error('Invalid saved style name or recipe.');return {name:p.name,appearance:check(p.appearance),material:R.checkMaterial(p.material)};}
+ function checkLibrary(v,R=root.MangoTransformMaterialV0715){if(!Array.isArray(v)||v.length>MAX_PRESETS)throw Error('Style library exceeds 24 presets.');const seen=new Set();return v.map(p=>{const n=checkPreset(p,R),key=n.name.toLowerCase();if(seen.has(key))throw Error('Style names must be unique.');seen.add(key);return n;});}
+ function savePreset(library,p,R=root.MangoTransformMaterialV0715){const v=checkLibrary(library,R),n=checkPreset(p,R);if(v.some(x=>x.name.toLowerCase()===n.name.toLowerCase()))throw Error('A style with that name already exists. Choose a new name or remove the old style.');if(v.length>=MAX_PRESETS)throw Error('Style library is full (24 presets).');return [n,...v];}
+ const api=Object.freeze({MAX_PRESETS,checkPreset,checkLibrary,savePreset,MAX_PIXELS,MAX_STOPS,MAX_SHADOWS,MAX_LAYERS,copy,empty,eligible,check,active,content,presets,shadow,requireBudget,gradientCSS,paint});
  root.MangoCreativeEffectsV0726=api;if(typeof module==='object'&&module.exports)module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
