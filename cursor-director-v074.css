@@ -13,3 +13,7 @@ body.studio-clip .cd-track-v074:before{content:'POST FX';position:absolute;left:
 body.studio-clip .cd-track-v074 button{position:absolute;top:2px;height:21px;min-width:0;min-height:0;padding:1px 3px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;background:var(--carbon-active);color:var(--carbon-text);border:1px solid var(--carbon-line-strong);border-radius:2px;font:650 10px system-ui;text-align:left;z-index:1}
 body.studio-clip .cd-track-v074 button[aria-pressed=true]{outline:2px solid var(--carbon-accent);outline-offset:-2px}
 body.studio-clip .cd-track-v074 button[data-disabled=true]{background:var(--carbon-hover);color:var(--carbon-text);border-style:dashed}
+
+body.studio-clip .cd-track-v074#live-fx-track-v0752:before{content:'LIVE FX'}
+body.studio-clip .cd-track-v074#live-fx-track-v0752 button{background:#425734;border-color:#728a57;color:#e8f3db}
+body.studio-clip .cd-track-v074#live-fx-track-v0752 button[data-disabled=true]{background:var(--carbon-hover);border-style:dashed}
