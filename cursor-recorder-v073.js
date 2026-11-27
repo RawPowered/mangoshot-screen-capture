@@ -30,7 +30,7 @@
  function disconnectLink(){const old=port;port=null;if(old)try{old.disconnect();}catch{}mode='preview';clear();
   el('cursor-link-v073').textContent='Connect linked tab';el('cursor-link-v073').setAttribute('aria-pressed','false');}
  function disconnect(){root.MangoNativeCursorV0753?.stop?.('Native tracking disconnected. Reconnect for a new or resumed recording.');disconnectLink();}
- function claimNative(desktopOverlay=false){if(!session||!host.active()||host.surface()!=='monitor'||desktopOverlay&&host.cleanMaster?.())return false;if(desktopOverlay)trace?.markBaked();disconnectLink();el('cursor-consent-v073').checked=false;mode='native';setStatus('Native monitor tracking active. Cursor effects are rendered in the live preview.');return true;}
+ function claimNative(desktopOverlay=false){if(!session||!host.active()||host.surface()!=='monitor'||desktopOverlay&&host.cleanMaster?.())return false;if(desktopOverlay)trace?.markBaked();disconnectLink();el('cursor-consent-v073').checked=false;mode='native';setStatus(desktopOverlay?'Native monitor tracking active. Desktop FX may be baked into the composite.':'Native monitor tracking active. Cursor effects are rendered in the live preview.');return true;}
  function nativeToggleEffect(action){if(mode!=='native'||!session||!host.active()||!['spotlight','ring'].includes(action))return false;hot.cancel();settings=core.config({...settings,[action]:!settings[action]});el('cursor-preset-v073').value='custom';renderSettings();return true;}
  function releaseNative(){if(mode!=='native')return;hot.cancel();clear();mode='preview';setStatus('Native monitor tracking stopped. Preview tracking only.');}
  function nativeSample(p,click){if(mode!=='native'||!session||!host.active())return false;if(p==null){clear();return true;}ingest(p,click===true);return true;}
@@ -95,7 +95,7 @@
   const output=control.outFrame(core.outputPoint(p,c),fitted);
   // Desktop FX already originate in the captured source. Suppress the second
   // compositor pass to avoid double dimming/rings in composite mode.
-  if(!root.MangoNativeCursorV0753?.desktopOverlay?.())core.draw(ctx,output,effective,w,h,age);
+  if(host.cleanMaster?.()||!root.MangoNativeCursorV0753?.desktopOverlay?.())core.draw(ctx,output,effective,w,h,age);
   if(trace&&seconds!=null){
    if(!host.cleanMaster?.()&&(!!output&&(effective.spotlight||effective.ring)||Math.abs(c.zoom-1)>.001))trace.markBaked();
    if(retain||traceStarted){traceStarted=traceStarted||retain;trace.add(seconds,retain?(host.cleanMaster?.()?control.outFrame(p,fitted):output):null);try{capture?.frame(seconds,p,c,fitted,effective,mode,retain);}catch(e){capture=null;setStatus('Source telemetry failed; continuing recorded-frame path: '+e.message);}}
