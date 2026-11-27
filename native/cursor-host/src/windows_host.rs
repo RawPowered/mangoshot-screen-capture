@@ -112,8 +112,8 @@ pub fn run()->io::Result<()> {
                 let monitors:Vec<_>=displays()?.into_iter().map(|d|d.monitor).collect();
                 write_message(&mut out,&json!({"type":"hello","protocol":PROTOCOL,"platform":"windows","monitors":monitors,"sample_hz_target":60,"overlays":true,"overlay_mode":"composite-only","global_shortcuts":true,"shortcut_mode":"registered-toggle"}))?;hello=true;
             }
-            Ok(Some(Command::Start{protocol,session:id,monitor_id,desktop_overlay,shortcuts})) if hello && session.is_none() => {
-                if protocol!=PROTOCOL || !valid_session(&id) {error(&mut out,"invalid_start")?;break;}
+            Ok(Some(Command::Start{protocol,session:id,monitor_id,desktop_overlay,shortcuts,master})) if hello && session.is_none() => {
+                if protocol!=PROTOCOL || !valid_session(&id) || desktop_overlay&&master.as_deref()!=Some("composite") {error(&mut out,"invalid_start")?;break;}
                 let Some(display)=displays()?.into_iter().find(|d|d.monitor.id==monitor_id) else {error(&mut out,"monitor_unavailable")?;break;};
                 if !confirm(&display.monitor,desktop_overlay,shortcuts){error(&mut out,"user_declined")?;break;}
                 if monitor(display.handle).as_ref()!=Some(&display.monitor){error(&mut out,"monitor_changed")?;break;}
