@@ -1,12 +1,12 @@
 /* Recorder cursor controls. Explicit scope, no passive desktop mouse hooks. */
 (function(root){'use strict';
- const core=root.MangoCursorCoreV073,host=root.MangoRecorderCursorHostV073,control=root.MangoRecorderControlV0710,doc=root.document;
+ const core=root.MangoCursorCoreV073,captureCore=root.MangoCursorCaptureV0751,host=root.MangoRecorderCursorHostV073,control=root.MangoRecorderControlV0710,doc=root.document;
  if(!core||!host||!doc)return;
  const el=id=>doc.getElementById(id),panel=el('cursor-studio-v073'),wrap=el('screen-wrap'),ink=el('ink');
  if(!panel||!wrap||!ink)return;
  const api=root.chrome??root.browser,now=()=>performance.now();
  let settings=core.preset('off'),mode='preview',port=null,pointer=null,clicked=null,clickAt=-Infinity,lastAt=-Infinity,lastFrame=0,lastCamera=null;
- let trace=null,retain=!!el('cursor-retain-v073').checked,focusTool=false,session=false,pendingClick=null,automationRevisionV075=0;
+ let trace=null,capture=null,retain=!!el('cursor-retain-v073').checked,focusTool=false,session=false,automationRevisionV075=0,traceWarning=false;
  const setStatus=t=>{el('cursor-status-v073').textContent=t;};
  const fields={spotlight:'cursor-spotlight-v073',ring:'cursor-ring-v073',zoomMode:'cursor-zoom-mode-v073',scale:'cursor-scale-v073',radius:'cursor-radius-v073',dim:'cursor-dim-v073',feather:'cursor-feather-v073',smooth:'cursor-smooth-v073',hold:'cursor-hold-v073',color:'cursor-color-v073'};
  const hot=control.spotlight(()=>settings.spotlight,value=>{settings=core.config({...settings,spotlight:value});el('cursor-preset-v073').value='custom';renderSettings();},renderHotkey);
@@ -26,14 +26,14 @@
  }
  function applyRecipe(raw){const checked=core.recipe(raw);if(checked.action!=='recorder.cursor.configure')throw Error('This recipe is for Clip Studio');
   hot.cancel();settings=checked.settings;clicked=null;clickAt=-Infinity;renderSettings();el('cursor-preset-v073').value='custom';return {...settings};}
- function clear(){pointer=null;clicked=null;pendingClick=null;clickAt=-Infinity;lastAt=-Infinity;}
+ function clear(){const t=host.seconds?.();if(pointer&&session&&retain&&Number.isFinite(t)){trace?.add(t,null);capture?.gap(t);}pointer=null;clicked=null;clickAt=-Infinity;lastAt=-Infinity;}
  function disconnect(){const old=port;port=null;if(old)try{old.disconnect();}catch{}mode='preview';clear();
   el('cursor-link-v073').textContent='Connect linked tab';el('cursor-link-v073').setAttribute('aria-pressed','false');}
  function enabled(){return retain||hot.effective()||settings.ring||settings.zoomMode!=='off';}
  function ingest(p,click=false){
   if(!session||!host.active())return;
   pointer=core.point(p);lastAt=now();
-  if(pointer&&click){clicked={...pointer};clickAt=lastAt;if(retain)pendingClick={...pointer};}
+  if(pointer&&click){clicked={...pointer};clickAt=lastAt;const t=host.seconds?.();if(retain&&Number.isFinite(t)){if(mode==='linked')capture?.click(t,pointer);const output=control.outFrame(core.outputPoint(pointer,lastCamera||host.camera()),host.frame());trace?.click(t,output);traceStarted=true;}}
  }
  function previewPoint(e,click=false){
   if(mode!=='preview'||!session||!host.active())return;
@@ -70,16 +70,16 @@
   catch(err){setStatus(err.message);renderSettings();}
  });
  el('spotlight-quick-v0710').addEventListener('click',()=>{hot.cancel();settings=core.config({...settings,spotlight:!settings.spotlight});el('cursor-preset-v073').value='custom';renderSettings();});
- el('cursor-retain-v073').addEventListener('change',e=>{retain=e.target.checked;if(!retain)pendingClick=null;setStatus(retain?'Cursor path retention ON (local).':'Cursor path retention OFF; earlier samples are preserved.');});
+ el('cursor-retain-v073').addEventListener('change',e=>{const t=host.seconds?.();if(!e.target.checked&&retain&&Number.isFinite(t)){trace?.add(t,null);capture?.gap(t);}retain=e.target.checked;setStatus(retain?'Cursor path retention ON (local).':'Cursor path retention OFF; earlier samples are preserved.');});
  el('cursor-focus-tool-v073').addEventListener('change',e=>{focusTool=e.target.checked;});
  el('cursor-apply-recipe-v073').addEventListener('click',()=>{try{
   const raw=el('cursor-recipe-v073').value;if(raw.length>4096)throw Error('Recipe exceeds 4 KB');
   applyRecipe(JSON.parse(raw));setStatus('Cursor recipe applied. Tracking permissions unchanged.');
  }catch(e){setStatus(e.message);}});
  renderSettings();
- function begin(){disconnect();session=true;trace=core.createTrace();lastFrame=now();lastCamera=null;el('cursor-consent-v073').checked=false;
+ function begin(){disconnect();session=true;trace=core.createTrace();capture=captureCore?.create(core.config)||null;traceWarning=false;lastFrame=now();lastCamera=null;el('cursor-consent-v073').checked=false;
   setStatus(retain?'Cursor path retention ON (local). Connect the same captured webpage for source tracking; display/window tracking is preview-only.':'Cursor path retention OFF. Enable it to preserve tracked movement.');}
- function end(){hot.cancel();const result=trace?.finish();trace=null;session=false;disconnect();lastCamera=null;el('cursor-consent-v073').checked=false;setStatus('Cursor tracking stopped.');return result?.samples.some(s=>s[1]!==null)?result:null;}
+ function end(){hot.cancel();let meta=null;try{if(traceStarted)meta=capture?.finish()||null;}catch(e){setStatus('Source telemetry could not be finalized; recorded-frame path retained.');}const result=trace?.finish(meta);trace=null;capture=null;session=false;disconnect();lastCamera=null;el('cursor-consent-v073').checked=false;setStatus(result&&(result.truncated||result.capture?.truncated)?'Cursor trace limit reached; recording retained but telemetry may be incomplete.':'Cursor tracking stopped.');return result&&(result.samples.some(s=>s[1]!==null)||result.clicks?.length||result.capture?.cameraFrames.length)?result:null;}
  function frame(ctx,media,base,w,h,seconds){
   const n=now(),dt=n-lastFrame;lastFrame=n;
   if(mode==='linked'&&n-lastAt>1000)clear();
@@ -89,10 +89,10 @@
   const fitted=control.drawSource(ctx,media,c,w,h);
   const output=control.outFrame(core.outputPoint(p,c),fitted);
   core.draw(ctx,output,effective,w,h,age);
-  if(trace&&seconds!=null&&(retain||traceStarted)){
-   traceStarted=traceStarted||retain;
-   trace.add(seconds,retain?output:null,!!output&&(effective.spotlight||effective.ring)||Math.abs(c.zoom-base.zoom)>.01);
-   if(retain&&pendingClick){trace.click(seconds,control.outFrame(core.outputPoint(pendingClick,c),fitted));pendingClick=null;}
+  if(trace&&seconds!=null){
+   if(!!output&&(effective.spotlight||effective.ring)||Math.abs(c.zoom-1)>.001)trace.markBaked();
+   if(retain||traceStarted){traceStarted=traceStarted||retain;trace.add(seconds,retain?output:null);try{capture?.frame(seconds,p,c,fitted,effective,mode,retain);}catch(e){capture=null;setStatus('Source telemetry failed; continuing recorded-frame path: '+e.message);}}
+   if(!traceWarning&&(trace.truncated()||capture?.truncated())){traceWarning=true;setStatus('Cursor trace capacity reached; video recording continues.');}
   }
   return c;
  }
@@ -100,7 +100,7 @@
  function resetSession(){traceStarted=false;begin();}
  function manualCamera(){if(settings.zoomMode!=='off'){settings={...settings,zoomMode:'off'};el('cursor-preset-v073').value='custom';renderSettings();}lastCamera=null;}
  function suspend(){hot.cancel();disconnect();el('cursor-consent-v073').checked=false;setStatus('Tracking paused; reconfirm and reconnect linked tab after resuming if needed.');}
- function sourceChanged(){hot.cancel();disconnect();lastCamera=null;el('cursor-consent-v073').checked=false;setStatus('Source changed · preview tracking; reconnect the linked tab if appropriate.');}
+ function sourceChanged(){const t=host.seconds?.();if(Number.isFinite(t))capture?.sourceChanged(t);hot.cancel();disconnect();lastCamera=null;el('cursor-consent-v073').checked=false;setStatus('Source changed · preview tracking; reconnect the linked tab if appropriate.');}
  root.MangoRecorderCursorV073=Object.freeze({begin:resetSession,end,suspend,frame,manualCamera,sourceChanged,spotlightDown:hot.down,spotlightUp:hot.up,spotlightCancel:hot.cancel,focusTool:()=>focusTool&&enabled(),applyRecipe,
   state:()=>({settings:{...settings},effectiveSpotlight:hot.effective(),spotlightHeld:hot.held(),mode,session,retain,focusTool,automationRevision:automationRevisionV075})});
 })(typeof globalThis!=='undefined'?globalThis:this);
