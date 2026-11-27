@@ -25,7 +25,7 @@
   const clicks=C.projectClicks(trace.clicks,parts);paint(pc,rows,length,clicks);
   const fx=C.projectIntervals(C.liveIntervals(meta?.states,duration),parts).map(r=>({...r,row:['spotlight','ring','zoomMode'].indexOf(r.kind),color:colors[r.kind]}));paint(lc,fx,length);
   const count=trace.samples.filter(s=>s[1]!==null).length,actual=meta?.sourceSamples.filter(s=>s[1]!==null).length||0;
-  detail.textContent=count+' recorded-frame samples · '+actual+' authorized source samples · '+(trace.clicks?.length||0)+' recorded-frame clicks'+(trace.truncated||meta?.truncated?' · TELEMETRY TRUNCATED':'')+(trace.baked?' · Live settings are reference history; effects already embedded in footage cannot be removed.':'')+'. Click a lane to inspect the playhead.';
+  detail.textContent=count+' recorded-frame samples · '+actual+' authorized source samples · '+(trace.clicks?.length||0)+' recorded-frame clicks'+(trace.truncated||meta?.truncated?' · TELEMETRY TRUNCATED':'')+(trace.baked?' · Live settings are reference history; effects already embedded in footage cannot be removed.':meta?.master==='clean'?' · Clean master: reconstructed live FX are editable on the LIVE FX track.':'')+'. Click a lane to inspect the playhead.';
   path.title='CUR PATH: blue = recorded-frame positions; green = authorized source positions; pale ticks = clicks.';
   live.title='LIVE SETTINGS: spotlight / ring / smart zoom. History only; recorded pixels are unchanged.';
  }
