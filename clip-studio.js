@@ -55,7 +55,7 @@ function setControls(){const loaded=!!original&&automationLoadReadyV075&&duratio
    'Edited or converted exports require re-encoding at approximately real-time playback speed. Preserve your original with Save original (instant).':
    'MP4 encoding unavailable in this browser; edited MP4 export is disabled. Save original (instant) does not convert the file.';
 }
-function render(){globalThis.MangoCursorDirectorV074?.refresh?.();const durationOut=MangoTimeline.outputDuration(segments);
+function render(){globalThis.MangoCursorDirectorV074?.refresh?.();globalThis.MangoCursorTimelineV0751?.refresh?.();const durationOut=MangoTimeline.outputDuration(segments);
  byId('duration').textContent=original?(duration>0?'Sequence '+time(durationOut)+' · Source '+time(duration):'Source duration unverified'):'No video loaded';
  byId('timeline').replaceChildren();
  for(const [i,s] of segments.entries()){
@@ -105,13 +105,13 @@ async function load(blob,attachedCursorTrace=null,capture=null){if(exporting||mu
   if(!Number.isFinite(duration)||duration<=0||duration>86400)throw Error('The browser could not determine a valid source duration.');
   if(notice){notice.hidden=true;notice.dataset.state='verified';}
  }catch(error){if(request!==loadVersion)return;duration=0;segments=[];render();if(notice){notice.hidden=false;notice.dataset.state='error';byId('media-check-message-v0739').textContent=error.message+' Original bytes retained. Save original or try a finalized/remuxed file.';}label('Source not qualified: '+error.message);return;}
- if(attachedCursorTrace&&globalThis.MangoCursorCoreV073){try{cursorTrace=globalThis.MangoCursorCoreV073.trace(attachedCursorTrace);}catch{cursorTrace=null;}}
+ let traceNotice='';if(attachedCursorTrace&&globalThis.MangoCursorCoreV073){try{cursorTrace=director().check({schema:'mangoshot.cursor.director.v1',regions:[],trace:attachedCursorTrace},duration).trace;}catch{try{const {capture:ignored,...legacy}=attachedCursorTrace;cursorTrace=director().check({schema:'mangoshot.cursor.director.v1',regions:[],trace:legacy},duration).trace;traceNotice=' · Source telemetry rejected; recorded-frame path retained.';}catch{cursorTrace=null;traceNotice=' · Cursor trace could not be validated.';}}}
  segments=[{start:0,end:duration}];layers=[];zoomEvents=[];transitions=[];sourceGrade=[];selectedLayerId=null;selectedClipIndex=null;rangeSelected=false;history=[];redoHistory=[];byId('in').value='0';byId('out').value=duration.toFixed(2);
  byId('in').max=byId('out').max=duration.toFixed(2);
  const frame=byId('clip-preview-frame');if(frame&&video.videoWidth>0&&video.videoHeight>0){
    const aspect=video.videoWidth/video.videoHeight;frame.style.setProperty('--mango-ratio',String(aspect));frame.style.setProperty('--mango-aspect',video.videoWidth+' / '+video.videoHeight);
   }
-  automationLoadReadyV075=true;render();globalThis.MangoCursorClipV073?.refresh?.();sequencePreview?.seekOutput(0);globalThis.MangoClipTimeline?.reset?.();globalThis.MangoLayerUI?.render?.();paintPreview();globalThis.MangoAutoCutUI?.onEditorChange?.();label('Loaded '+time(duration)+' video · original is unchanged.');
+  automationLoadReadyV075=true;render();globalThis.MangoCursorClipV073?.refresh?.();sequencePreview?.seekOutput(0);globalThis.MangoClipTimeline?.reset?.();globalThis.MangoLayerUI?.render?.();paintPreview();globalThis.MangoAutoCutUI?.onEditorChange?.();label('Loaded '+time(duration)+' video · original is unchanged.'+traceNotice);
 }
 function readRange(){const clip=selectedClipIndex!==null&&!rangeSelected?MangoSequenceOps.bounds(segments,selectedClipIndex):null;
  return clip||MangoTimeline.range(Number(byId('in').value),Number(byId('out').value),MangoEditOps.length(segments));}
