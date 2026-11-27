@@ -2,7 +2,7 @@
 const byId=id=>document.getElementById(id),video=byId('video'),status=byId('status');
 let original=null,originalUrl=null,segments=[],layers=[],selectedLayerId=null,history=[],duration=0,sequencePlaying=false,exporting=false,cancelExport=false,originalFormat=null;
 let previewSequenceTime=null,loadVersion=0,selectedClipIndex=null,rangeSelected=false,redoHistory=[],automationRevisionV075=0,automationLoadReadyV075=false;
-let sequencePreview=null,zoomEvents=[],transitions=[],cursorTrace=null,cursorRegions=[],sourceGrade=[];
+let sequencePreview=null,zoomEvents=[],transitions=[],cursorTrace=null,cursorRegions=[],sourceGrade=[],motionDraftV0750=null;
 const compositor=globalThis.MangoCompositorV0714,MT=globalThis.MangoMultitrackV0716,PT=globalThis.MangoProfessionalTimelineV0717,ST=globalThis.MangoStreamingV0718;
 let secondary=MT?.defaults()||{clips:[]},multiPreparing=false,multiRequest=null,multiAudioContext=null,multiPreviewMix=null,multiFrameRequest=null,streamGate=0,streamPriming=false;
 const mediaAsset=id=>globalThis.MangoMediaBin?.registry.get(id),multiRuntime=MT?.createRuntime(mediaAsset),hasMulti=()=>secondary.clips.length>0;
@@ -14,7 +14,7 @@ const cinematic=globalThis.MangoCinematicV0713?.createCache();let cinematicReque
 const hasCreative=()=>hasMulti()||compositor?.active(sourceGrade)||transitions.length>0||cursorRegions.some(r=>r.enabled)||zoomEvents.length>0||!!globalThis.MangoCreativeUI?.hasVoice?.();
 const snapshot=()=>({segments:clone(segments),layers:clone(layers),sourceGrade:clone(sourceGrade),secondary:clone(secondary),markers:globalThis.MangoClipTimeline?.markers?.()||[],
  selectedLayerId,selectedClipIndex,rangeSelected,zoomFrames:clone(zoomEvents),transitions:clone(transitions),cursorRegions:clone(cursorRegions),cursorTrace,selection:{start:Number(byId('in').value),end:Number(byId('out').value)}});
-const remember=()=>{automationRevisionV075++;history.push(snapshot());if(history.length>80)history.shift();redoHistory=[];};
+const remember=()=>{motionDraftV0750=null;automationRevisionV075++;history.push(snapshot());if(history.length>80)history.shift();redoHistory=[];};
 function restore(snap){automationRevisionV075++;segments=clone(snap.segments);layers=clone(snap.layers);sourceGrade=clone(snap.sourceGrade||[]);secondary=clone(snap.secondary||MT?.defaults()||{clips:[]});multiRequest=null;selectedClipIndex=snap.selectedClipIndex??null;selectedLayerId=snap.selectedLayerId??null;
  cursorRegions=clone(snap.cursorRegions||[]);cursorTrace=snap.cursorTrace||null;
  rangeSelected=!!snap.rangeSelected;zoomEvents=MangoCreativeZoom.check(snap.zoomFrames||[]);transitions=MangoMotion.checkTransitions(snap.transitions||[]);
@@ -24,7 +24,7 @@ function restore(snap){automationRevisionV075++;segments=clone(snap.segments);la
  byId('out').value=Math.min(length,selection.end).toFixed(2);
  globalThis.MangoClipTimeline?.loadMarkers?.(snap.markers||[]);
  refreshed();}
-function refreshed(){render();sequencePreview?.update();previewSequenceTime=null;globalThis.MangoClipTimeline?.render?.();globalThis.MangoClipTimeline?.onSequenceChange?.();globalThis.MangoLayerUI?.render?.();paintPreview();globalThis.MangoAutoCutUI?.onEditorChange?.();globalThis.MangoMediaBin?.refresh?.();globalThis.MangoMultitrackUIV0716?.refresh?.();globalThis.MangoCreativeUI?.renderZoom?.();globalThis.MangoCreativeUI?.renderVoice?.();globalThis.MangoVisualClip?.refresh?.();globalThis.MangoMotionUI?.sync?.();}
+function refreshed(){motionDraftV0750=null;render();sequencePreview?.update();previewSequenceTime=null;globalThis.MangoClipTimeline?.render?.();globalThis.MangoClipTimeline?.onSequenceChange?.();globalThis.MangoLayerUI?.render?.();paintPreview();globalThis.MangoAutoCutUI?.onEditorChange?.();globalThis.MangoMediaBin?.refresh?.();globalThis.MangoMultitrackUIV0716?.refresh?.();globalThis.MangoCreativeUI?.renderZoom?.();globalThis.MangoCreativeUI?.renderVoice?.();globalThis.MangoVisualClip?.refresh?.();globalThis.MangoMotionUI?.sync?.();}
 
 const label=text=>status.textContent=text;
 const time=t=>`${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}.${String(Math.round(t%1*100)).padStart(2,'0')}`;
@@ -221,6 +221,7 @@ function paintMulti(ctx,t,w,h,strict=false,running=false){
 }
 async function toggleSequence(){
  if(!original||exporting)return;
+ if(motionDraftV0750){motionDraftV0750=null;paintPreview();}
  if(sequencePreview?.isPlaying()){sequencePreview.stop();return;}
  if(cinematicPlaybackPending||multiPreparing)return;
  if(!cinematicActive()&&!hasMulti()){void sequencePreview?.toggle();return;}
@@ -238,8 +239,11 @@ function paintPreview(){
  if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
  const ctx=canvas.getContext('2d');ctx.clearRect(0,0,w,h);
  const mapped=previewSequenceTime===null?MangoSequenceMedia.atSource(segments,video.currentTime)?.output??null:previewSequenceTime;
- if(mapped!==null){const z=MangoCreativeZoom.preview(video,zoomEvents,mapped);const active=MangoMotion.transitionAt(segments,transitions,mapped);let inTransition=false;if(active&&globalThis.MangoCinematicV0713?.isType(active.type)){inTransition=paintCinematic(ctx,transitions,mapped,w,h);if(!inTransition)queueCinematicPreview();}else inTransition=MangoMotion.paintTransition(ctx,video,zoomEvents,segments,transitions,mapped,w,h);if(compositor?.active(sourceGrade)&&video.readyState>=2){if(!inTransition)MangoCreativeZoom.draw(ctx,video,zoomEvents,mapped,w,h);compositor.gradeFrame(ctx,sourceGrade);}if(!inTransition)director()?.paint(ctx,cursorTrace,cursorRegions,segments,mapped,z,w,h);if(!paintMulti(ctx,mapped,w,h,false,!!sequencePreview?.isPlaying()&&!video.paused&&!streamPriming))return;MangoGraphics.render(ctx,layers,mapped,w,h);}
- globalThis.MangoLayerUI?.selectionOutline?.(ctx,mapped,w,h);
+ const draft=motionDraftV0750?.id===selectedLayerId&&!sequencePreview?.isPlaying?.()&&motionDraftV0750?.revision===automationRevisionV075?motionDraftV0750:null;
+ const previewLayers=draft?layers.map(l=>l.id===draft.id?{...l,keyframes:draft.keys}:l):layers;
+ if(mapped!==null){const z=MangoCreativeZoom.preview(video,zoomEvents,mapped);const active=MangoMotion.transitionAt(segments,transitions,mapped);let inTransition=false;if(active&&globalThis.MangoCinematicV0713?.isType(active.type)){inTransition=paintCinematic(ctx,transitions,mapped,w,h);if(!inTransition)queueCinematicPreview();}else inTransition=MangoMotion.paintTransition(ctx,video,zoomEvents,segments,transitions,mapped,w,h);if(compositor?.active(sourceGrade)&&video.readyState>=2){if(!inTransition)MangoCreativeZoom.draw(ctx,video,zoomEvents,mapped,w,h);compositor.gradeFrame(ctx,sourceGrade);}if(!inTransition)director()?.paint(ctx,cursorTrace,cursorRegions,segments,mapped,z,w,h);if(!paintMulti(ctx,mapped,w,h,false,!!sequencePreview?.isPlaying()&&!video.paused&&!streamPriming))return;MangoGraphics.render(ctx,previewLayers,mapped,w,h);}
+ globalThis.MangoLayerUI?.selectionOutline?.(ctx,mapped,w,h,draft?previewLayers.find(l=>l.id===draft.id):null);
+ globalThis.MangoMotionStudioV0750?.refresh?.(mapped);
 }
 
 function edit(kind){if(!original||exporting)return;
@@ -443,6 +447,10 @@ globalThis.MangoClipView={
   multitrack:()=>clone(secondary),
   multitrackBusy:()=>multiPreparing,
   async commitSecondaryTimeline(id,candidate,expected){const s=this.automationCapture();if(!s.ready||s.stamp!==expected)throw Error('Timeline edit is stale.');return this.applyMultitrack(PT.change(secondary,id,candidate),expected);},
+  motionPosition:()=>previewSequenceTime??sequencePreview?.current()??null,
+  previewGraphicMotion(id,keys,expected){const s=this.automationCapture(),l=layers.find(x=>x.id===id);if(!s.ready||s.identity!==expected?.identity||s.stamp!==expected?.stamp||!l||l.locked||selectedLayerId!==id)throw Error('Motion gesture is stale or the layer is locked.');motionDraftV0750={id,keys:compositor.checkKeys(keys),revision:automationRevisionV075};paintPreview();return true;},
+  cancelGraphicMotion(id){if(motionDraftV0750?.id!==id)return false;motionDraftV0750=null;paintPreview();return true;},
+  commitGraphicMotion(id,keys,expected){const s=this.automationCapture(),i=layers.findIndex(l=>l.id===id);if(!s.ready||s.identity!==expected?.identity||s.stamp!==expected?.stamp||i<0||layers[i].locked||selectedLayerId!==id)throw Error('Motion edit is stale or the layer is locked.');const next=compositor.checkKeys(keys);motionDraftV0750=null;if(PT.eq(next,layers[i].keyframes||[])){paintPreview();return false;}remember();layers[i]={...layers[i],keyframes:next};refreshed();label('Transform keyframes updated. Ctrl+Z to undo.');return true;},
   commitGraphicKeyTime(id,index,at,expected){const s=this.automationCapture(),i=layers.findIndex(l=>l.id===id);if(!s.ready||s.stamp!==expected||i<0||layers[i].locked)throw Error('Keyframe edit is stale or locked.');const next=compositor.checkKeys(PT.keyTime(layers[i].keyframes,index,at));if(PT.eq(next,layers[i].keyframes))return false;remember();layers[i]={...layers[i],keyframes:next};selectedLayerId=id;refreshed();label('Keyframe time updated. Ctrl+Z to undo.');return true;},
   secondaryReferences:id=>[secondary,...history.map(x=>x.secondary),...redoHistory.map(x=>x.secondary)].some(m=>m?.clips.some(c=>c.assetId===id)),
   async applyMultitrack(model,expected,notify=()=>{},allowed=()=>true){
