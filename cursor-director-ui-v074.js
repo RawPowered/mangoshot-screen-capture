@@ -34,7 +34,8 @@ function renderProposal(){const host=ui('proposals');host.replaceChildren();if(p
 function refresh(){
  const v=view(),t=trace(),list=regions(),loaded=!!v?.original?.(),busy=!!v?.exporting?.();ui('source').textContent=t?t.samples.filter(s=>s[1]!==null).length+' frame samples · '+(t.clicks?.length||0)+' clicks'+(t.truncated||t.capture?.truncated?' · TRUNCATED':'')+(t.baked?' · recorded pixels contain baked changes':''):'No cursor path';
  for(const k of ['add','use-range','propose','update','remove','run'])ui(k).disabled=!loaded||!t||busy;
- const rebuild=el('restore-live-v0752');if(rebuild)rebuild.disabled=!loaded||busy||t?.baked||t?.capture?.master!=='clean'||list.some(r=>live(r.id))||!!v?.zoomFrames?.().length;
+ const rebuild=el('restore-live-v0752');if(rebuild)rebuild.disabled=!loaded||busy||t?.baked||t?.capture?.master!=='clean'||list.some(r=>live(r.id))&&!!v?.zoomFrames?.().length;
+ const tracked=el('cd-tracked-v0755');if(tracked)tracked.disabled=!loaded||busy||!t?.samples.some(s=>s[1]!==null)||list.some(r=>!live(r.id));
  if(proposal&&(proposal.stamp!==stamp()||proposal.trace!==t)){proposal=null;renderProposal();}
  ui('apply').disabled=busy||!proposal?.items.length;if(!list.some(x=>x.id===selected))selected=null;ui('edit').hidden=!selected;
  const sig=JSON.stringify([v?.segments?.()||[],list,selected,busy,loaded]);if(sig===lastStamp&&t===lastTrace)return;lastStamp=sig;lastTrace=t;
@@ -46,6 +47,7 @@ function refresh(){
 el('restore-live-v0752')?.addEventListener('click',safe(()=>{const v=ready();report(v.restoreCapturedLive());}));
 ui('use-range').addEventListener('click',safe(()=>{ui('start').value=el('in').value;ui('end').value=el('out').value;}));
 ui('add').addEventListener('click',safe(()=>action('effects.add',{start:Number(ui('start').value),end:Number(ui('end').value),style:readStyle()})));
+el('cd-tracked-v0755')?.addEventListener('click',safe(()=>{const v=ready(),t=trace(),s=readStyle();if(regions().some(r=>!live(r.id)))throw Error('Edit or remove existing Post FX regions first.');if(!t.samples.some(p=>p[1]!==null))throw Error('No retained cursor movement.');const next=d.addRange(regions(),v.segments(),0,v.outputDuration(),s,'cursor-'+id(),v.duration());v.commitCursorDirector({regions:next});report('Applied current style to all retained footage; effects appear only where movement is recorded.');}));
 ui('update').addEventListener('click',safe(()=>action('effects.update',{id:selected,start:Number(ui('source-start').value),end:Number(ui('source-end').value),style:readStyle(),enabled:ui('enabled').checked})));
 ui('remove').addEventListener('click',safe(()=>action('effects.remove',{id:selected})));
 ui('propose').addEventListener('click',safe(()=>action('smartZoom.propose',{settings:{mode:ui('smart-mode').value,scale:Number(ui('smart-scale').value),transition:Number(ui('smart-transition').value),hold:Number(ui('smart-hold').value)}})));
