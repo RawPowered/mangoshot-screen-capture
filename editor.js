@@ -123,7 +123,7 @@ async function begin(){
     // Do not leave sensitive screenshot copies in the transfer database after
     // they have been successfully assembled in Image Studio.
     await globalThis.MangoCaptureStore.remove(stored).catch(()=>{});
-  }catch(error){label('Capture failed: '+error.message);}finally{documentLoadPending=false;globalThis.MangoImageDocumentUIV0723?.refresh();globalThis.MangoPixelUIV0741?.refresh?.();}
+  }catch(error){label('Capture failed: '+error.message);}finally{documentLoadPending=false;globalThis.MangoImageDocumentUIV0723?.refresh();globalThis.MangoPixelUIV0741?.refresh?.();globalThis.MangoTextLayoutUIV0746?.refresh?.();}
 }
 
 /* Explicit clipboard import: never read in the background or on page load.

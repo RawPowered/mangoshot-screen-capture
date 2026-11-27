@@ -18,10 +18,11 @@
    const fav=d.createElement('button');fav.type='button';fav.setAttribute('aria-label','Favorite '+C.titles[id]);fav.setAttribute('aria-pressed',String(p.favorites.includes(id)));fav.append(I.svg('star',16));
    fav.addEventListener('click',()=>{const next=read();next.favorites=next.favorites.includes(id)?next.favorites.filter(x=>x!==id):[id,...next.favorites];write(next);render();});row.append(pick,fav);if(image&&p.favorites.includes(id)&&el('favorites').checked){for(const [delta,label,symbol] of [[-1,'Move earlier','↑'],[1,'Move later','↓']]){const b=d.createElement('button');b.type='button';b.textContent=symbol;b.setAttribute('aria-label',label+' '+C.titles[id]);const index=p.favorites.indexOf(id);b.disabled=index+delta<0||index+delta>=p.favorites.length;b.onclick=()=>{const next=read(),i=next.favorites.indexOf(id),j=i+delta;if(i<0||j<0||j>=next.favorites.length)return;[next.favorites[i],next.favorites[j]]=[next.favorites[j],next.favorites[i]];write(next);render();};row.append(b);}}list.append(row);
   }
+  if(image&&el('favorites').checked){for(const id of p.favorites){const row=[...list.children].find(n=>n.dataset.tool===id);if(row)list.append(row);}}
   if(!list.children.length){const p=d.createElement('p');p.textContent='No matching tools.';list.append(p);}
  }
  let trigger=null;
- function open(e,favorites=false){if(dlg.open||d.querySelector('dialog[open]'))return;trigger=e?.currentTarget?.closest('.v06-menu')?.querySelector('summary')||d.activeElement;for(const menu of d.querySelectorAll('.v06-menu[open]'))menu.open=false;if(favorites){el('search').value='';el('group').value='all';el('favorites').checked=true;}render();dlg.showModal();el('search').focus();}
+ function open(e,favorites=false){if(dlg.open||d.querySelector('dialog[open]'))return;trigger=e?.currentTarget?.closest('.v06-menu')?.querySelector('summary')||d.activeElement;for(const menu of d.querySelectorAll('.v06-menu[open]'))menu.open=false;if(favorites!==false){el('search').value='';el('group').value='all';el('favorites').checked=favorites===true;}render();dlg.showModal();el('search').focus();}
  el('open').addEventListener('click',e=>open(e));
  el('close').addEventListener('click',()=>dlg.close());dlg.addEventListener('close',()=>trigger?.focus());
  for(const id of ['search','group','favorites'])el(id).addEventListener('input',render);

@@ -1,0 +1,15 @@
+/* Favorites are the existing Tool Studio preferences, with one optional compact shelf. */
+(function(root){'use strict';const d=root.document,C=root.MangoToolStudioV0711,L=root.MangoToolLibraryV0711,I=root.MangoIconsV079,shelf=d.getElementById('ux40-shelf'),all=shelf?.querySelector('.ux40-shelf-strip');if(!C||!L||!I||!all)return;
+ const make=(tag,cls,text)=>{const n=d.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n;},button=(id,text,fn)=>{const b=make('button','',text);b.id=id;b.type='button';b.onclick=fn;return b;};
+ const storage='MangoShot.ImageShelf.v0746';let mode='all',signature='';try{if(root.localStorage.getItem(storage)==='pins')mode='pins';}catch{}
+ const pins=make('div','ux46-pins');pins.id='ux46-pinned-tools';pins.setAttribute('role','group');pins.setAttribute('aria-label','Pinned image tools');
+ const actions=make('div','ux46-shelf-actions'),toggle=button('ux46-pin-mode','Pins',()=>{mode=mode==='all'?'pins':'all';try{root.localStorage.setItem(storage,mode);}catch{}refresh();}),manage=button('ux46-pin-manage','Edit pins',()=>L.open('manage'));toggle.title='Show pinned tools only or all creative tools';manage.title='Customize pinned tools in Tool Studio';actions.append(toggle,manage);shelf.append(pins,actions);
+ const target=id=>C.actions[id]?d.getElementById(C.actions[id].target):null,disabled=id=>!!C.actions[id]&&(!target(id)||target(id).disabled);
+ function refresh(){const list=L.state().preferences.favorites,tool=d.getElementById('tool')?.value;all.hidden=mode==='pins';pins.hidden=mode!=='pins';toggle.textContent=mode==='pins'?'All tools':'Pins';toggle.setAttribute('aria-pressed',String(mode==='pins'));manage.setAttribute('aria-label','Customize pinned image tools');
+  const next=JSON.stringify(list);if(signature!==next){signature=next;pins.replaceChildren();if(!list.length){pins.append(make('span','ux46-empty','No pins yet. Use Edit pins to star your favorite tools.'));}for(const id of list){const b=button('ux46-pin-'+id,'',()=>{if(!b.disabled)L.activate(id);});b.className='ux40-launch ux46-pin';b.dataset.pin=id;b.title=C.titles[id];b.setAttribute('aria-label','Pinned '+C.titles[id]);const original=target(id)?.querySelector('svg');b.append(original?original.cloneNode(true):I.svg(C.icons[id]||id,18),make('span','ux40-tool-label',C.titles[id]));pins.append(b);}}
+  for(const b of pins.querySelectorAll('button[data-pin]')){const id=b.dataset.pin;b.disabled=disabled(id);if(!C.actions[id])b.setAttribute('aria-pressed',String(tool===id));}
+ }
+ let queued=false;function schedule(){if(queued)return;queued=true;root.requestAnimationFrame(()=>{queued=false;refresh();});}
+ for(const type of ['click','change','input','pointerup','keydown'])d.addEventListener(type,schedule,true);root.addEventListener('storage',schedule);for(const a of Object.values(C.actions)){const b=d.getElementById(a.target);if(b)new MutationObserver(schedule).observe(b,{attributes:true,attributeFilter:['disabled']});}
+ root.MangoPinShelfV0746=Object.freeze({refresh,state:()=>({mode,pins:L.state().preferences.favorites})});refresh();
+})(globalThis);

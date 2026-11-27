@@ -1,0 +1,22 @@
+
+body.studio-image #text-properties .ty45-tabs button{font-size:10px;padding:5px 2px}
+body.studio-image #ty45-layout-panel .ty46-preview{display:block;width:100%;height:auto;aspect-ratio:2;background:var(--carbon-shell);border:1px solid var(--carbon-line);box-sizing:border-box}
+.ty46-fields{display:grid;gap:8px;min-width:0}
+.ty46-scalar{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:4px 7px;align-items:center;padding:6px 0;border-bottom:1px solid var(--carbon-line)}
+.ty46-label{font-size:11px;font-weight:600;color:var(--carbon-secondary)}
+.ty46-control{display:flex;align-items:center;gap:4px;min-width:0}.ty46-control .co36-dial{width:32px;height:32px;flex:0 0 32px}
+.ty46-control .ty45-exact{width:48px;min-width:0;text-align:right;padding:3px;font-variant-numeric:tabular-nums;font-size:11px}
+.ty46-unit{font-size:9px;color:var(--carbon-muted)}
+.ty46-scalar>input[type=range]{grid-column:1/-1;width:100%;min-width:0}
+.ty46-choice{display:grid;gap:5px;min-width:0}
+.ty46-segments{display:flex;gap:3px}.ty46-segments button{flex:1;min-width:0;padding:6px 3px;font-size:11px}
+body.studio-image .ty46-segments button[aria-pressed=true]{border-color:var(--carbon-accent-edge);color:var(--carbon-accent);background:var(--carbon-active)}
+.ty46-status{font-size:10px;color:var(--carbon-secondary);margin:0;min-height:12px}
+body.studio-image #ux40-shelf .ux40-shelf-strip[hidden],body.studio-image #ux40-shelf .ux46-pins[hidden]{display:none!important}
+.ux46-pins{flex:1;min-width:0;display:flex;align-items:center;gap:4px;overflow-x:auto;scrollbar-width:thin;overscroll-behavior-x:contain}
+.ux46-pins .ux46-pin{flex:0 0 auto}
+.ux46-empty{font-size:11px;color:var(--carbon-secondary);white-space:nowrap}
+.ux46-shelf-actions{display:flex;align-items:center;gap:4px;flex:0 0 auto;padding-left:6px;border-left:1px solid var(--carbon-line)}
+body.studio-image .ux46-shelf-actions button{padding:4px 6px;font-size:10px;white-space:nowrap;min-height:27px}
+body.studio-image .ux46-shelf-actions button[aria-pressed=true]{border-color:var(--carbon-accent-edge);color:var(--carbon-accent)}
+@media(max-width:720px){.ux46-shelf-actions{gap:2px;padding-left:3px}.ux46-shelf-actions button{font-size:10px}.ux46-pins .ux40-tool-label{display:none}}
