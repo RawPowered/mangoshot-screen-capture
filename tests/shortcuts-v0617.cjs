@@ -54,7 +54,7 @@ function engine(studio,legacyKeys=null){
   return{prevented,stopped};
  }
  return {api:root.MangoShortcutsV0617,core:root.MangoShortcutCoreV0617,press,
-  called,doc,root,store,buttons};
+  called,doc,root,store,buttons,emit:(type,event)=>{for(const fn of handlers[type]||[])fn(event);}};
 }
 const i=engine('image');assert.ok(i.api.active);assert.equal(i.api.studio,'image');
 const core=i.core;
@@ -110,6 +110,21 @@ assert.ok(c.called.includes('tool-razor'));
 assert.equal(c.press('z','KeyZ',{ctrlKey:true}).prevented,1);
 assert.ok(c.called.includes('undo'));
 assert.equal(c.press('x','KeyX',{target:{closest:()=>({})}}).prevented,0);
+// A pointer-focused editor control must not swallow Space or plain tool keys.
+// Keyboard-focused controls and text fields retain native interaction.
+const focusButton={closest(q){return q.startsWith('button,')?this:null;}};
+const beforePlay=c.called.filter(x=>x==='program-play').length;
+assert.equal(c.press(' ','Space',{target:focusButton}).prevented,0,'Keyboard focus preserves native button behavior');
+c.emit('pointerdown',{button:0,pointerType:'mouse',target:focusButton});
+c.emit('focusin',{target:focusButton});
+assert.equal(c.press(' ','Space',{target:focusButton}).prevented,1,'Pointer focus routes Space to program playback');
+assert.equal(c.called.filter(x=>x==='program-play').length,beforePlay+1);
+assert.equal(c.press(' ','Space',{target:focusButton,repeat:true}).prevented,1,'Held Space must not re-trigger native button');
+assert.equal(c.called.filter(x=>x==='program-play').length,beforePlay+1);
+assert.equal(c.press('c','KeyC',{target:focusButton}).prevented,1,'Pointer focus routes tool commands');
+assert.equal(c.press('Enter','Enter',{target:focusButton}).prevented,0,'Enter remains native');
+c.press('Tab','Tab',{target:focusButton});
+assert.equal(c.press(' ','Space',{target:focusButton}).prevented,0,'Tab restores native control ownership');
 const profile={format:'MangoShot.Shortcuts',version:2,studio:'clip',bindings:c.api.keys()};
 const valid=core.check(profile.bindings,'clip',{allowMissing:false});
 assert.equal(valid.ok,true);
