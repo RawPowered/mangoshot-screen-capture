@@ -3,7 +3,7 @@
 (function(root){'use strict';
  const SCHEMA='mangoshot.cursor.capture.v1',MAX=60000,MAX_EVENTS=6000,MAX_CLICKS=12000;
  const q=(n,d=10000)=>Math.round(n*d)/d,ok=(n,a,b)=>Number.isFinite(n)&&n>=a&&n<=b;
- const scopes=['linked','preview','untracked','off'];
+ const scopes=['linked','native','preview','untracked','off'];
  const validPoint=p=>p&&ok(p.x,0,1)&&ok(p.y,0,1)?p:null;
  function time(t){if(!ok(t,0,86400))throw Error('Invalid cursor capture time');return q(t,1000);}
  function tupleList(raw,max,normalize){if(!Array.isArray(raw)||raw.length>max)throw Error('Invalid cursor capture list');let last=-1;return raw.map(s=>{if(!Array.isArray(s)||!ok(s[0],0,86400)||s[0]<=last)throw Error('Invalid cursor capture order');last=s[0];return normalize(s);});}
@@ -16,7 +16,7 @@
  function create(config,master=null){if(master!==null&&!['clean','composite'].includes(master))throw Error('Invalid recording master mode');const data={schema:SCHEMA,truncated:false,...(master?{master}:{}),sourceSamples:[],sourceClicks:[],cameraFrames:[],states:[]};let epoch=0,signature=null,forceGap=false;
   function gap(t){if(!ok(t,0,86400))return;const last=data.sourceSamples.at(-1);if(last&&last[1]!==null){if(time(t)<=last[0])forceGap=true;else sample(data.sourceSamples,t,null,MAX,data);}}
   function sourceChanged(t){gap(t);if(epoch<MAX_EVENTS)epoch++;else data.truncated=true;signature=null;}
-  function frame(t,p,c,f,settings,scope,retain){if(!ok(t,0,86400))return;const stamp=time(t),kind=retain?(scopes.includes(scope)&&scope!=='off'?scope:'untracked'):'off',active=kind==='linked'?validPoint(p):null;
+  function frame(t,p,c,f,settings,scope,retain){if(!ok(t,0,86400))return;const stamp=time(t),kind=retain?(scopes.includes(scope)&&scope!=='off'?scope:'untracked'):'off',active=kind==='linked'||kind==='native'?validPoint(p):null;
    if(forceGap){if(stamp>(data.sourceSamples.at(-1)?.[0]??-1)){sample(data.sourceSamples,t,null,MAX,data);forceGap=false;}}else if(retain||data.sourceSamples.length)sample(data.sourceSamples,t,active,MAX,data);
    const state=retain?config(settings):null,sig=JSON.stringify([kind,epoch,state]);if(sig!==signature){if(append(data.states,[stamp,kind,epoch,state],MAX_EVENTS,data))signature=sig;}
    if(!retain)return;
