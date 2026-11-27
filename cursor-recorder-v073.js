@@ -6,7 +6,7 @@
  if(!panel||!wrap||!ink)return;
  const api=root.chrome??root.browser,now=()=>performance.now();
  let settings=core.preset('off'),mode='preview',port=null,pointer=null,clicked=null,clickAt=-Infinity,lastAt=-Infinity,lastFrame=0,lastCamera=null;
- let trace=null,retain=false,focusTool=false,session=false,pendingClick=null,automationRevisionV075=0;
+ let trace=null,retain=!!el('cursor-retain-v073').checked,focusTool=false,session=false,pendingClick=null,automationRevisionV075=0;
  const setStatus=t=>{el('cursor-status-v073').textContent=t;};
  const fields={spotlight:'cursor-spotlight-v073',ring:'cursor-ring-v073',zoomMode:'cursor-zoom-mode-v073',scale:'cursor-scale-v073',radius:'cursor-radius-v073',dim:'cursor-dim-v073',feather:'cursor-feather-v073',smooth:'cursor-smooth-v073',hold:'cursor-hold-v073',color:'cursor-color-v073'};
  const hot=control.spotlight(()=>settings.spotlight,value=>{settings=core.config({...settings,spotlight:value});el('cursor-preset-v073').value='custom';renderSettings();},renderHotkey);
@@ -70,7 +70,7 @@
   catch(err){setStatus(err.message);renderSettings();}
  });
  el('spotlight-quick-v0710').addEventListener('click',()=>{hot.cancel();settings=core.config({...settings,spotlight:!settings.spotlight});el('cursor-preset-v073').value='custom';renderSettings();});
- el('cursor-retain-v073').addEventListener('change',e=>{retain=e.target.checked;if(!retain)pendingClick=null;});
+ el('cursor-retain-v073').addEventListener('change',e=>{retain=e.target.checked;if(!retain)pendingClick=null;setStatus(retain?'Cursor path retention ON (local).':'Cursor path retention OFF; earlier samples are preserved.');});
  el('cursor-focus-tool-v073').addEventListener('change',e=>{focusTool=e.target.checked;});
  el('cursor-apply-recipe-v073').addEventListener('click',()=>{try{
   const raw=el('cursor-recipe-v073').value;if(raw.length>4096)throw Error('Recipe exceeds 4 KB');
@@ -78,7 +78,7 @@
  }catch(e){setStatus(e.message);}});
  renderSettings();
  function begin(){disconnect();session=true;trace=core.createTrace();lastFrame=now();lastCamera=null;el('cursor-consent-v073').checked=false;
-  setStatus('Preview tracking available. Connect the same captured webpage for source tracking.');}
+  setStatus(retain?'Cursor path retention ON (local). Connect the same captured webpage for source tracking; display/window tracking is preview-only.':'Cursor path retention OFF. Enable it to preserve tracked movement.');}
  function end(){hot.cancel();const result=trace?.finish();trace=null;session=false;disconnect();lastCamera=null;el('cursor-consent-v073').checked=false;setStatus('Cursor tracking stopped.');return result?.samples.some(s=>s[1]!==null)?result:null;}
  function frame(ctx,media,base,w,h,seconds){
   const n=now(),dt=n-lastFrame;lastFrame=n;
