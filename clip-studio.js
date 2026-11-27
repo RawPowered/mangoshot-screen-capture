@@ -24,7 +24,7 @@ function restore(snap){automationRevisionV075++;segments=clone(snap.segments);la
  byId('out').value=Math.min(length,selection.end).toFixed(2);
  globalThis.MangoClipTimeline?.loadMarkers?.(snap.markers||[]);
  refreshed();}
-function refreshed(){motionDraftV0750=null;render();sequencePreview?.update();previewSequenceTime=null;globalThis.MangoClipTimeline?.render?.();globalThis.MangoClipTimeline?.onSequenceChange?.();globalThis.MangoLayerUI?.render?.();paintPreview();globalThis.MangoAutoCutUI?.onEditorChange?.();globalThis.MangoMediaBin?.refresh?.();globalThis.MangoMultitrackUIV0716?.refresh?.();globalThis.MangoCreativeUI?.renderZoom?.();globalThis.MangoCreativeUI?.renderVoice?.();globalThis.MangoVisualClip?.refresh?.();globalThis.MangoMotionUI?.sync?.();}
+function refreshed(){motionDraftV0750=null;previewSequenceTime=null;render();sequencePreview?.update();globalThis.MangoClipTimeline?.render?.();globalThis.MangoClipTimeline?.onSequenceChange?.();globalThis.MangoLayerUI?.render?.();paintPreview();globalThis.MangoAutoCutUI?.onEditorChange?.();globalThis.MangoMediaBin?.refresh?.();globalThis.MangoMultitrackUIV0716?.refresh?.();globalThis.MangoCreativeUI?.renderZoom?.();globalThis.MangoCreativeUI?.renderVoice?.();globalThis.MangoVisualClip?.refresh?.();globalThis.MangoMotionUI?.sync?.();}
 
 const label=text=>status.textContent=text;
 const time=t=>`${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}.${String(Math.round(t%1*100)).padStart(2,'0')}`;
@@ -93,7 +93,7 @@ function waitVideoEvent(type,timeout=8000){return new Promise((resolve,reject)=>
  video.addEventListener(type,done,{once:true});video.addEventListener('error',failed,{once:true});
  });}
 async function load(blob,attachedCursorTrace=null,capture=null){if(exporting||multiPreparing)throw new Error('Finish the current export first.');
- globalThis.MangoBridgeV077?.disconnect?.('Source changed');automationLoadReadyV075=false;automationRevisionV075++;const request=++loadVersion;cursorTrace=null;cursorRegions=[];globalThis.MangoCursorClipV073?.refresh?.();
+ globalThis.MangoBridgeV077?.disconnect?.('Source changed');automationLoadReadyV075=false;automationRevisionV075++;const request=++loadVersion;cursorTrace=null;cursorRegions=[];previewSequenceTime=null;globalThis.MangoCursorClipV073?.refresh?.();
  if(!(blob instanceof Blob)||!blob.size)throw new Error('Select a nonempty video.');
  sequencePlaying=false;sequencePreview?.stop();video.pause();stopMultiPreview();multiRuntime?.clear();multiRequest=null;secondary=MT?.defaults()||{clips:[]};cinematic?.clear();cinematicRequest=null;if(originalUrl)URL.revokeObjectURL(originalUrl);
  globalThis.MangoCreativeUI?.voice?.dispose?.();zoomEvents=[];duration=0;segments=[];layers=[];selectedLayerId=null;selectedClipIndex=null;history=[];redoHistory=[];
@@ -113,7 +113,7 @@ async function load(blob,attachedCursorTrace=null,capture=null){if(exporting||mu
  const frame=byId('clip-preview-frame');if(frame&&video.videoWidth>0&&video.videoHeight>0){
    const aspect=video.videoWidth/video.videoHeight;frame.style.setProperty('--mango-ratio',String(aspect));frame.style.setProperty('--mango-aspect',video.videoWidth+' / '+video.videoHeight);
   }
-  automationLoadReadyV075=true;render();globalThis.MangoCursorClipV073?.refresh?.();sequencePreview?.seekOutput(0);globalThis.MangoClipTimeline?.reset?.();globalThis.MangoLayerUI?.render?.();paintPreview();globalThis.MangoAutoCutUI?.onEditorChange?.();label('Loaded '+time(duration)+' video · original is unchanged.'+traceNotice);
+  automationLoadReadyV075=true;render();globalThis.MangoCursorClipV073?.refresh?.();sequencePreview?.seekOutput(0);globalThis.MangoClipTimeline?.reset?.();globalThis.MangoCreativeUI?.renderZoom?.();globalThis.MangoCreativeUI?.renderVoice?.();globalThis.MangoLayerUI?.render?.();paintPreview();globalThis.MangoAutoCutUI?.onEditorChange?.();label('Loaded '+time(duration)+' video · original is unchanged.'+traceNotice);
 }
 function readRange(){const clip=selectedClipIndex!==null&&!rangeSelected?MangoSequenceOps.bounds(segments,selectedClipIndex):null;
  return clip||MangoTimeline.range(Number(byId('in').value),Number(byId('out').value),MangoEditOps.length(segments));}
@@ -248,6 +248,7 @@ function renderSummary(){
  const node=byId('ms55-render-summary');if(!node)return;const t=cursorTrace,active=cursorRegions.filter(r=>r.enabled).length,coverage=globalThis.MangoClipRenderV0755?.coverage(t,cursorRegions,segments),mapped=coverage?.seconds||0;
  const tracked=t?.samples?.some(s=>s[1]!==null),native=t?.capture?.states?.some(s=>s[1]==='linked'||s[1]==='native');
  const warn=!!original&&(active>0&&mapped<=0||t?.capture?.master==='clean'&&!tracked||t?.capture?.master==='clean'&&!active&&!zoomEvents.length&&t.capture.states.some(s=>s[3]?.spotlight||s[3]?.ring||s[3]?.zoomMode&&s[3].zoomMode!=='off'));
+ const monitor=byId('preview-label');if(monitor){monitor.textContent=original?active+' cursor FX · '+zoomEvents.length+' camera events':'Edited sequence preview';monitor.title='Committed timeline effects, not draft settings.';}
  node.dataset.warning=String(warn);node.textContent=!original?'Load a recording to inspect committed effects.':(active+' enabled cursor region(s) · '+zoomEvents.length+' camera event(s) · '+(tracked?(native?'source tracking available':'preview-only or legacy cursor path'):'no tracked pointer samples')+(active?' · '+mapped.toFixed(1)+'s tracked FX coverage':'')+(warn?' · Review Cursor → Effects; missing motion cannot be reconstructed.':'')+(t?.baked?' · original may contain baked effects':''));
 }
 function paintPreview(){
