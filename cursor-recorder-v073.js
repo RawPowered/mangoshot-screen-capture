@@ -33,7 +33,7 @@
  function ingest(p,click=false){
   if(!session||!host.active())return;
   pointer=core.point(p);lastAt=now();
-  if(pointer&&click){clicked={...pointer};clickAt=lastAt;const t=host.seconds?.();if(retain&&Number.isFinite(t)){if(mode==='linked')capture?.click(t,pointer);const output=control.outFrame(core.outputPoint(pointer,lastCamera||host.camera()),host.frame());trace?.click(t,output);traceStarted=true;}}
+  if(pointer&&click){clicked={...pointer};clickAt=lastAt;const t=host.seconds?.();if(retain&&Number.isFinite(t)){if(mode==='linked')capture?.click(t,pointer);const output=control.outFrame(host.cleanMaster?.()?pointer:core.outputPoint(pointer,lastCamera||host.camera()),host.frame());trace?.click(t,output);traceStarted=true;}}
  }
  function previewPoint(e,click=false){
   if(mode!=='preview'||!session||!host.active())return;
@@ -77,7 +77,7 @@
   applyRecipe(JSON.parse(raw));setStatus('Cursor recipe applied. Tracking permissions unchanged.');
  }catch(e){setStatus(e.message);}});
  renderSettings();
- function begin(){disconnect();session=true;trace=core.createTrace();capture=captureCore?.create(core.config)||null;traceWarning=false;lastFrame=now();lastCamera=null;el('cursor-consent-v073').checked=false;
+ function begin(){disconnect();session=true;retain=!!el('cursor-retain-v073').checked;trace=core.createTrace();capture=captureCore?.create(core.config,host.cleanMaster?.()?'clean':'composite')||null;traceWarning=false;lastFrame=now();lastCamera=null;el('cursor-consent-v073').checked=false;
   setStatus(retain?'Cursor path retention ON (local). Connect the same captured webpage for source tracking; display/window tracking is preview-only.':'Cursor path retention OFF. Enable it to preserve tracked movement.');}
  function end(){hot.cancel();let meta=null;try{if(traceStarted)meta=capture?.finish()||null;}catch(e){setStatus('Source telemetry could not be finalized; recorded-frame path retained.');}const result=trace?.finish(meta);trace=null;capture=null;session=false;disconnect();lastCamera=null;el('cursor-consent-v073').checked=false;setStatus(result&&(result.truncated||result.capture?.truncated)?'Cursor trace limit reached; recording retained but telemetry may be incomplete.':'Cursor tracking stopped.');return result&&(result.samples.some(s=>s[1]!==null)||result.clicks?.length||result.capture?.cameraFrames.length)?result:null;}
  function frame(ctx,media,base,w,h,seconds){
@@ -90,8 +90,8 @@
   const output=control.outFrame(core.outputPoint(p,c),fitted);
   core.draw(ctx,output,effective,w,h,age);
   if(trace&&seconds!=null){
-   if(!!output&&(effective.spotlight||effective.ring)||Math.abs(c.zoom-1)>.001)trace.markBaked();
-   if(retain||traceStarted){traceStarted=traceStarted||retain;trace.add(seconds,retain?output:null);try{capture?.frame(seconds,p,c,fitted,effective,mode,retain);}catch(e){capture=null;setStatus('Source telemetry failed; continuing recorded-frame path: '+e.message);}}
+   if(!host.cleanMaster?.()&&(!!output&&(effective.spotlight||effective.ring)||Math.abs(c.zoom-1)>.001))trace.markBaked();
+   if(retain||traceStarted){traceStarted=traceStarted||retain;trace.add(seconds,retain?(host.cleanMaster?.()?control.outFrame(p,fitted):output):null);try{capture?.frame(seconds,p,c,fitted,effective,mode,retain);}catch(e){capture=null;setStatus('Source telemetry failed; continuing recorded-frame path: '+e.message);}}
    if(!traceWarning&&(trace.truncated()||capture?.truncated())){traceWarning=true;setStatus('Cursor trace capacity reached; video recording continues.');}
   }
   return c;
