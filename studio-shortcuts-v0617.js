@@ -49,6 +49,8 @@
   const view={workspaceEdit:'edit',workspaceGraphics:'graphics',workspaceTimeline:'timeline'}[id];
   if(view){const b=document.querySelector?.('[data-workspace="'+view+'"]');if(!b)return false;b.click();return true;}
   if(!st?.original?.()||st.exporting?.())return false;
+  const motionAction={motionStudio:'open',motionAddKey:'addKey',motionPrevKey:'previous',motionNextKey:'next'}[id];
+  if(motionAction)return root.MangoMotionStudioV0750?.[motionAction]?.()===true;
   const targets={select:'tool-select',razor:'tool-razor',range:'range-tool',split:'split',
    markIn:'mark-in',markOut:'mark-out',marker:'add-marker',trim:'trim',
    undo:'undo',redo:'redo',redoAlternate:'redo',
