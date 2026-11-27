@@ -1,0 +1,41 @@
+name: Native cursor development qualification
+on:
+  push:
+    branches:
+      - feature/v0.7.53-native-cursor-engine
+    paths:
+      - 'native/cursor-host/**'
+      - 'native-cursor-*-v0753.js'
+      - 'tests/native-cursor-v0753.cjs'
+      - 'cursor-recorder-v073.js'
+      - 'cursor-capture-v0751.js'
+      - 'recorder.js'
+      - 'recorder.html'
+      - '.github/workflows/native-cursor-v0753.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  contracts:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: JavaScript native protocol and recorder contracts
+        run: |
+          node --check native-cursor-protocol-v0753.js
+          node --check native-cursor-ui-v0753.js
+          node --check cursor-recorder-v073.js
+          node --check recorder.js
+          node tests/native-cursor-v0753.cjs
+          node tests/cursor-capture-v0751.cjs
+          node tests/clean-master-v0752.cjs
+      - name: Rust unit tests and Windows compilation
+        run: |
+          cargo test --manifest-path native/cursor-host/Cargo.toml
+          cargo build --release --manifest-path native/cursor-host/Cargo.toml
+      - name: Unsigned development host (not a release)
+        uses: actions/upload-artifact@v4
+        with:
+          name: mangoshot-cursor-host-windows-preview
+          path: native/cursor-host/target/release/mangoshot-cursor-host.exe
+          if-no-files-found: error
