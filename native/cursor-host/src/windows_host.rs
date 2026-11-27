@@ -2,7 +2,7 @@
 //! confirmed recording lease is alive. No hooks, global keyboard polling,
 //! desktop overlay, disk logs, shell execution, network or input injection.
 use mangoshot_cursor_host::{expired, read_command, valid_origin, valid_session, write_message, ClickEdge, Command, Monitor, PROTOCOL, SAMPLE_MS};
-use serde_json::{json, Value};
+use serde_json::json;
 use std::{ffi::c_void, io::{self, Write}, sync::mpsc::{self, RecvTimeoutError}, thread, time::{Duration, Instant}};
 
 #[repr(C)]
@@ -22,6 +22,7 @@ extern "system" {
     fn GetMonitorInfoW(monitor: Handle, info: *mut MonitorInfo) -> i32;
     fn GetPhysicalCursorPos(point: *mut Point) -> i32;
     fn GetAsyncKeyState(key: i32) -> i16;
+    fn GetSystemMetrics(index: i32) -> i32;
     fn MessageBoxW(owner: Handle, text: *const u16, caption: *const u16, kind: u32) -> i32;
 }
 #[derive(Clone)]
@@ -66,7 +67,7 @@ fn sample(s:&mut Session,out:&mut impl Write)->io::Result<bool>{
     }
     let mut p=Point::default();
     let pos=if unsafe {GetPhysicalCursorPos(&mut p)}!=0 {s.display.monitor.normalized(p.x,p.y)} else {None};
-    let click=s.click.sample(pos.map(|_|unsafe {GetAsyncKeyState(0x01)<0}));
+    let click=s.click.sample(pos.map(|_|unsafe {let button=if GetSystemMetrics(23)!=0 {0x02}else{0x01};GetAsyncKeyState(button)<0}));
     s.sequence+=1;
     let (x,y)=pos.map_or((None,None),|(x,y)|(Some(x),Some(y)));
     write_message(out,&json!({"type":"sample","session":s.id,"seq":s.sequence,"elapsed_ms":ms(s.start),"x":x,"y":y,"click":click}))?;
