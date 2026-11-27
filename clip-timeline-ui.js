@@ -6,7 +6,7 @@
  let markers=[],generation=0,tool='select',draggingPlayhead=false,draggingRange=false,rangeAnchor=0;
  // Caches are keyed by SOURCE time. Every render reprojects them into
  // sequence time, so edited gaps never appear in the A1 or thumbnail strips.
- let thumbnailUrls=[],thumbnailCache=[],generated=false,renderTimer=0,sourceUrl=null,sequenceSignature='';
+ let thumbnailUrls=[],thumbnailCache=[],generated=false,renderTimer=0,sourceUrl=null,sequenceSignature='',activeGeneration=0;
  let waveformPeaks=null,waveformDuration=0,profile='balanced';
  const thumbCount=duration=>profile==='high'?Math.min(80,Math.max(16,Math.ceil(duration/5))):Math.min(36,Math.max(12,Math.ceil(duration/10)));
  function reflowThumbnails(){
@@ -24,7 +24,7 @@
     if(diff<distance){nearest=item;distance=diff;}}
    const tolerance=Math.min(1.5,Math.max(.12,duration/plan.length*.16));
    const retained=globalThis.MangoSequenceMedia.sections(st.segments())[frame.index];
-   if(nearest&&distance<=tolerance&&nearest.source>=retained.sourceStart-.0001&&nearest.source<=retained.sourceEnd+.0001){node.style.backgroundImage='url('+nearest.url+')';}
+   if(nearest&&distance<=tolerance&&nearest.source>=retained.sourceStart-.0001&&nearest.source<=retained.sourceEnd+.0001){node.style.backgroundImage='url('+nearest.url+')';const img=document.createElement('img');img.alt='';img.src=nearest.url;img.draggable=false;node.appendChild(img);}
    else {node.className+=' frame-thumb-pending';node.textContent=format(frame.output);}
    frameStrip.appendChild(node);
   }
@@ -159,8 +159,8 @@
  async function generateFrames(automatic=false){
   const st=state(),source=st?.url();if(!source||!st.duration())return;
   const myGeneration=++generation,button=ui('make-thumbnails');
-  generated=true;sourceUrl=source;
-  button.disabled=true;
+  generated=true;sourceUrl=source;activeGeneration=myGeneration;
+  button.disabled=true;button.textContent='Generating…';reflowThumbnails();
   if(!automatic)st.message('Generating sequence-aligned preview frames locally…');
   const plan=globalThis.MangoSequenceMedia.thumbnailPlan(st.segments(),thumbCount(st.outputDuration()));
   let thumbVideo;
@@ -172,25 +172,28 @@
   });
   try{
    thumbVideo=document.createElement('video');thumbVideo.preload='auto';thumbVideo.muted=true;thumbVideo.playsInline=true;
-   const metadata=wait(thumbVideo,'loadedmetadata');thumbVideo.src=source;await metadata;
-   if(thumbVideo.readyState<2)await wait(thumbVideo,'loadeddata');
+   thumbVideo.style.cssText='position:fixed;left:-9999px;width:2px;height:2px;pointer-events:none;opacity:0';document.body.appendChild(thumbVideo);
+   const metadata=wait(thumbVideo,'loadedmetadata');thumbVideo.src=source;thumbVideo.load();await metadata;
+   if(globalThis.MangoMediaDurationV0739)await globalThis.MangoMediaDurationV0739.resolve(thumbVideo,st.duration(),()=>generation===myGeneration&&st.url()===source);else if(thumbVideo.readyState<2)await wait(thumbVideo,'loadeddata');
    const width=150,height=Math.max(50,Math.round(width*(thumbVideo.videoHeight||9)/(thumbVideo.videoWidth||16)));
    const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
    const ctx=canvas.getContext('2d',{alpha:false});
    for(let i=0;i<plan.length;i++){
     if(generation!==myGeneration||st.url()!==source)return;
-    const sourceTime=Math.max(0,Math.min(thumbVideo.duration-.05,plan[i].source));
+    const sourceTime=Math.max(0,Math.min(st.duration()-.005,plan[i].source));
     const existing=thumbnailCache.find(c=>Math.abs(c.source-sourceTime)<.06);
     if(existing)continue;
     if(Math.abs(thumbVideo.currentTime-sourceTime)>.018){const done=wait(thumbVideo,'seeked');thumbVideo.currentTime=sourceTime;await done;}
-    if(generation!==myGeneration)return;
+    if(generation!==myGeneration||st.url()!==source)return;
+    if(thumbVideo.readyState<2)await wait(thumbVideo,'loadeddata');if(thumbVideo.seeking||Math.abs(thumbVideo.currentTime-sourceTime)>.15)throw Error('Thumbnail frame not synchronized');
     ctx.drawImage(thumbVideo,0,0,width,height);
     let url;if(canvas.toBlob&&globalThis.URL?.createObjectURL){
      const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.72));
      if(blob)url=URL.createObjectURL(blob);
     }
     if(!url)url=canvas.toDataURL('image/jpeg',.72);
-    thumbnailCache.push({source:sourceTime,url});thumbnailUrls.push(url);
+    if(generation!==myGeneration||st.url()!==source){if(url.startsWith('blob:'))URL.revokeObjectURL(url);return;}
+    thumbnailCache.push({source:sourceTime,url});thumbnailUrls.push(url);button.textContent='Thumbnails '+(i+1)+'/'+plan.length;
     if(thumbnailCache.length>200){const stale=thumbnailCache.shift();
      if(stale.url.startsWith('blob:'))URL.revokeObjectURL(stale.url);thumbnailUrls=thumbnailUrls.filter(url=>url!==stale.url);}
     if(i%4===0)reflowThumbnails();
@@ -199,7 +202,7 @@
    if(generation===myGeneration){reflowThumbnails();
     if(!automatic)st.message('Sequence-synchronized thumbnails ready. Cuts remain aligned after edits.');}
   }catch(error){if(generation===myGeneration)st.message('Thumbnail analysis unavailable: '+error.message);}
-  finally{thumbVideo?.pause?.();thumbVideo?.removeAttribute?.('src');thumbVideo?.load?.();button.disabled=false;}
+  finally{thumbVideo?.pause?.();thumbVideo?.removeAttribute?.('src');thumbVideo?.load?.();thumbVideo?.remove?.();if(activeGeneration===myGeneration){activeGeneration=0;button.textContent='Generate thumbnails';st.updateControls?.();}}
  }
  function scheduleRegeneration(){
   if(!generated)return;
@@ -305,6 +308,6 @@
   else if(key==='j'){st.video().pause();st.seekOutput(Math.max(0,(st.outputAt(st.video().currentTime)||0)-2));event.preventDefault();}
   else if(event.altKey&&key==='backspace'){rippleSelection();event.preventDefault();}
  });
- globalThis.MangoClipTimeline={render,markers:()=>markers.map(m=>({...m})),loadMarkers(items){markers=items.map(m=>({...m}));render();},onSequenceChange(){const signature=JSON.stringify(state()?.segments()||[]);if(signature===sequenceSignature)return;sequenceSignature=signature;++generation;reflowThumbnails();redrawWaveform();scheduleRegeneration();},setProfile(next){profile=next==='high'?'high':'balanced';reflowThumbnails();scheduleRegeneration();},reset(){tool='select';setTool('select');generation++;markers=[];draggingPlayhead=false;draggingRange=false;generated=false;waveformPeaks=null;waveformDuration=0;sourceUrl=null;sequenceSignature=JSON.stringify(state()?.segments()||[]);clearTimeout(renderTimer);thumbnailCache=[];
+ globalThis.MangoClipTimeline={render,isGenerating:()=>!!activeGeneration,markers:()=>markers.map(m=>({...m})),loadMarkers(items){markers=items.map(m=>({...m}));render();},onSequenceChange(){const signature=JSON.stringify(state()?.segments()||[]);if(signature===sequenceSignature)return;sequenceSignature=signature;++generation;reflowThumbnails();redrawWaveform();scheduleRegeneration();},setProfile(next){profile=next==='high'?'high':'balanced';reflowThumbnails();scheduleRegeneration();},reset(){tool='select';setTool('select');generation++;activeGeneration=0;ui('make-thumbnails').textContent='Generate thumbnails';markers=[];draggingPlayhead=false;draggingRange=false;generated=false;waveformPeaks=null;waveformDuration=0;sourceUrl=null;sequenceSignature=JSON.stringify(state()?.segments()||[]);clearTimeout(renderTimer);thumbnailCache=[];
   for(const url of thumbnailUrls)if(url.startsWith('blob:'))try{URL.revokeObjectURL(url);}catch{}thumbnailUrls=[];ui('thumbnail-strip').replaceChildren();const hint=document.createElement('span');hint.className='frame-thumb-label';hint.textContent='Generate thumbnails to inspect source frames';ui('thumbnail-strip').appendChild(hint);const wave=ui('audio-waveform');wave?.getContext?.('2d')?.clearRect(0,0,wave.width,wave.height);render();},playhead};
 })();
