@@ -1,4 +1,4 @@
-# MangoShot native cursor host (v0.7.53 development preview)
+# MangoShot native cursor host (v0.7.54 development preview)
 
 ## Contract
 Windows 10/11, Chrome or Edge, entire-screen capture only. Browser still owns capture permission, audio, encoding, source switching, local clip storage and export. This companion emits normalized monitor-local cursor positions and sampled primary-button down edges during a user-confirmed recording. It does not capture keystrokes, inject input, read windows or documents, take screenshots, listen on sockets, or store telemetry on disk.
@@ -40,4 +40,4 @@ No elevated installer, startup service, Firefox registration, signed binary or p
 ## Release gates
 Run the native Rust tests and JS contract tests in CI, then install and exercise on actual Windows hardware: single display; negative-origin second display; mixed 100/150/200% DPI; rotated monitor; move across monitor boundary; unplug/resize; swapped mouse buttons; very short clicks; monitor mismatch; declined consent; pause/resume; source switch; stop; browser close; host missing; corrupt/stale protocol; hidden preview; CPU/IPC load. Compare cursor position and timing against the captured footage. Confirm the host is idle before approval and terminates on lease loss. Check clean and composite modes, recovery, saved v2 projects and preview/export.
 
-Actual-monitor overlays, native video capture, cursor-pixel exclusion, global shortcut registration and exact timestamp synchronization are deliberately outside this patch. Do not label this preview as complete desktop effects or frame-accurate native capture. The next overlay prototype must demonstrate exclusion from each selected capture API before enabling clean-master overlays; no automatic enabling.
+v0.7.54 adds an opt-in experimental desktop overlay and optional registered global shortcuts. Enable them before approving the native session. The overlay is composite-only; the browser disables the option in clean mode, and the host requires an explicit composite declaration. No capture-exclusion guarantee is made. Native video capture, cursor-pixel exclusion and exact timestamp synchronization remain out of scope. See [Native Overlay Studio](../../docs/native-overlay-v0754.md) for the separate Windows qualification gates.
