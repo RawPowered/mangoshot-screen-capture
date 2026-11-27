@@ -4,15 +4,17 @@ const d=root.MangoCursorDirectorCoreV074,doc=root.document,el=id=>doc.getElement
 const ui=k=>el('cd-'+k+'-v074'),view=()=>root.MangoClipView,trace=()=>view()?.cursorTrace?.()||null,regions=()=>view()?.cursorRegions?.()||[],report=t=>ui('note').textContent=t;
 const fields=['spotlight','ring','pulse','marker','radius','dim','feather','smooth','markerSize','color'];
 const id=()=>root.crypto?.randomUUID?.()||Date.now()+'-'+Math.random().toString(36).slice(2),copy=x=>JSON.parse(JSON.stringify(x)),live=x=>root.MangoCleanMasterV0752?.isLive(x)===true;
-let selected=null,proposal=null,lastStamp=null,lastTrace=null,profiles=[];
+let selected=null,proposal=null,lastStamp=null,lastTrace=null,profiles=[],lastSelectedState=null;
 const key='MangoShotCursorDirectorPresetsV1';
 try{const a=JSON.parse(root.localStorage.getItem(key)||'[]');if(Array.isArray(a))profiles=a.slice(0,30).map(d.presetFile);}catch{}
 function readStyle(){return d.style(Object.fromEntries(fields.map(k=>{const n=ui(k);return [k,n.type==='checkbox'?n.checked:['marker','color'].includes(k)?n.value:Number(n.value)];})));}
 function putStyle(s){for(const k of fields){const n=ui(k);if(n.type==='checkbox')n.checked=s[k];else n.value=s[k];}}
 function page(name){for(const p of panel.querySelectorAll('[data-cd-page]'))p.hidden=p.dataset.cdPage!==name;for(const b of panel.querySelectorAll('[data-cd-tab]'))b.setAttribute('aria-pressed',String(b.dataset.cdTab===name));}
 for(const b of panel.querySelectorAll('[data-cd-tab]'))b.addEventListener('click',()=>page(b.dataset.cdTab));
-ui('preset').addEventListener('change',()=>{if(ui('preset').value!=='custom')putStyle(d.preset(ui('preset').value));});
-for(const k of fields)ui(k).addEventListener('change',()=>{ui('preset').value='custom';});
+function commitSelectedStyle(){try{const r=regions().find(x=>x.id===selected);if(!r){report('Effect draft updated. Apply to a range or retained footage.');return;}const v=ready();if(v.isPlaying?.())throw Error('Pause playback before editing this effect.');action('effects.update',{id:r.id,style:readStyle(),enabled:ui('enabled').checked});report('Selected cursor effect committed to timeline · Ctrl+Z to undo.');}catch(e){report(e.message);const r=regions().find(x=>x.id===selected);if(r){putStyle(r.style);ui('enabled').checked=r.enabled;}}}
+ui('preset').addEventListener('change',()=>{if(ui('preset').value!=='custom'){putStyle(d.preset(ui('preset').value));commitSelectedStyle();}});
+for(const k of fields)ui(k).addEventListener('change',()=>{ui('preset').value='custom';commitSelectedStyle();});
+ui('enabled').addEventListener('change',commitSelectedStyle);
 function stamp(){const v=view();return JSON.stringify([v?.segments?.()||[],v?.zoomFrames?.()||[],regions(),v?.duration?.()||0]);}
 function ready(){const v=view();if(!v?.original?.()||v.exporting()||!trace())throw Error('Load a recording with cursor path retention and finish export first');return v;}
 function run(raw){
@@ -38,12 +40,14 @@ function refresh(){
  const tracked=el('cd-tracked-v0755');if(tracked)tracked.disabled=!loaded||busy||!t?.samples.some(s=>s[1]!==null)||list.some(r=>!live(r.id));
  if(proposal&&(proposal.stamp!==stamp()||proposal.trace!==t)){proposal=null;renderProposal();}
  ui('apply').disabled=busy||!proposal?.items.length;if(!list.some(x=>x.id===selected))selected=null;ui('edit').hidden=!selected;
+ const current=list.find(x=>x.id===selected),selectedStamp=current?JSON.stringify(current):null;if(selectedStamp!==lastSelectedState){lastSelectedState=selectedStamp;if(current){putStyle(current.style);ui('source-start').value=current.start;ui('source-end').value=current.end;ui('enabled').checked=current.enabled;}}const draft=el('cd-new-draft-v0755');if(draft)draft.disabled=busy||!loaded;
  const sig=JSON.stringify([v?.segments?.()||[],list,selected,busy,loaded]);if(sig===lastStamp&&t===lastTrace)return;lastStamp=sig;lastTrace=t;
  const host=ui('regions'),track=ui('track'),liveTrack=el('live-fx-track-v0752');host.replaceChildren();track.replaceChildren();liveTrack?.replaceChildren();const parts=v?.segments?.()||[],length=v?.outputDuration?.()||0,projected=d.project(parts,list);
  for(const r of list){const row=doc.createElement('div');row.className='cd-row-v074';const p=projected.find(x=>x.id===r.id);const b=btn((live(r.id)?'Live · ':'Post · ')+(r.enabled?'':'Disabled · ')+r.start.toFixed(2)+'–'+r.end.toFixed(2)+'s source'+(!p?' · not retained':''),()=>choose(r.id,p?.start));b.setAttribute('aria-pressed',String(r.id===selected));row.append(b);host.append(row);}
  if(!list.length)host.textContent='No cursor effects on timeline.';
  if(length>0)for(const p of projected){const b=btn(live(p.id)?'Live FX':'Post FX',()=>choose(p.id,p.start));b.style.left=100*p.start/length+'%';b.style.width=100*(p.end-p.start)/length+'%';b.dataset.disabled=String(!p.enabled);b.setAttribute('aria-pressed',String(p.id===selected));b.title='Cursor effect '+p.start.toFixed(2)+'–'+p.end.toFixed(2)+'s';b.setAttribute('aria-label',b.title);(live(p.id)&&liveTrack?liveTrack:track).append(b);}track.hidden=!list.some(r=>!live(r.id));if(liveTrack)liveTrack.hidden=!list.some(r=>live(r.id));
 }
+el('cd-new-draft-v0755')?.addEventListener('click',()=>{selected=null;lastSelectedState=null;lastStamp=null;refresh();report('New effect draft. Choose settings, then apply to the desired range.');});
 el('restore-live-v0752')?.addEventListener('click',safe(()=>{const v=ready();report(v.restoreCapturedLive());}));
 ui('use-range').addEventListener('click',safe(()=>{ui('start').value=el('in').value;ui('end').value=el('out').value;}));
 ui('add').addEventListener('click',safe(()=>action('effects.add',{start:Number(ui('start').value),end:Number(ui('end').value),style:readStyle()})));
