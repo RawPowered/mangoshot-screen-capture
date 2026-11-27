@@ -3,7 +3,7 @@
 const d=root.MangoCursorDirectorCoreV074,doc=root.document,el=id=>doc.getElementById(id),panel=el('cursor-director-v074');if(!d||!panel)return;
 const ui=k=>el('cd-'+k+'-v074'),view=()=>root.MangoClipView,trace=()=>view()?.cursorTrace?.()||null,regions=()=>view()?.cursorRegions?.()||[],report=t=>ui('note').textContent=t;
 const fields=['spotlight','ring','pulse','marker','radius','dim','feather','smooth','markerSize','color'];
-const id=()=>root.crypto?.randomUUID?.()||Date.now()+'-'+Math.random().toString(36).slice(2),copy=x=>JSON.parse(JSON.stringify(x));
+const id=()=>root.crypto?.randomUUID?.()||Date.now()+'-'+Math.random().toString(36).slice(2),copy=x=>JSON.parse(JSON.stringify(x)),live=x=>root.MangoCleanMasterV0752?.isLive(x)===true;
 let selected=null,proposal=null,lastStamp=null,lastTrace=null,profiles=[];
 const key='MangoShotCursorDirectorPresetsV1';
 try{const a=JSON.parse(root.localStorage.getItem(key)||'[]');if(Array.isArray(a))profiles=a.slice(0,30).map(d.presetFile);}catch{}
@@ -34,14 +34,16 @@ function renderProposal(){const host=ui('proposals');host.replaceChildren();if(p
 function refresh(){
  const v=view(),t=trace(),list=regions(),loaded=!!v?.original?.(),busy=!!v?.exporting?.();ui('source').textContent=t?t.samples.filter(s=>s[1]!==null).length+' frame samples · '+(t.clicks?.length||0)+' clicks'+(t.truncated||t.capture?.truncated?' · TRUNCATED':'')+(t.baked?' · recorded pixels contain baked changes':''):'No cursor path';
  for(const k of ['add','use-range','propose','update','remove','run'])ui(k).disabled=!loaded||!t||busy;
+ const rebuild=el('restore-live-v0752');if(rebuild)rebuild.disabled=!loaded||busy||t?.baked||t?.capture?.master!=='clean'||list.some(r=>live(r.id))||!!v?.zoomFrames?.().length;
  if(proposal&&(proposal.stamp!==stamp()||proposal.trace!==t)){proposal=null;renderProposal();}
  ui('apply').disabled=busy||!proposal?.items.length;if(!list.some(x=>x.id===selected))selected=null;ui('edit').hidden=!selected;
  const sig=JSON.stringify([v?.segments?.()||[],list,selected,busy,loaded]);if(sig===lastStamp&&t===lastTrace)return;lastStamp=sig;lastTrace=t;
- const host=ui('regions'),track=ui('track');host.replaceChildren();track.replaceChildren();const parts=v?.segments?.()||[],length=v?.outputDuration?.()||0,projected=d.project(parts,list);
- for(const r of list){const row=doc.createElement('div');row.className='cd-row-v074';const p=projected.find(x=>x.id===r.id);const b=btn((r.enabled?'':'Disabled · ')+r.start.toFixed(2)+'–'+r.end.toFixed(2)+'s source'+(!p?' · not retained':''),()=>choose(r.id,p?.start));b.setAttribute('aria-pressed',String(r.id===selected));row.append(b);host.append(row);}
+ const host=ui('regions'),track=ui('track'),liveTrack=el('live-fx-track-v0752');host.replaceChildren();track.replaceChildren();liveTrack?.replaceChildren();const parts=v?.segments?.()||[],length=v?.outputDuration?.()||0,projected=d.project(parts,list);
+ for(const r of list){const row=doc.createElement('div');row.className='cd-row-v074';const p=projected.find(x=>x.id===r.id);const b=btn((live(r.id)?'Live · ':'Post · ')+(r.enabled?'':'Disabled · ')+r.start.toFixed(2)+'–'+r.end.toFixed(2)+'s source'+(!p?' · not retained':''),()=>choose(r.id,p?.start));b.setAttribute('aria-pressed',String(r.id===selected));row.append(b);host.append(row);}
  if(!list.length)host.textContent='No cursor effects on timeline.';
- if(length>0)for(const p of projected){const b=btn('Cursor FX',()=>choose(p.id,p.start));b.style.left=100*p.start/length+'%';b.style.width=100*(p.end-p.start)/length+'%';b.dataset.disabled=String(!p.enabled);b.setAttribute('aria-pressed',String(p.id===selected));b.title='Cursor effect '+p.start.toFixed(2)+'–'+p.end.toFixed(2)+'s';b.setAttribute('aria-label',b.title);track.append(b);}track.hidden=!list.length;
+ if(length>0)for(const p of projected){const b=btn(live(p.id)?'Live FX':'Post FX',()=>choose(p.id,p.start));b.style.left=100*p.start/length+'%';b.style.width=100*(p.end-p.start)/length+'%';b.dataset.disabled=String(!p.enabled);b.setAttribute('aria-pressed',String(p.id===selected));b.title='Cursor effect '+p.start.toFixed(2)+'–'+p.end.toFixed(2)+'s';b.setAttribute('aria-label',b.title);(live(p.id)&&liveTrack?liveTrack:track).append(b);}track.hidden=!list.some(r=>!live(r.id));if(liveTrack)liveTrack.hidden=!list.some(r=>live(r.id));
 }
+el('restore-live-v0752')?.addEventListener('click',safe(()=>{const v=ready();report(v.restoreCapturedLive());}));
 ui('use-range').addEventListener('click',safe(()=>{ui('start').value=el('in').value;ui('end').value=el('out').value;}));
 ui('add').addEventListener('click',safe(()=>action('effects.add',{start:Number(ui('start').value),end:Number(ui('end').value),style:readStyle()})));
 ui('update').addEventListener('click',safe(()=>action('effects.update',{id:selected,start:Number(ui('source-start').value),end:Number(ui('source-end').value),style:readStyle(),enabled:ui('enabled').checked})));
@@ -56,7 +58,7 @@ ui('import-preset').addEventListener('click',()=>ui('preset-file').click());
 ui('preset-file').addEventListener('change',async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;try{if(file.size>4096)throw Error('Preset exceeds 4 KB');savePreset(d.presetFile(JSON.parse(await file.text())));report('Preset imported.');}catch(err){report(err.message);}});
 ui('run').addEventListener('click',safe(()=>{if(ui('recipe').value.length>8192)throw Error('Recipe exceeds 8 KB');ui('result').value=JSON.stringify(run(JSON.parse(ui('recipe').value)),null,2);}));
 ui('recipe').value=JSON.stringify({schema:d.RECIPE,action:'smartZoom.propose',settings:{mode:'auto',scale:1.75,transition:.4,hold:1.2}},null,2);
-const title=doc.querySelector('.clip-timeline-panel > .panel-heading span');if(title)title.textContent='TIMELINE · G3 / G2 / V1+A1 / CAM / CUR PATH / LIVE / POST FX / A2';
+const title=doc.querySelector('.clip-timeline-panel > .panel-heading span');if(title)title.textContent='TIMELINE · G3 / G2 / V1+A1 / CAM / CUR PATH / LIVE HISTORY / LIVE FX / POST FX / A2';
 putStyle(d.preset('spotlight'));renderProfiles();refresh();
 root.MangoCursorDirectorV074=Object.freeze({run,refresh,inspect:()=>({regions:regions(),proposal:proposal?{id:proposal.id,items:copy(proposal.items)}:null})});
 })(typeof globalThis!=='undefined'?globalThis:this);
