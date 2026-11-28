@@ -1,9 +1,0 @@
-node_modules/
-coverage/
-dist/
-.DS_Store
-*.log
-tests/sample.pdf
-tests/sample.png
-tests/editor-screenshot.png
-tests/page-*.png
