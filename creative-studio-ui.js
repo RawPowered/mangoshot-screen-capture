@@ -11,14 +11,17 @@
  dialog?.addEventListener('click',e=>{if(e.target===dialog)dialog?.close?.();});
  const currentZoom=()=>view()?.zoomFrames?.()||[];
  function renderZoom(){const list=el('v061-zoom-events'),track=el('v061-zoom-track');list?.replaceChildren();track?.replaceChildren();
-  const total=Math.max(.01,view()?.outputDuration?.()||0);
+  const v=view(),total=Math.max(.01,v?.outputDuration?.()||0);
+  const select=e=>{if(v?.exporting?.())return;v.seekOutput(Math.min(e.start,Math.max(0,total-.001)));root.MangoWorkspaceV062?.activate?.('camera');root.MangoZoomStudioV0738?.openAt?.(e.id);};
   for(const e of currentZoom()){
-   const row=document.createElement('div');row.className='v061-zoom-row';row.dataset.zoomId=e.id;row.tabIndex=0;row.setAttribute('role','button');row.setAttribute('aria-label','Edit camera keyframe at '+e.start.toFixed(2)+' seconds');
-   const label=document.createElement('span');label.textContent=e.start.toFixed(2)+'s · '+Math.round(e.scale*100)+'% · focus '+Math.round(e.x*100)+'% / '+Math.round(e.y*100)+'%';
-   const remove=document.createElement('button');remove.type='button';remove.textContent='Remove';
-   remove.disabled=!!view()?.exporting?.();remove.addEventListener('click',()=>view().removeZoomKeyframe(e.id));
+   const row=document.createElement('div');row.className='v061-zoom-row';row.dataset.zoomId=e.id;
+   const label=document.createElement('button');label.type='button';label.className='ms58-camera-select';label.textContent=e.start.toFixed(2)+'s · '+Math.round(e.scale*100)+'% · '+(e.boundary?'Cut pose':e.duration.toFixed(2)+'s move')+' · X '+Math.round(e.x*100)+' / Y '+Math.round(e.y*100);
+   label.title='Edit selected camera event';label.addEventListener('click',()=>select(e));
+   const remove=document.createElement('button');remove.type='button';remove.textContent='Remove';remove.disabled=!!v?.exporting?.();remove.addEventListener('click',()=>v.removeZoomKeyframe(e.id));
    row.append(label,remove);list?.append(row);
-   const pin=document.createElement('span');pin.className='v061-zoom-marker';pin.style.left=Math.min(100,100*e.start/total)+'%';pin.title=label.textContent;track?.append(pin);
+   if(track){const pin=document.createElement('button');pin.type='button';pin.className='v061-zoom-marker ms58-camera-marker';pin.dataset.cameraId=e.id;pin.dataset.boundary=String(!!e.boundary);pin.style.left=Math.min(100,100*e.start/total)+'%';pin.style.width=Math.max(.001,100*e.duration/total)+'%';pin.title=label.textContent+' · Click to edit, drag to retime, arrows nudge';pin.setAttribute('aria-label',pin.title);pin.disabled=!!v?.exporting?.();track.append(pin);
+    const G=root.MangoTimelineMotionGestureV0758;if(G)G.bind(pin,{view:v,lane:track,initial:e.start,total,limits:()=>[0,Math.max(0,total-Math.max(.001,e.duration))],commit:(t,stamp)=>v.commitCameraTiming(e.id,t,stamp),activate:()=>select(e)});else pin.addEventListener('click',()=>select(e));
+   }
   }
   if(list&&!currentZoom().length)list.textContent='No camera animations yet.';
   root.MangoZoomHUD?.refresh?.();

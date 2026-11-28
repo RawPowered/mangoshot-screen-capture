@@ -17,7 +17,7 @@
    return {scale,x:clamp(from.x+(e.x-from.x)*f,0,1),y:clamp(from.y+(e.y-from.y)*f,0,1)};
  }
  function at(items,time){let before=neutral();for(const e of check(items)){if(time<e.start)return before;const next=poseCheck(e);if(e.duration>0&&time<e.start+e.duration)return interpolate(e,e.from||before,(time-e.start)/e.duration);before=next;}return before;}
- const same=(a,b)=>Math.abs(a.scale-b.scale)<EPS&&(Math.abs(a.scale-1)<EPS||Math.abs(a.x-b.x)<EPS&&Math.abs(a.y-b.y)<EPS);
+ const same=(a,b)=>Math.abs(a.scale-b.scale)<EPS&&Math.abs(a.x-b.x)<EPS&&Math.abs(a.y-b.y)<EPS;
  function retime(raw,ranges,length){
   if(!Array.isArray(ranges)||!Number.isFinite(length)||length<=0)throw Error('Invalid camera timing map');
   if(!ranges.length||!raw.length)return check(raw);

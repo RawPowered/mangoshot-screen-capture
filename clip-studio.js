@@ -66,16 +66,17 @@ function render(){globalThis.MangoCursorDirectorV074?.refresh?.();globalThis.Man
   node.onclick=()=>{if(byId('timeline').dataset.tool==='razor')return;selectedClipIndex=i;selectedLayerId=null;rangeSelected=false;sequencePreview?.stop();sequencePreview?.seekOutput(MangoSequenceMedia.sections(segments)[i].outputStart);
    render();label('Selected Clip '+(i+1)+' · Ripple Delete removes the clip and closes the gap.');};
   for(const edge of ['start','end']){const handle=document.createElement('span');handle.className='trim-grip trim-'+edge;handle.title='Drag inward to trim '+edge+' edge (undoable)';
-   handle.addEventListener('pointerdown',event=>{if(exporting)return;event.preventDefault();event.stopPropagation();
+   handle.addEventListener('pointerdown',event=>{const state=globalThis.MangoClipView?.automationCapture?.();if(event.button!==0||!state?.ready)return;event.preventDefault();event.stopPropagation();
     const originX=event.clientX,width=Math.max(1,byId('timeline').getBoundingClientRect().width),original={...segments[i]};
     const delta=ev=>((ev.clientX-originX)/width)*durationOut;
     const moving=ev=>{handle.title='Trim '+edge+' to '+time(Math.max(original.start,Math.min(original.end,edge==='start'?original.start+delta(ev):original.end+delta(ev))));};
-    const finished=ev=>{window.removeEventListener('pointermove',moving);window.removeEventListener('pointerup',finished);
-     try{const transaction=MangoSequenceOps.edge(segments,layers,globalThis.MangoClipTimeline?.markers?.()||[],i,edge,
+    const cancel=()=>{window.removeEventListener('pointermove',moving);window.removeEventListener('pointerup',finished);window.removeEventListener('pointercancel',cancel);window.removeEventListener('blur',cancel);window.removeEventListener('keydown',escape);};const escape=ev=>{if(ev.key==='Escape'){ev.preventDefault();ev.stopPropagation();cancel();}};
+    const finished=ev=>{cancel();
+     try{if(globalThis.MangoClipView?.automationCapture?.().stamp!==state.stamp)throw Error('Clip timing gesture became stale. Try again.');const transaction=MangoSequenceOps.edge(segments,layers,globalThis.MangoClipTimeline?.markers?.()||[],i,edge,
       edge==='start'?original.start+delta(ev):original.end+delta(ev),duration);
       if(transaction)applyTransaction(transaction,'Clip edge trimmed and downstream timeline rippled. Ctrl+Z to undo.');
      }catch(error){label('Trim not applied: '+error.message);}};
-    window.addEventListener('pointermove',moving);window.addEventListener('pointerup',finished,{once:true});
+    window.addEventListener('pointermove',moving);window.addEventListener('pointerup',finished,{once:true});window.addEventListener('pointercancel',cancel,{once:true});window.addEventListener('blur',cancel,{once:true});window.addEventListener('keydown',escape);
    });node.appendChild(handle);}
   byId('timeline').appendChild(node);
  }

@@ -28,3 +28,11 @@
 .studio-clip .v061-voice-track:before{content:'A2';position:absolute;left:5px;top:5px;font:700 10px system-ui;color:var(--carbon-text)}
 .studio-clip .v061-voice-chip{position:absolute;top:3px;bottom:3px;background:var(--carbon-active);color:var(--carbon-text);min-width:2px;padding:2px 6px;border-radius:4px;white-space:nowrap;font:700 10px system-ui;overflow:hidden}
 @media(max-width:750px){.studio-clip .v061-creative-row{align-items:stretch}.studio-clip .v061-creative-row label{flex:1 1 42%}.studio-clip .clip-preview-frame{width:100%}}
+
+/* v0.7.58 direct camera timing lane. */
+.studio-clip .v061-zoom-track{height:28px}
+.studio-clip .v061-zoom-track:before{top:7px;pointer-events:none;z-index:2;opacity:.66}
+.studio-clip button.ms58-camera-marker{position:absolute;top:4px;bottom:4px;min-width:10px;height:auto;padding:0;border:1px solid #a8c77f;border-radius:2px;background:#506339;touch-action:none;cursor:ew-resize;z-index:3}
+.studio-clip button.ms58-camera-marker[data-boundary=true]{min-width:9px;background:#c2db83;border-color:#edf7ce}
+.studio-clip button.ms58-camera-marker:hover,.studio-clip button.ms58-camera-marker:focus-visible{background:#a4c66b;outline:2px solid #def5b5;outline-offset:1px}
+.studio-clip button.ms58-camera-select{flex:1;min-width:0;text-align:left;font-size:11px;white-space:normal;cursor:pointer}
