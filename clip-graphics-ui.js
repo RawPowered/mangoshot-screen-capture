@@ -60,25 +60,24 @@
   ghost.style.top=(track.top-inner.top+2)+'px';ghost.style.height=Math.max(20,track.height-4)+'px';
   ghost.textContent=`G${candidate.track}  ${fmt(candidate.start)} – ${fmt(candidate.end)}`;
  }
- function startTimelineGesture(e,layer,chip){if(e.button!==0||current()?.exporting())return;
+ function startTimelineGesture(e,layer,chip){if(e.button!==0||!current()?.automationCapture?.().ready)return;
   e.preventDefault();e.stopPropagation();
   if(layer.locked){select(layer.id);return;}
   const kind=e.target?.dataset?.edge||'move';const ghost=document.createElement('div');
   ghost.className='graphic-timeline-ghost';el('timeline-inner').appendChild(ghost);
-  dragTimeline={id:layer.id,origin:{...layer},kind,x:e.clientX,y:e.clientY,chip,ghost,candidate:{...layer},moved:false};
+  select(layer.id,true);dragTimeline={id:layer.id,origin:{...layer},kind,x:e.clientX,y:e.clientY,pointerId:e.pointerId,stamp:current().automationCapture().stamp,chip,ghost,candidate:{...layer},moved:false};
   ghostPos(ghost,layer);chip.classList.add('is-dragging');
-  chip.setPointerCapture?.(e.pointerId);select(layer.id,true);
+  chip.setPointerCapture?.(e.pointerId);
  }
- function updateTimelineGesture(e){const d=dragTimeline;if(!d)return;
+ function updateTimelineGesture(e){const d=dragTimeline;if(!d||e.pointerId!==d.pointerId)return;
   if(Math.hypot(e.clientX-d.x,e.clientY-d.y)<2&&!d.moved)return;
   e.preventDefault?.();d.moved=true;d.candidate=dragCandidate(d,e);ghostPos(d.ghost,d.candidate);
   for(const track of [2,3])el('graphic-track-'+track).parentElement?.classList?.toggle('is-drop-track',track===d.candidate.track&&track!==d.origin.track);
   d.chip.style.opacity='.3';
  }
- function finishTimelineGesture(){const d=dragTimeline;if(!d)return;dragTimeline=null;
+ function finishTimelineGesture(event){const d=dragTimeline;if(!d||event?.pointerId!=null&&event.pointerId!==d.pointerId)return;dragTimeline=null;
   d.ghost.remove();d.chip.style.opacity='';for(const track of [2,3])el('graphic-track-'+track).parentElement?.classList?.remove('is-drop-track');
-  if(d.moved&&MangoLayerOps.changed(d.origin,d.candidate))current()?.commitLayerTimeline?.(d.id,d.candidate);
-  else current()?.selectLayer?.(d.id);
+  if(event?.type==='pointerup'){if(d.moved&&MangoLayerOps.changed(d.origin,d.candidate))current()?.commitLayerTimeline?.(d.id,d.candidate,d.stamp);else current()?.selectLayer?.(d.id);}
  }
  function graphicChip(layer,total){const chip=document.createElement('div');chip.className='graphic-timeline-clip'+(!layer.visible?' is-hidden':'')+(layer.locked?' is-locked':'')+
   (current().selectedLayer()===layer.id?' is-selected':'');chip.tabIndex=0;chip.role='button';chip.dataset.layerId=layer.id;
@@ -193,7 +192,7 @@
  const canvas=el('graphics-preview');
  function canvasPoint(e){const rect=canvas.getBoundingClientRect();return {x:(e.clientX-rect.left)/rect.width,y:(e.clientY-rect.top)/rect.height};}
  canvas.addEventListener('pointerdown',e=>{if(e.button!==0)return;const st=current(),now=st?.motionPosition?.()??st?.outputAt(st.video().currentTime);
-  if(!st||now===null)return;
+  if(!st||now===null||!st.automationCapture().ready)return;
   const p=canvasPoint(e),w=canvas.width,h=canvas.height;
   const visible=MangoGraphics.at(st.layers(),now).reverse();
   const primary=activeLayer(),S=rootShape(),g=primary?.kind==='shape'&&!primary.keyframes?.length&&!primary.locked&&visible.some(l=>l.id===primary.id)?S.geometry(primary,w,h):null,px=p.x*w,py=p.y*h,near=q=>Math.hypot(px-q.x,py-q.y)<Math.max(10,h/65),handle=g?(near(g.rotate)?'rotate':near(g.resize)?'resize':null):null;
@@ -209,8 +208,7 @@
   }
   const box=MangoGraphics.bounds(clicked,w,h),size=20;
   const onHandle=st.selectedLayer()===clicked.id&&Math.abs(p.x*w-(box.x+box.w))<size&&Math.abs(p.y*h-(box.y+box.h))<size;
-  movingCanvas={id:clicked.id,startX:p.x,startY:p.y,x:clicked.x,y:clicked.y,width:clicked.width,
-   size:clicked.fontSize,height:clicked.shape?.height,shape:clicked.kind==='shape'?MangoGraphics.clone(clicked):null,mode:handle||(onHandle?'resize':'move'),moved:false};
+  movingCanvas={id:clicked.id,pointerId:e.pointerId,at:now,expected:st.automationCapture(),startX:p.x,startY:p.y,x:clicked.x,y:clicked.y,width:clicked.width,size:clicked.fontSize,height:clicked.shape?.height,shape:clicked.kind==='shape'?MangoGraphics.clone(clicked):null,mode:handle||(onHandle?'resize':'move'),moved:false,draft:null};
  });
  canvas.addEventListener('pointermove',e=>{if(!movingCanvas)return;
   const st=current(),l=st.layers().find(x=>x.id===movingCanvas.id);if(!l)return;
@@ -222,21 +220,12 @@
    catch(err){movingCanvas=null;st.cancelGraphicMotion(g.id);st.message(err.message);try{canvas.releasePointerCapture?.(g.pointerId);}catch{}}
    return;
   }
-  if(movingCanvas.shape&&['rotate','resize'].includes(movingCanvas.mode)){const o=movingCanvas.shape,w=canvas.width,h=canvas.height,S=rootShape(),next=movingCanvas.mode==='rotate'?{shape:{...o.shape,rotation:S.rotateTo(o,w,h,p.x*w,p.y*h,e.shiftKey)}}:S.resizeFrom(o,w,h,dx*w,dy*h,e.shiftKey);if(JSON.stringify({x:l.x,y:l.y,width:l.width,shape:l.shape})===JSON.stringify({x:next.x??l.x,y:next.y??l.y,width:next.width??l.width,shape:next.shape}))return;if(!movingCanvas.moved){st.beginLayerMove(l.id);movingCanvas.moved=true;}st.moveShapeGeometry(l.id,next);return;}
-  if(movingCanvas.mode==='resize'){
-   const width=Math.max(.1,Math.min(1-l.x,movingCanvas.width+dx));
-   const fontSize=e.shiftKey?Math.max(12,Math.min(220,movingCanvas.size*(1+dy*2))):movingCanvas.size;
-   const height=l.kind==='shape'?Math.max(.03,Math.min(1-l.y,movingCanvas.height+dy)):null;
-   if(Math.abs(width-l.width)+(height===null?Math.abs(fontSize-l.fontSize)/200:Math.abs(height-l.shape.height))<.0005)return;
-   if(!movingCanvas.moved){st.beginLayerMove(l.id);movingCanvas.moved=true;}
-   st.resizeLayer(l.id,width,fontSize,height);
-  }else{
-   const x=Math.max(0,Math.min(1-l.width,movingCanvas.x+dx));
-   const y=Math.max(0,Math.min(l.kind==='shape'?Math.max(0,1-l.shape.height):.94,movingCanvas.y+dy));
-   if(Math.abs(x-l.x)+Math.abs(y-l.y)<.0005)return;
-   if(!movingCanvas.moved){st.beginLayerMove(l.id);movingCanvas.moved=true;}
-   st.moveLayer(l.id,x,y);
-  }
+  const g=movingCanvas;if(e.pointerId!==g.pointerId)return;let patch;
+  if(g.shape&&['rotate','resize'].includes(g.mode)){const o=g.shape,w=canvas.width,h=canvas.height,S=rootShape();patch=g.mode==='rotate'?{shape:{...o.shape,rotation:S.rotateTo(o,w,h,p.x*w,p.y*h,e.shiftKey)}}:S.resizeFrom(o,w,h,dx*w,dy*h,e.shiftKey);}
+  else if(g.mode==='resize'){const width=Math.max(.1,Math.min(1-l.x,g.width+dx));const fontSize=e.shiftKey?Math.max(12,Math.min(220,g.size*(1+dy*2))):g.size;patch=l.kind==='shape'?{width,shape:{...l.shape,height:Math.max(.03,Math.min(1-l.y,g.height+dy))}}:{width,fontSize};}
+  else patch={x:Math.max(0,Math.min(1-l.width,g.x+dx)),y:Math.max(0,Math.min(l.kind==='shape'?Math.max(0,1-l.shape.height):.94,g.y+dy))};
+  if(!g.moved&&Math.hypot(dx*canvas.width,dy*canvas.height)<2)return;
+  try{st.previewGraphicTransform(g.id,patch,g.expected);g.draft=patch;g.moved=true;}catch(err){movingCanvas=null;st.cancelGraphicMotion(g.id);st.message(err.message);try{canvas.releasePointerCapture(g.pointerId);}catch{}}
  });
  function endCanvas(event){if(!movingCanvas)return;
   const g=movingCanvas;
@@ -247,11 +236,10 @@
    catch(err){st.cancelGraphicMotion(g.id);st.message(err.message);}
    try{if(canvas.hasPointerCapture?.(g.pointerId))canvas.releasePointerCapture(g.pointerId);}catch{}return;
   }
-  if(g.moved)current()?.endLayerMove();else current()?.selectLayer(g.id);
-  movingCanvas=null;
+  if(event?.pointerId!=null&&event.pointerId!==g.pointerId)return;movingCanvas=null;const st=current();try{if(event?.type==='pointerup'&&g.moved&&g.draft){if(Math.abs((st.motionPosition()??g.at)-g.at)>.02)throw Error('Playhead changed during gesture.');st.commitGraphicTransform(g.id,g.draft,g.expected);}else{st.cancelGraphicMotion(g.id);if(event?.type==='pointerup')st.selectLayer(g.id);}}catch(err){st.cancelGraphicMotion(g.id);st.message(err.message);}
  }
  for(const ev of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(ev,endCanvas);
- globalThis.addEventListener('keydown',e=>{if(e.key==='Escape'&&movingCanvas?.animated){e.preventDefault();e.stopImmediatePropagation();endCanvas({type:'cancel'});}},true);
- globalThis.addEventListener('blur',()=>{if(movingCanvas?.animated)endCanvas({type:'cancel'});});
+ globalThis.addEventListener('keydown',e=>{if(e.key==='Escape'&&(movingCanvas||dragTimeline)){e.preventDefault();e.stopImmediatePropagation();if(movingCanvas)endCanvas({type:'cancel'});if(dragTimeline)finishTimelineGesture({type:'cancel'});}},true);
+ globalThis.addEventListener('blur',()=>{if(movingCanvas)endCanvas({type:'cancel'});if(dragTimeline)finishTimelineGesture({type:'cancel'});});
  globalThis.MangoLayerUI={render,selectionOutline};render();
 })();

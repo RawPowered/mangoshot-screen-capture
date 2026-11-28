@@ -78,12 +78,11 @@
   if(command==='clip.timeline.rippleDelete'){
    if(s.hasVoice)throw Error('Ripple edits with a recorded voiceover are not supported in sequence scripts');
    if(s.secondary?.clips.length)throw Error('Use the interactive timeline for ripple edits with secondary media.');
-   // Existing camera ripple can drop a return keyframe. Require cuts before camera animation.
-   if(s.zoomFrames.length)throw Error('Perform ripple cuts before adding camera animation (or remove existing camera events)');
+   // Use the same retained-time camera transaction as the interactive editor.
    if(a.end<=a.start||a.end>len)throw Error('Invalid ripple range');
    const tx=root.MangoSequenceOps.range(s.segments,s.layers,s.markers,a.start,a.end);
    const valid=new Set(tx.segments.slice(1).map((p,i)=>tx.segments[i].end.toFixed(5)+':'+p.start.toFixed(5)));
-   s.segments=tx.segments;s.layers=tx.layers;s.markers=tx.markers;s.transitions=s.transitions.filter(t=>valid.has(t.fromEnd.toFixed(5)+':'+t.toStart.toFixed(5)));
+   s.zoomFrames=root.MangoCreativeZoom.retime(s.zoomFrames,tx.removedRanges,len);s.segments=tx.segments;s.layers=tx.layers;s.markers=tx.markers;s.transitions=s.transitions.filter(t=>valid.has(t.fromEnd.toFixed(5)+':'+t.toStart.toFixed(5)));
    return {start:a.start,end:a.end,removed:tx.removed,duration:duration(s)};
   }
   if(command==='clip.camera.zoomRange')return cameraRange(s,a);

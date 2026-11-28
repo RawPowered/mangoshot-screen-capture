@@ -120,6 +120,7 @@ function readRange(){const clip=selectedClipIndex!==null&&!rangeSelected?MangoSe
  return clip||MangoTimeline.range(Number(byId('in').value),Number(byId('out').value),MangoEditOps.length(segments));}
 function commitSequence(next,message,newLayers=layers){
  if(!original||exporting||multiPreparing||!next.length)return false;
+ if(Math.abs(MangoEditOps.length(next)-MangoEditOps.length(segments))>.00001&&(zoomEvents.length||layers.some(l=>l.keyframes?.length))){label('Use Trim or Ripple Delete to preserve animation timing.');return false;}
  if(globalThis.MangoCreativeUI?.hasVoice?.()&&Math.abs(MangoEditOps.length(next)-MangoEditOps.length(segments))>.00001){label('Download or remove narration before changing sequence duration.');return false;}
  if(hasMulti()&&Math.abs(MangoEditOps.length(next)-MangoEditOps.length(segments))>.00001){label('Remove secondary clips before changing primary sequence duration.');return false;}
  remember();segments=clone(next);layers=clone(newLayers);transitions=reconcileTransitions(transitions,segments);selectedClipIndex=null;rangeSelected=false;
@@ -263,7 +264,7 @@ function paintPreview(){
  const ctx=canvas.getContext('2d');if(video.seeking||video.readyState<2)return;video.style.transform='none';video.style.transformOrigin='50% 50%';ctx.clearRect(0,0,w,h);
  const mapped=previewSequenceTime===null?MangoSequenceMedia.atSource(segments,video.currentTime)?.output??null:previewSequenceTime;
  const draft=motionDraftV0750?.id===selectedLayerId&&!sequencePreview?.isPlaying?.()&&motionDraftV0750?.revision===automationRevisionV075?motionDraftV0750:null;
- const previewLayers=draft?layers.map(l=>l.id===draft.id?{...l,keyframes:draft.keys}:l):layers;
+ const previewLayers=draft?layers.map(l=>l.id===draft.id?{...l,...(draft.patch||{keyframes:draft.keys})}:l):layers;
  if(mapped!==null&&video.readyState>=2&&!video.seeking){const result=composeCommitted(ctx,video,mapped,w,h,{graphicLayers:previewLayers,running:!!sequencePreview?.isPlaying()&&!video.paused&&!streamPriming});if(!result.ready)return;}
  globalThis.MangoLayerUI?.selectionOutline?.(ctx,mapped,w,h,draft?previewLayers.find(l=>l.id===draft.id):null);
  globalThis.MangoMotionStudioV0750?.refresh?.(mapped);
@@ -474,6 +475,8 @@ globalThis.MangoClipView={
   async commitSecondaryTimeline(id,candidate,expected){const s=this.automationCapture();if(!s.ready||s.stamp!==expected)throw Error('Timeline edit is stale.');return this.applyMultitrack(PT.change(secondary,id,candidate),expected);},
   motionPosition:()=>previewSequenceTime??sequencePreview?.current()??null,
   previewGraphicMotion(id,keys,expected){const s=this.automationCapture(),l=layers.find(x=>x.id===id);if(!s.ready||s.identity!==expected?.identity||s.stamp!==expected?.stamp||!l||l.locked||selectedLayerId!==id)throw Error('Motion gesture is stale or the layer is locked.');motionDraftV0750={id,keys:compositor.checkKeys(keys),revision:automationRevisionV075};paintPreview();return true;},
+  previewGraphicTransform(id,patch,expected){const s=this.automationCapture(),l=layers.find(x=>x.id===id);if(!s.ready||s.identity!==expected?.identity||s.stamp!==expected?.stamp||!l||l.locked||selectedLayerId!==id)throw Error('Graphic gesture is stale or locked.');const allowed=['x','y','width','fontSize','shape'];if(!patch||Object.keys(patch).some(k=>!allowed.includes(k)))throw Error('Invalid graphic transform');const next={...l,...patch};if(![next.x,next.y,next.width,next.fontSize].every(Number.isFinite)||next.x<0||next.x>1||next.y<0||next.y>1||next.width<.1||next.width>1||next.fontSize<12||next.fontSize>220)throw Error('Graphic geometry outside valid bounds');if(patch.shape)patch={...patch,shape:globalThis.MangoClipShapesV0742.check(patch.shape)};motionDraftV0750={id,patch:clone(patch),revision:automationRevisionV075};paintPreview();return true;},
+  commitGraphicTransform(id,patch,expected){this.previewGraphicTransform(id,patch,expected);const next=motionDraftV0750.patch,i=layers.findIndex(l=>l.id===id),candidate={...layers[i],...next};motionDraftV0750=null;if(JSON.stringify(candidate)===JSON.stringify(layers[i])){paintPreview();return false;}remember();layers[i]=candidate;refreshed();label('Graphic transform committed. Ctrl+Z to undo.');return true;},
   cancelGraphicMotion(id){if(motionDraftV0750?.id!==id)return false;motionDraftV0750=null;paintPreview();return true;},
   commitGraphicMotion(id,keys,expected){const s=this.automationCapture(),i=layers.findIndex(l=>l.id===id);if(!s.ready||s.identity!==expected?.identity||s.stamp!==expected?.stamp||i<0||layers[i].locked||selectedLayerId!==id)throw Error('Motion edit is stale or the layer is locked.');const next=compositor.checkKeys(keys);motionDraftV0750=null;if(PT.eq(next,layers[i].keyframes||[])){paintPreview();return false;}remember();layers[i]={...layers[i],keyframes:next};refreshed();label('Transform keyframes updated. Ctrl+Z to undo.');return true;},
   commitGraphicKeyTime(id,index,at,expected){const s=this.automationCapture(),i=layers.findIndex(l=>l.id===id);if(!s.ready||s.stamp!==expected||i<0||layers[i].locked)throw Error('Keyframe edit is stale or locked.');const next=compositor.checkKeys(PT.keyTime(layers[i].keyframes,index,at));if(PT.eq(next,layers[i].keyframes))return false;remember();layers[i]={...layers[i],keyframes:next};selectedLayerId=id;refreshed();label('Keyframe time updated. Ctrl+Z to undo.');return true;},
@@ -513,12 +516,14 @@ globalThis.MangoClipView={
     remember();transitions=next;refreshed();label('Clip opening transition updated.');return true;
    }catch(error){label(error.message);return false;}
   },
-  zoomFrames:()=>clone(zoomEvents),setZoomFrames(items){zoomEvents=MangoCreativeZoom.check(items);refreshed();},
-  addZoomKeyframe(at,scale,x,y,ease){if(!original||exporting)throw Error('Load a video first');const next=MangoCreativeZoom.add(zoomEvents,at,scale,x,y,ease);if(next.some(e=>e.start>=MangoEditOps.length(segments)))throw Error('Camera keyframe must start inside the edited sequence');remember();zoomEvents=next;refreshed();},
+  zoomFrames:()=>clone(zoomEvents),setZoomFrames(items){const state=this.automationCapture();if(!state.ready)throw Error(state.reason);return this.commitZoomStudio(items,state);},
+  commitCameraTiming(id,start,expected){const state=this.automationCapture(),e=zoomEvents.find(k=>k.id===id);if(!state.ready||state.stamp!==expected||!e)throw Error('Camera timing gesture is stale.');const len=MangoEditOps.length(segments);if(!Number.isFinite(start)||start<0||start>=len||start+e.duration>len+1e-6)throw Error('Camera event must fit inside the sequence.');return this.commitZoomStudio(zoomEvents.map(k=>k.id===id?{...k,start}:k),state);},
+  commitCursorTiming(id,start,end,expected){const state=this.automationCapture(),r=cursorRegions.find(x=>x.id===id);if(!state.ready||state.stamp!==expected||!r)throw Error('Cursor timing gesture is stale.');const next=director().regions(cursorRegions.map(x=>x.id===id?{...x,start,end}:x),duration);if(JSON.stringify(next)===JSON.stringify(cursorRegions))return false;return this.commitCursorDirector({regions:next});},
+  addZoomKeyframe(at,scale,x,y,ease){if(!this.automationCapture().ready)throw Error('Pause playback and load a video before editing camera');const next=MangoCreativeZoom.add(zoomEvents,at,scale,x,y,ease);if(next.some(e=>e.start>=MangoEditOps.length(segments)))throw Error('Camera keyframe must start inside the edited sequence');remember();zoomEvents=next;refreshed();},
   commitZoomStudio(items,expected){const actual=this.automationCapture();if(!actual.ready||actual.identity!==expected?.identity||actual.stamp!==expected?.stamp)throw Error('Camera draft is stale. Close and reopen Zoom Studio.');const checked=MangoCreativeZoom.nonOverlap(items);if(checked.some(e=>e.start>=MangoEditOps.length(segments)))throw Error('Camera keyframe must start inside the edited sequence');if(new Set(checked.map(e=>e.id)).size!==checked.length)throw Error('Duplicate camera keyframe ID');if(JSON.stringify(checked)===JSON.stringify(zoomEvents))return false;remember();zoomEvents=checked;refreshed();label('Camera animation applied. Ctrl+Z restores the previous camera edit.');return true;},
-  removeZoomKeyframe(id){if(exporting)return;remember();zoomEvents=MangoCreativeZoom.remove(zoomEvents,id);refreshed();},
+  removeZoomKeyframe(id){const state=this.automationCapture();if(!state.ready||!zoomEvents.some(e=>e.id===id))return false;return this.commitZoomStudio(MangoCreativeZoom.remove(zoomEvents,id),state);},
   updateZoomKeyframe(id,patch){
-   if(!original||exporting)throw Error('Load video and stop export to edit camera');
+   if(!this.automationCapture().ready)throw Error('Pause playback and finish export to edit camera');
    if(!zoomEvents.some(e=>e.id===id))throw Error('Camera keyframe no longer exists');
    const next=zoomEvents.map(e=>e.id===id?{...e,...patch,id:e.id}:e);
    const checked=MangoCreativeZoom.nonOverlap(next);
@@ -602,7 +607,7 @@ globalThis.MangoClipView={
    if(index<0||exporting||layers[index].locked)return;
    if(multiPreparing||sequencePreview?.isPlaying?.())return false;
    if(['start','end','track'].some(k=>Object.hasOwn(changes,k))){if(Object.keys(changes).some(k=>!['start','end','track'].includes(k)))throw Error('Separate timing edits from appearance edits');return this.commitLayerTimeline(id,{...layers[index],...changes});}
-   const next={...layers[index],...changes};if(next.keyframes)next.keyframes=compositor.checkKeys(next.keyframes);if(PT.eq(next,layers[index]))return false;
+   const next={...layers[index],...changes};if(next.keyframes)next.keyframes=compositor.checkKeys(next.keyframes);if(JSON.stringify(next)===JSON.stringify(layers[index]))return false;
    remember();layers[index]=next;refreshed();return true;
  },
  deleteLayer(id){
