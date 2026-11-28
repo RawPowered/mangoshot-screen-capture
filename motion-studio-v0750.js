@@ -41,7 +41,7 @@
   add.disabled=!s.ready||(s.keys.length>=C.MAX_KEYS&&s.index<0);remove.disabled=!s.ready||s.index<0;copy.disabled=!s.ready;paste.disabled=!s.ready||!clipboard;
   prev.disabled=!l||!M.adjacent(s.keys,s.t??(s.at<l?.start?-1:2),-1);next.disabled=!l||!M.adjacent(s.keys,s.t??(s.at<l?.start?-1:2),1);
  }
- function open(){const l=V.layers().find(l=>l.id===V.selectedLayer());if(!l){V.message('Select a graphic layer to open Motion Studio.');return false;}V.selectLayer(l.id);root.MangoWorkspaceV062?.activate?.('graphics');host.open=true;refresh();host.scrollIntoView?.({block:'nearest'});return true;}
- function openAtKeyframe(id,t){const l=V.layers().find(x=>x.id===id);if(!l||!Number.isFinite(t))return false;V.selectLayer(id);root.MangoWorkspaceV062?.activate?.('graphics');host.open=true;V.seekOutput(l.start+(l.end-l.start)*t);refresh(l.start+(l.end-l.start)*t);host.scrollIntoView?.({block:'nearest'});return true;}
+ function open(){const l=V.layers().find(l=>l.id===V.selectedLayer());if(!l){V.message('Select a graphic layer to open Motion Studio.');return false;}V.selectLayer(l.id);root.MangoVisualInspectorV068?.activateMotion?.();root.MangoWorkspaceV062?.activate?.('graphics');host.open=true;refresh();host.scrollIntoView?.({block:'nearest'});return true;}
+ function openAtKeyframe(id,t){const l=V.layers().find(x=>x.id===id);if(!l||!Number.isFinite(t))return false;V.selectLayer(id);root.MangoVisualInspectorV068?.activateMotion?.();root.MangoWorkspaceV062?.activate?.('graphics');host.open=true;V.seekOutput(l.start+(l.end-l.start)*t);refresh(l.start+(l.end-l.start)*t);host.scrollIntoView?.({block:'nearest'});return true;}
  host.addEventListener('toggle',()=>refresh());root.MangoMotionStudioV0750=Object.freeze({open,openAtKeyframe,refresh,addKey:()=>safe(()=>{if(!open())return false;return addKey();}),previous:()=>safe(()=>jump(-1)),next:()=>safe(()=>jump(1))});refresh();
 })(globalThis);

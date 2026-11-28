@@ -22,7 +22,7 @@
   let current='';try{current=root.localStorage?.getItem('MangoShot.VisualTab.v068.'+key)||'';}catch{}
   if(!items.some(x=>x[0]===current))current=items[0][0];
   const activate=(name,focus=false)=>{
-   if(!pages[name])return;
+   if(!pages[name]||controls[name].hidden)return false;
    current=name;for(const id of Object.keys(pages)){
     const active=id===name;pages[id].hidden=!active;controls[id].setAttribute('aria-selected',String(active));
     controls[id].tabIndex=active?0:-1;
@@ -40,19 +40,19 @@
   }
   bar.addEventListener('keydown',e=>{
    if(!['ArrowRight','ArrowLeft','Home','End'].includes(e.key))return;
-   const keys=Object.keys(pages);let index=keys.indexOf(current);
+   const keys=Object.keys(pages).filter(k=>!controls[k].hidden);let index=keys.indexOf(current);if(!keys.length)return;
    if(e.key==='Home')index=0;else if(e.key==='End')index=keys.length-1;
    else index=(index+(e.key==='ArrowRight'?1:-1)+keys.length)%keys.length;
-   e.preventDefault();activate(keys[index],true);
+   e.preventDefault();e.stopPropagation();activate(keys[index],true);
   });
   host.prepend(views);host.prepend(bar);activate(current);
   return {bar,views,pages,activate,current:()=>current};
  };
- const graphicTabs=tabs(graphics,[['design','Design'],['premium','Premium'],['motion','Motion'],['numbers','Numbers'],['advanced','Advanced']],'graphic');
+ const graphicTabs=tabs(graphics,[['design','Design'],['transform','Transform'],['motion','Motion'],['advanced','Appearance'],['premium','Presets'],['numbers','Counters']],'graphic');
  const clipTabs=tabs(clip,[['edit','Edit'],['transitions','Transitions']],'clip');
  // Keep one compact layer switcher visible above all graphic subpages.
  const layerSection=layerList.closest('.inspector-section');
- const layerDock=create('details','v068-layers-dock');
+ const layerDock=create('details','v068-layers-dock');layerDock.open=true;
  const layerSummary=create('summary','', 'Layers');layerDock.append(layerSummary);
  const deleteSelected=btn('×','v0610-delete-selected','Delete selected graphic layer (Ctrl+Z to undo)',()=>{
   const l=selectLayer();if(l&&!l.locked&&!view()?.exporting?.())view()?.deleteLayer?.(l.id);
@@ -68,15 +68,19 @@
  shapeEdit.id='ux44-edit-selected-shape';
  const effectEdit=btn('Effects','ux44-selected-action','Edit selected layer appearance and filters',()=>root.MangoLayerStudioUIV0712?.open('effects'));
  effectEdit.id='ux44-edit-selected-effects';
- const keysEdit=btn('Keyframes','ux44-selected-action','Edit transform keyframes',()=>root.MangoCompositorUIV0714?.open('keys'));
+ const keysEdit=btn('Motion','ux44-selected-action','Edit transform keyframes in Motion Studio',()=>root.MangoMotionStudioV0750?.open());
  keysEdit.id='ux44-edit-selected-keys';
  selectedActions.append(selectedName,shapeEdit,effectEdit,keysEdit);
- graphicTabs.pages.design.prepend(selectedActions);
+ graphics.insertBefore(selectedActions,graphicTabs.bar);
  const title=inspector.querySelector('h3');if(title)title.textContent='Selected graphic';
  // Move the manual v0.6.3 drawers, do not recreate their fields or handlers.
- graphicTabs.pages.advanced.append(create('h3','v068-page-title','Exact typography & layout controls'),drawers);
- const advancedHint=create('p','v068-note','Numeric positioning, advanced typography, layer timing, fades, styling and manual presets remain fully editable here.');
- graphicTabs.pages.advanced.append(advancedHint);
+ const transformFields=create('div','v063-drawers ms59-transform-fields');
+ for(const drawer of [...drawers.children]){
+  if(drawer.querySelector('#graphic-x,#graphic-shape-height,#graphic-tail-x,#graphic-in,#graphic-duplicate')){transformFields.append(drawer);if(drawer.querySelector('#graphic-x,#graphic-in'))drawer.open=true;}
+ }
+ graphicTabs.pages.transform.append(create('h3','v068-page-title','Base geometry & layer timing'),transformFields,create('p','v068-note','Base position and opacity are separate from animated offsets and multipliers in Motion. Moving a whole layer preserves its keyframe timing.'));
+ graphicTabs.pages.advanced.append(create('h3','v068-page-title','Typography, paint & style'),drawers,create('p','v068-note','Change base appearance here; use Motion for animated opacity or transforms. Effects Studio owns ordered filters and materials.'));
+ const emptyTransform=create('p','v068-note ms59-no-selection','Select a graphic layer on the timeline or in Layers.');graphicTabs.pages.transform.prepend(emptyTransform);
  // Relocate the original v0.6.7 fields into deliberate "Fine tuning" drawers.
  const originals=[...motionPanel.querySelectorAll('fieldset')];
  const entryField=originals.find(f=>f.querySelector('#v067-enter-type'));
@@ -139,33 +143,32 @@
   ['flip','Flip','Turn in','viral'],['slideLeft','Slide Left','Side motion','viral'],
   ['slideRight','Slide Right','Other direction','viral']
  ];
- const motionView=graphicTabs.pages.motion;
- motionView.append(header('Text & Callout Motion','Visual first · exact settings below'));
+ const motionView=graphicTabs.pages.motion,transformMotion=el('ms50-panel');if(transformMotion)motionView.append(transformMotion);const entryMotion=create('div','ms59-entry-motion');motionView.append(entryMotion);entryMotion.append(header('Entry & exit presets','Separate from transform keyframes · exact settings below'));
  const phaseSwitch=sectionTabs([['enter','Entry'],['exit','Exit']],phase=>{currentPhase=phase;drawMotion();});
- motionView.append(phaseSwitch);
+ entryMotion.append(phaseSwitch);
  const effectFilter=sectionTabs([['basic','Essentials'],['viral','Viral']],group=>{effectGroup=group;drawMotion();});
- motionView.append(effectFilter);
+ entryMotion.append(effectFilter);
  const motionGrid=create('div','v068-effects-grid');motionGrid.setAttribute('role','group');motionGrid.setAttribute('aria-label','Text animation effects');
  for(const [value,name,desc,group] of effects){
   const b=card(value,name,desc,'motion',()=>set('v067-'+currentPhase+'-type')(value));
   b.dataset.group=group;motionGrid.append(b);
  }
- motionView.append(motionGrid);
+ entryMotion.append(motionGrid);
  const durationRow=create('div','v068-control-row');durationRow.append(create('label','v068-control-label','Animation duration'));
  const durationValue=create('output','v068-duration-value','0.45 s');
- durationRow.append(durationValue);motionView.append(durationRow);
+ durationRow.append(durationValue);entryMotion.append(durationRow);
  const durationSlider=create('input','v068-range');durationSlider.type='range';durationSlider.min=.08;durationSlider.max=5;
  durationSlider.step=.05;durationSlider.setAttribute('aria-label','Animation duration');
  durationSlider.addEventListener('input',()=>{durationValue.textContent=Number(durationSlider.value).toFixed(2)+' s';});
  durationSlider.addEventListener('change',()=>set('v067-'+currentPhase+'-duration')(Number(durationSlider.value)));
- motionView.append(durationSlider);
+ entryMotion.append(durationSlider);
  const speedRow=create('div','v068-speed-row');
  for(const [name,value] of [['Snappy',.25],['Natural',.55],['Cinematic',1.2]]){
   speedRow.append(btn(name,'v068-chip','Set '+name+' timing',()=>set('v067-'+currentPhase+'-duration')(value)));
  }
- motionView.append(speedRow);
- motionView.append(btn('▶ Preview '+ 'animation','v068-preview','Play real graphic motion in Program Monitor',()=>preview(currentPhase)));
- motionView.append(motionAdvanced);
+ entryMotion.append(speedRow);
+ entryMotion.append(btn('▶ Preview '+ 'animation','v068-preview','Play real graphic motion in Program Monitor',()=>preview(currentPhase)));
+ entryMotion.append(motionAdvanced);
  const motionEmpty=hint('Select an unlocked text or callout layer to edit its motion.');
  motionView.prepend(motionEmpty);
  let currentPhase='enter',effectGroup='basic';
@@ -281,7 +284,7 @@
   deleteSelected.disabled=!l||l.locked||!!view()?.exporting?.();
   deleteSelected.title=l?'Delete '+l.name+' (Ctrl+Z to undo)':'Select a layer to delete';
   const shape=l?.kind==='shape';graphics.dataset.ux44Kind=l?.kind||'';selectedActions.hidden=!l;selectedName.textContent=l?.name||'';shapeEdit.hidden=!shape;for(const b of [shapeEdit,effectEdit,keysEdit])b.disabled=!l||l.locked||!!view()?.exporting?.();for(const key of ['premium','numbers']){const tab=graphicTabs.bar.querySelector('#v068-graphic-tab-'+key);tab.hidden=!!shape;}if(shape&&['premium','numbers'].includes(graphicTabs.current()))graphicTabs.activate('design');
-  drawers.hidden=!l;
+  drawers.hidden=!l;transformFields.hidden=!l;emptyTransform.hidden=!!l;
   transitionAdvanced.hidden=!selectedTransition();
   const current=el('v067-'+currentPhase+'-type')?.value||'none';
   const match=effects.find(x=>x[0]===current);

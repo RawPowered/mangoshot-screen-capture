@@ -9,7 +9,7 @@ const key='MangoShotCursorDirectorPresetsV1';
 try{const a=JSON.parse(root.localStorage.getItem(key)||'[]');if(Array.isArray(a))profiles=a.slice(0,30).map(d.presetFile);}catch{}
 function readStyle(){return d.style(Object.fromEntries(fields.map(k=>{const n=ui(k);return [k,n.type==='checkbox'?n.checked:['marker','color'].includes(k)?n.value:Number(n.value)];})));}
 function putStyle(s){for(const k of fields){const n=ui(k);if(n.type==='checkbox')n.checked=s[k];else n.value=s[k];}}
-function page(name){for(const p of panel.querySelectorAll('[data-cd-page]'))p.hidden=p.dataset.cdPage!==name;for(const b of panel.querySelectorAll('[data-cd-tab]'))b.setAttribute('aria-pressed',String(b.dataset.cdTab===name));}
+function page(name){for(const p of panel.querySelectorAll('[data-cd-page]'))p.hidden=p.dataset.cdPage!==name;for(const b of panel.querySelectorAll('[data-cd-tab]')){const on=b.dataset.cdTab===name;b.setAttribute('aria-pressed',String(on));b.setAttribute('aria-selected',String(on));b.tabIndex=on?0:-1;}}
 for(const b of panel.querySelectorAll('[data-cd-tab]'))b.addEventListener('click',()=>page(b.dataset.cdTab));
 function commitSelectedStyle(){try{const r=regions().find(x=>x.id===selected);if(!r){report('Effect draft updated. Apply to a range or retained footage.');return;}const v=ready();if(v.isPlaying?.())throw Error('Pause playback before editing this effect.');action('effects.update',{id:r.id,style:readStyle(),enabled:ui('enabled').checked});report('Selected cursor effect committed to timeline · Ctrl+Z to undo.');}catch(e){report(e.message);const r=regions().find(x=>x.id===selected);if(r){putStyle(r.style);ui('enabled').checked=r.enabled;}}}
 ui('preset').addEventListener('change',()=>{if(ui('preset').value!=='custom'){putStyle(d.preset(ui('preset').value));commitSelectedStyle();}});
@@ -66,5 +66,5 @@ ui('run').addEventListener('click',safe(()=>{if(ui('recipe').value.length>8192)t
 ui('recipe').value=JSON.stringify({schema:d.RECIPE,action:'smartZoom.propose',settings:{mode:'auto',scale:1.75,transition:.4,hold:1.2}},null,2);
 const title=doc.querySelector('.clip-timeline-panel > .panel-heading span');if(title)title.textContent='TIMELINE · G3 / G2 / V1+A1 / CAM / CUR PATH / LIVE HISTORY / LIVE FX / POST FX / A2';
 putStyle(d.preset('spotlight'));renderProfiles();refresh();
-root.MangoCursorDirectorV074=Object.freeze({run,refresh,inspect:()=>({regions:regions(),proposal:proposal?{id:proposal.id,items:copy(proposal.items)}:null})});
+root.MangoCursorDirectorV074=Object.freeze({run,refresh,page,inspect:()=>({regions:regions(),proposal:proposal?{id:proposal.id,items:copy(proposal.items)}:null})});
 })(typeof globalThis!=='undefined'?globalThis:this);

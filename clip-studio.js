@@ -56,14 +56,14 @@ function setControls(){const loaded=!!original&&automationLoadReadyV075&&duratio
    'Edited or converted exports require re-encoding at approximately real-time playback speed. Preserve your original with Save original (instant).':
    'MP4 encoding unavailable in this browser; edited MP4 export is disabled. Save original (instant) does not convert the file.';
 }
-function render(){globalThis.MangoCursorDirectorV074?.refresh?.();globalThis.MangoCursorTimelineV0751?.refresh?.();const durationOut=MangoTimeline.outputDuration(segments);
+function render(){globalThis.MangoWorkspaceV062?.syncSelection?.({layer:selectedLayerId,clip:selectedClipIndex,range:rangeSelected});globalThis.MangoCursorDirectorV074?.refresh?.();globalThis.MangoCursorTimelineV0751?.refresh?.();const durationOut=MangoTimeline.outputDuration(segments);
  byId('duration').textContent=original?(duration>0?'Sequence '+time(durationOut)+' · Source '+time(duration):'Source duration unverified'):'No video loaded';
  byId('timeline').replaceChildren();
  for(const [i,s] of segments.entries()){
   const node=document.createElement('button');node.className='clip-segment';node.type='button';
   node.style.width=100*(s.end-s.start)/Math.max(.01,durationOut)+'%';node.title=`Clip ${i+1}: ${time(s.start)} – ${time(s.end)}`;
   node.textContent=String(i+1);node.classList.toggle('is-selected',selectedClipIndex===i);node.setAttribute('aria-pressed',String(selectedClipIndex===i));
-  node.onclick=()=>{if(byId('timeline').dataset.tool==='razor')return;selectedClipIndex=i;selectedLayerId=null;rangeSelected=false;sequencePreview?.stop();sequencePreview?.seekOutput(MangoSequenceMedia.sections(segments)[i].outputStart);
+  node.onclick=()=>{if(byId('timeline').dataset.tool==='razor')return;selectedClipIndex=i;selectedLayerId=null;rangeSelected=false;globalThis.MangoWorkspaceV062?.syncSelection?.({clip:i},false);sequencePreview?.stop();sequencePreview?.seekOutput(MangoSequenceMedia.sections(segments)[i].outputStart);
    render();label('Selected Clip '+(i+1)+' · Ripple Delete removes the clip and closes the gap.');};
   for(const edge of ['start','end']){const handle=document.createElement('span');handle.className='trim-grip trim-'+edge;handle.title='Drag inward to trim '+edge+' edge (undoable)';
    handle.addEventListener('pointerdown',event=>{const state=globalThis.MangoClipView?.automationCapture?.();if(event.button!==0||!state?.ready)return;event.preventDefault();event.stopPropagation();
@@ -83,9 +83,9 @@ function render(){globalThis.MangoCursorDirectorV074?.refresh?.();globalThis.Man
  const list=byId('segments');list.replaceChildren();
  for(const [i,s] of segments.entries()){
   const row=document.createElement('button');row.className='segment-row';row.textContent=`Clip ${i+1}: ${time(s.start)} → ${time(s.end)} (${time(s.end-s.start)})`;
-  row.onclick=()=>{selectedClipIndex=i;rangeSelected=false;sequencePreview?.stop();sequencePreview?.seekOutput(MangoSequenceMedia.sections(segments)[i].outputStart);render();};list.appendChild(row);
+  row.onclick=()=>{selectedClipIndex=i;selectedLayerId=null;rangeSelected=false;sequencePreview?.stop();sequencePreview?.seekOutput(MangoSequenceMedia.sections(segments)[i].outputStart);render();};list.appendChild(row);
  }
- globalThis.MangoUnifiedV062?.rejoin?.();setControls();globalThis.MangoClipTimeline?.render?.();globalThis.MangoMotionUI?.sync?.();renderSummary();
+ globalThis.MangoUnifiedV062?.rejoin?.();setControls();globalThis.MangoClipTimeline?.render?.();globalThis.MangoMotionUI?.sync?.();renderSummary();globalThis.MangoWorkspaceUIV0759?.refresh?.();
 }
 function waitVideoEvent(type,timeout=8000){return new Promise((resolve,reject)=>{
  const timer=setTimeout(()=>{clear();reject(new Error('Video '+type+' timed out.'));},timeout);
@@ -180,9 +180,9 @@ function deleteSelection(){if(!original||exporting)return false;
 function setRange(a,b){if(!original||exporting)return;
  const length=MangoEditOps.length(segments);
  byId('in').value=Math.max(0,Math.min(length,a)).toFixed(2);byId('out').value=Math.max(0,Math.min(length,b)).toFixed(2);
- selectedClipIndex=null;rangeSelected=true;refreshed();
+ selectedClipIndex=null;selectedLayerId=null;rangeSelected=true;refreshed();
 }
-function clearSelection(){selectedClipIndex=null;rangeSelected=false;byId('in').value='0';byId('out').value=MangoEditOps.length(segments).toFixed(2);refreshed();}
+function clearSelection(){selectedClipIndex=null;selectedLayerId=null;rangeSelected=false;byId('in').value='0';byId('out').value=MangoEditOps.length(segments).toFixed(2);refreshed();}
 function cinematicActive(items=transitions){return items.some(t=>globalThis.MangoCinematicV0713?.isType(t.type));}
 function prepareCinematic(items=transitions,notify=()=>{}){
  if(!cinematicActive(items))return Promise.resolve(null);
@@ -600,9 +600,9 @@ globalThis.MangoClipView={
    layer.end=Math.min(layer.end,MangoEditOps.length(segments));
    remember();layers.push(layer);selectedLayerId=layer.id;selectedClipIndex=null;rangeSelected=false;refreshed();label(layer.name+' layer added.');
  },
- selectLayer(id,quiet=false){selectedLayerId=id;
+ selectLayer(id,quiet=false){if(id!==null&&!layers.some(l=>l.id===id))return false;selectedLayerId=id;
    if(id){selectedClipIndex=null;rangeSelected=false;}
-   if(!quiet){render();globalThis.MangoLayerUI?.render?.();}
+   if(!quiet){render();globalThis.MangoLayerUI?.render?.();}else globalThis.MangoWorkspaceV062?.syncSelection?.({layer:selectedLayerId,clip:selectedClipIndex,range:rangeSelected});
    paintPreview();
  },
  updateLayer(id,changes){const index=layers.findIndex(l=>l.id===id);
@@ -694,7 +694,7 @@ globalThis.MangoLayerClipV0712=Object.freeze({
 
 sequencePreview=MangoSequencePreview.create(video,playbackParts,
  output=>{previewSequenceTime=output;globalThis.MangoClipTimeline?.playhead?.();paintPreview();globalThis.MangoCreativeUI?.onPosition?.(output);try{multiPreviewMix?.sync(output,sequencePreview?.isPlaying()&&!video.paused);}catch(e){sequencePreview?.stop();label('Secondary audio preview failed: '+e.message);}},
- (playing,error)=>{if(!playing)stopMultiPreview();globalThis.MangoCreativeUI?.onPlayback?.(playing);byId('program-play').textContent=playing?'❚❚ Pause':'▶ Play';if(error)label('Preview paused: '+error);globalThis.MangoMotionStudioV0750?.refresh?.();},{beforePlay:primeStreamPlayback,onPause:()=>{multiRuntime?.pauseStreams?.();multiPreviewMix?.stop();}});
+ (playing,error)=>{if(!playing)stopMultiPreview();globalThis.MangoCreativeUI?.onPlayback?.(playing);byId('program-play').textContent=playing?'❚❚ Pause':'▶ Play';if(error)label('Preview paused: '+error);globalThis.MangoMotionStudioV0750?.refresh?.();globalThis.MangoWorkspaceUIV0759?.refresh?.();},{beforePlay:primeStreamPlayback,onPause:()=>{multiRuntime?.pauseStreams?.();multiPreviewMix?.stop();}});
 video.addEventListener('timeupdate',()=>{globalThis.MangoClipTimeline?.playhead?.();paintPreview();});
 video.addEventListener('pause',()=>{multiPreviewMix?.stop();if(!streamPriming)multiRuntime?.pauseStreams?.();});video.addEventListener('seeked',paintPreview);video.addEventListener('loadeddata',paintPreview);
 let cursorFramePending=false;

@@ -4,9 +4,9 @@
  const heading=d.querySelector('.clip-timeline-panel>.panel-heading');if(heading){heading.firstElementChild.textContent='TIMELINE · PRIMARY / GRAPHICS / CAMERA / AUDIO';const b=make('button','ci39-track-button','Primary track');b.type='button';b.onclick=()=>{if(scroller)scroller.scrollTop=0;};heading.append(b);}
  by('media-check-save-v0739')?.addEventListener('click',()=>by('save-original')?.click());
  const props=by('v062-cursor-panel'),director=by('cursor-director-v074'),simple=by('cursor-clip-v073');if(props&&director&&simple){
-  const launch=make('button','ci39-open','Open Cursor Studio · dials & effects');launch.type='button';launch.id='ci39-open-cursor';props.prepend(launch);
+  const launch=make('button','ci39-open','Expand cursor properties…');launch.type='button';launch.id='ci39-open-cursor';props.prepend(launch);props.append(simple);
   const dlg=make('dialog','ci39-cursor-dialog');dlg.id='ci39-cursor-dialog';dlg.setAttribute('aria-label','Cursor Studio');const top=make('header','ci39-cursor-head'),close=make('button','','Close ×');close.type='button';close.onclick=()=>dlg.close();top.append(make('strong','','CURSOR STUDIO'),close);const body=make('div','ci39-cursor-body');dlg.append(top,body);d.body.append(dlg);let placeholders=[];
-  launch.onclick=()=>{if(d.querySelector('dialog[open]'))return;placeholders=[simple,director].map(n=>{const p=d.createComment('cursor studio owner');n.before(p);body.append(n);return {p,n};});dlg.showModal();};
+  launch.onclick=()=>{if(d.querySelector('dialog[open]'))return;placeholders=[director,simple].map(n=>{const p=d.createComment('cursor studio owner');n.before(p);body.append(n);return {p,n};});try{dlg.showModal();}catch(e){for(const {p,n} of placeholders)p.replaceWith(n);placeholders=[];by('status').textContent=e.message;}};
   dlg.addEventListener('close',()=>{for(const {p,n} of placeholders)p.replaceWith(n);placeholders=[];launch.focus();});
  }
  const U=root.MangoCalloutMotionUIV0736;

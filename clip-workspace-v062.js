@@ -10,15 +10,15 @@
  const layout=document.querySelector('.clip-layout'),props=document.querySelector('.clip-properties'),bin=document.querySelector('.clip-bin'),timeline=document.querySelector('.clip-timeline-panel');
  if(!layout||!props||!bin||!timeline)return;
  document.body.classList.add('v062-workspace');
- const panels={},buttons={};
- const toolbar=make('nav','v062-property-tabs');toolbar.setAttribute('aria-label','Properties categories');
- const groups=[['clip','Clip'],['graphics','Callouts'],['camera','Camera'],['cursor','Cursor'],['voice','Voiceover'],['autocut','AutoCut']];
+ const panels={},buttons={};let current='clip',lastSelection=null;
+ const toolbar=make('nav','v062-property-tabs');toolbar.setAttribute('aria-label','Properties categories');toolbar.setAttribute('role','tablist');
+ const groups=[['clip','Edit'],['graphics','Graphics'],['camera','Camera'],['cursor','Cursor'],['voice','Audio'],['autocut','AutoCut']];
  for(const [key,title] of groups){
   const panel=make('section','v062-tab-panel');panel.id='v062-'+key+'-panel';
-  panel.setAttribute('aria-label',title+' properties');panel.hidden=key!=='clip';
+  panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby','ms59-tab-'+key);panel.hidden=key!=='clip';
   panels[key]=panel;
   const tab=button(title,()=>activate(key),'v062-tab');
-  tab.dataset.v062Tab=key;tab.setAttribute('aria-controls',panel.id);
+  tab.dataset.v062Tab=key;tab.id='ms59-tab-'+key;tab.setAttribute('role','tab');tab.setAttribute('aria-controls',panel.id);tab.setAttribute('aria-selected',String(key==='clip'));tab.tabIndex=key==='clip'?0:-1;
   tab.setAttribute('aria-pressed',String(key==='clip'));
   buttons[key]=tab;toolbar.appendChild(tab);
  }
@@ -44,10 +44,20 @@
  for(const id of ['cursor-clip-v073','cursor-director-v074']){const section=el(id);if(section)panels.cursor.append(section);}
  for(const [key] of groups)tabsHost.appendChild(panels[key]);
  const header=q(props,':scope > .panel-heading');header?.after(toolbar,tabsHost);
- function activate(key){
-  if(!panels[key])return;
-  for(const [name] of groups){const on=key===name;panels[name].hidden=!on;buttons[name].setAttribute('aria-pressed',String(on));}
+ function reveal(){const ui=root.MangoProfessionalUIV070;if(ui?.layout?.().properties===false)ui.setLayout({properties:true});}
+ function activate(key,{show=true,focus=false}={}){
+  if(!panels[key])return false;
+  if(show)reveal();
+  const changed=current!==key;current=key;
+  for(const [name] of groups){const on=key===name;panels[name].hidden=!on;buttons[name].setAttribute('aria-pressed',String(on));buttons[name].setAttribute('aria-selected',String(on));buttons[name].tabIndex=on?0:-1;}
+  if(changed)tabsHost.scrollTop=0;
+  if(focus)buttons[key].focus();
+  return true;
  }
+ toolbar.addEventListener('keydown',e=>{const keys=Object.keys(panels);if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(e.key))return;e.preventDefault();e.stopPropagation();const i=keys.indexOf(current),next=e.key==='Home'?0:e.key==='End'?keys.length-1:(i+(['ArrowRight','ArrowDown'].includes(e.key)?1:-1)+keys.length)%keys.length;activate(keys[next],{focus:true});});
+ // State-only selection changes may route the inspector, but never reopen a user-hidden panel.
+ function syncSelection({layer=null,clip=null,range=false}={},show=false){const key=layer?'graphics':Number.isInteger(clip)||range?'clip':null,signature=JSON.stringify([layer,clip,!!range]);if(signature===lastSelection&&!show)return;lastSelection=signature;if(key)activate(key,{show});}
+ function showContext(key,sub=null){if(!activate(key))return false;const tabs=root.MangoVisualInspectorV068;if(sub){const group=key==='graphics'?tabs?.graphicTabs:key==='clip'?tabs?.clipTabs:null;group?.activate?.(sub);}return true;}
  for(const id of ['add-text','add-callout','quick-text','quick-callout']){
   el(id)?.addEventListener('click',()=>activate('graphics'));
  }
@@ -56,7 +66,7 @@
  const railAuto=document.querySelector('[data-v06-tool="autocut-toggle"]');
  railAuto?.addEventListener('click',()=>activate('autocut'));
  const originalRefresh=()=>{};
- root.MangoWorkspaceV062={activate,properties:()=>Object.keys(panels),refresh:originalRefresh};
+ root.MangoWorkspaceV062={activate,showContext,syncSelection,reveal,current:()=>current,properties:()=>Object.keys(panels),refresh:originalRefresh};
 
  // One coherent timeline clip: the thumbnail strip and A1 waveform are
  // non-interactive visual layers inside the ACTUAL V1 segment control surface.
@@ -69,9 +79,9 @@
  root.MangoUnifiedV062={rejoin,refresh(){rejoin();root.MangoClipTimeline?.render?.();}};
  rejoin();
  const timelineTitle=q(timeline,':scope > .panel-heading span');
- if(timelineTitle)timelineTitle.textContent='TIMELINE · G3 / G2 / V3 / V2 / V1+A1 / CAM / A2';
+ if(timelineTitle)timelineTitle.textContent='TIMELINE · VIDEO / GRAPHICS / CAMERA / CURSOR / AUDIO';
  const timelineHint=q(timeline,':scope > .panel-heading .panel-muted');
- if(timelineHint)timelineHint.textContent='Drag clips or trim their edges · Alt bypasses snap · Enter opens clip controls';
+ if(timelineHint)timelineHint.textContent='Select a track object to inspect its properties · Alt bypasses snapping';
  const scroll=el('timeline-scroll');scroll?.setAttribute('aria-label','Razor, select and trim directly on the combined V1 video/audio clips');
 
  // Rehome Project actions into File > Projects… with dedicated modal controls.
@@ -88,7 +98,7 @@
   details.append(make('summary','','Compatibility · legacy v1 project JSON'),legacy);
   projectBody.append(details);}
  projectModal.append(projectBody);
- const projectFoot=make('p','v062-modal-hint','Projects save edit decisions and source references, not video files. Export and preserve source media separately.');
+ const projectFoot=make('p','v062-modal-hint','Use the v2 project for edit decisions, cursor and camera tracks, saved narration and media references. Keep original source and secondary media files separately. Legacy v1 is compatibility only.');
  projectModal.append(projectFoot);
  document.body.append(projectModal);
  const fileMenu=q(document,'.v06-menu-bar .v06-menu:first-child .v06-menu-pop');
@@ -97,7 +107,7 @@
   const action=button('Projects · Open / Save…',()=>open(projectModal),'v062-menu-command');
   action.id='v062-project-menu';fileMenu.insertBefore(action,fileMenu.querySelector('.v06-menu-separator'));
  }
- function open(dialog){if(!dialog)return;try{dialog.showModal();}catch{dialog.setAttribute('open','');}}
+ function open(dialog){if(!dialog||dialog.open||document.querySelector('dialog[open]'))return false;const focused=document.activeElement;for(const m of document.querySelectorAll('.v06-menu[open]'))m.open=false;try{dialog.showModal();dialog.addEventListener('close',()=>focused?.focus?.({preventScroll:true}),{once:true});return true;}catch(e){notify(e.message);return false;}}
  function close(dialog){if(!dialog)return;try{dialog.close();}catch{dialog.removeAttribute('open');}}
  projectModal.addEventListener('click',e=>{if(e.target===projectModal)close(projectModal);});
  // The v2 Open input is visually hidden but remains reachable through its label.
