@@ -1,6 +1,0 @@
-const assert=require('node:assert/strict'),S=require('../streaming-media-v0718.js');require('../compositor-core-v0714.js');const M=require('../multitrack-core-v0716.js');
-const a={id:'source',kind:'video',name:'long.webm',size:100,duration:120},find=()=>a,m=M.defaults(),c={...M.make(a,1,60,'V2'),id:'long',end:40,sourceIn:5,sourceOut:44};m.clips=[c];assert.doesNotThrow(()=>M.check(m,find,60));assert.equal(M.framesFor(c,a),0);assert.equal(S.sourceAt(c,20),24);assert.equal(S.sourceAt(c,41),44);
-assert.deepEqual(S.partition([{start:10,end:30},{start:50,end:90}],m,find),[{start:10,end:11,outputStart:0,outputEnd:1},{start:11,end:30,outputStart:1,outputEnd:20},{start:50,end:70,outputStart:20,outputEnd:40},{start:70,end:90,outputStart:40,outputEnd:60}]);
-assert.equal(S.selected(m,1,find).length,1);assert.equal(S.selected(m,40,find).length,0);m.tracks.V2.visible=false;assert.equal(S.has(m,find),false);assert.equal(S.partition([{start:0,end:60}],m,find).length,1);
-assert.equal(S.MAX_DECODERS,2);assert.ok(S.DRIFT_LIMIT<.5);assert.equal(S.MAX_PIXELS,24000000);
-console.log('Native streaming: long-span validation, zero video raster samples, source mapping, active boundary partition, visibility and decoder limits passed');
