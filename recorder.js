@@ -541,7 +541,7 @@ pause.addEventListener('click',()=>{
  if(!recorder||stopping)return;
  if(recorder.state==='recording'){pausedAt=Date.now();recorder.pause();globalThis.MangoRecorderCursorV073?.suspend?.();pause.textContent='Resume';light.className='record-dot idle';label('Recording paused');}
  else if(recorder.state==='paused'){recorder.resume();pausedTotal+=Date.now()-pausedAt;pausedAt=0;
-   pause.textContent='Pause';light.className='record-dot active';label('Recording resumed');}
+   pause.textContent='Pause';light.className='record-dot active';label('Recording resumed. Reconnect authorized source tracking if it was active before pause; preview tracking is available.');}
 });
 get('save-raw').addEventListener('click',()=>saveBlob(lastBlob,'Saved original recording.'));
 get('save-cursor-v0751').addEventListener('click',()=>{if(!lastCursorTrace)return;const url=URL.createObjectURL(new Blob([JSON.stringify(lastCursorTrace)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='MangoShot-'+(lastSessionId||'recording')+'-cursor.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);});

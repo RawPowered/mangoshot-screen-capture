@@ -32,6 +32,7 @@
   }
   if(project.legacyV1!=null){if(!project.legacyV1||project.legacyV1.schema!=='mangoshot.project.v1'||!project.legacyV1.source||
     !Array.isArray(project.legacyV1.segments)||!Array.isArray(project.legacyV1.layers))throw new Error('Invalid legacy editing decisions.');}
+  if(project.creative?.voice!=null){if(!root.MangoVoiceover||!project.legacyV1)throw Error('Saved narration requires its primary sequence');const span=project.legacyV1.segments.reduce((n,s)=>n+s.end-s.start,0);root.MangoVoiceover.validatePortable(project.creative.voice,span);}
   const out=copy(project),secondary=project.timeline.clips.filter(c=>!c.staged&&['V2','V3','A2'].includes(c.track));
   if(project.multitrack!=null){if(!root.MangoMultitrackV0716||!project.legacyV1)throw Error('Multitrack schema or primary edit list unavailable.');const span=project.legacyV1.segments.reduce((n,s)=>n+s.end-s.start,0);out.multitrack=root.MangoMultitrackV0716.check(project.multitrack,project.assets,span);if(secondary.length!==out.multitrack.clips.length||out.multitrack.clips.some(c=>!secondary.some(x=>x.id===c.id&&x.assetId===c.assetId&&x.track===c.track&&x.start===c.start&&x.end===c.end&&x.sourceIn===c.sourceIn&&x.sourceOut===c.sourceOut&&x.opacity===c.opacity&&x.volume===c.volume)))throw Error('Secondary timeline metadata mismatch.');}
   else if(secondary.length)throw Error('Active secondary clips require multitrack metadata.');return out;

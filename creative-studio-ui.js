@@ -39,19 +39,19 @@
  }
  async function stop(){try{if(wasMuted!==null&&view()?.video?.()){view().video().muted=wasMuted;wasMuted=null;}
    if(view()?.isPlaying?.())el('program-play').click();
-   const clip=await controller.stop();notify('Narration recorded. Download the A2 source audio before closing Clip Studio.');
+   const clip=await controller.stop();notify('Narration recorded. Save Project to preserve narration, or download its audio.');
   }catch(e){notify(e.message);}finally{renderVoice();}}
  el('v061-voice-start')?.addEventListener('click',()=>{void record();});
  el('v061-voice-stop')?.addEventListener('click',()=>{void stop();});
- el('v061-voice-remove')?.addEventListener('click',()=>{controller.dispose();renderVoice();notify('Voiceover removed.');});
+ el('v061-voice-remove')?.addEventListener('click',()=>{if(view()?.exporting?.()||controller.state().recording)return;controller.dispose();renderVoice();notify('Voiceover removed.');});
  el('v061-voice-download')?.addEventListener('click',()=>{const clip=controller.state().clip;if(!clip)return;
   const a=document.createElement('a');a.href=clip.url;a.download='MangoShot-Voiceover-'+Date.now()+'.'+(clip.mime.includes('ogg')?'ogg':clip.mime.includes('mp4')?'m4a':'webm');
   document.body.append(a);a.click();a.remove();});
  function renderVoice(){const s=controller.state(),c=s.clip;
-  for(const [id,off] of [['v061-voice-start',s.recording||!view()?.original?.()||!!view()?.exporting?.()],['v061-voice-stop',!s.recording],['v061-voice-download',!c||s.recording],['v061-voice-remove',!c||s.recording]]){
+  for(const [id,off] of [['v061-voice-start',s.recording||!view()?.original?.()||!!view()?.exporting?.()],['v061-voice-stop',!s.recording],['v061-voice-download',!c||s.recording],['v061-voice-remove',!c||s.recording||!!view()?.exporting?.()]]){
    const b=el(id);if(b)b.disabled=!!off;
   }
-  const note=el('v061-voice-status');if(note)note.textContent=s.recording?'● Recording microphone…':c?('A2 voiceover · '+c.start.toFixed(2)+'s–'+(c.start+c.duration).toFixed(2)+'s · download to preserve'):'No narration yet.';
+  const note=el('v061-voice-status');if(note)note.textContent=s.recording?'● Recording microphone…':c?('A2 voiceover · '+c.start.toFixed(2)+'s–'+(c.start+c.duration).toFixed(2)+'s · Save Project to preserve'):'No narration yet.';
   view()?.updateControls?.();
   const track=el('v061-voice-track');track?.replaceChildren();
   if(track&&c){const chip=document.createElement('span'),length=view()?.outputDuration?.()||1;

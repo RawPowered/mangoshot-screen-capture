@@ -282,9 +282,9 @@ byId('clear-range').onclick=clearSelection;
 byId('trim').onclick=()=>edit('trim');byId('cut').onclick=()=>{
  if(rangeSelected||selectedClipIndex!==null)deleteSelection();else edit('cut');
 };
-byId('undo').onclick=()=>{if(exporting||multiPreparing||!history.length)return;redoHistory.push(snapshot());restore(history.pop());label('Undo complete.');};
-byId('redo').onclick=()=>{if(exporting||multiPreparing||!redoHistory.length)return;history.push(snapshot());restore(redoHistory.pop());label('Redo complete.');};
-byId('reset').onclick=()=>{if(!original||exporting||multiPreparing)return;remember();segments=[{start:0,end:duration}];layers=[];zoomEvents=[];cursorRegions=[];transitions=[];sourceGrade=[];secondary=MT?.defaults()||{clips:[]};stopMultiPreview();multiRequest=null;multiRuntime?.clear();cinematic?.clear();cinematicRequest=null;selectedLayerId=null;
+byId('undo').onclick=()=>{if(exporting||multiPreparing||!history.length)return;if(globalThis.MangoCreativeUI?.hasVoice?.()&&Math.abs(MangoEditOps.length(history.at(-1).segments)-MangoEditOps.length(segments))>.00001){label('Remove or download narration before undoing a duration-changing edit.');return;}redoHistory.push(snapshot());restore(history.pop());label('Undo complete.');};
+byId('redo').onclick=()=>{if(exporting||multiPreparing||!redoHistory.length)return;if(globalThis.MangoCreativeUI?.hasVoice?.()&&Math.abs(MangoEditOps.length(redoHistory.at(-1).segments)-MangoEditOps.length(segments))>.00001){label('Remove or download narration before redoing a duration-changing edit.');return;}history.push(snapshot());restore(redoHistory.pop());label('Redo complete.');};
+byId('reset').onclick=()=>{if(!original||exporting||multiPreparing)return;if(globalThis.MangoCreativeUI?.hasVoice?.()){label('Download or remove narration before resetting the sequence.');return;}remember();segments=[{start:0,end:duration}];layers=[];zoomEvents=[];cursorRegions=[];transitions=[];sourceGrade=[];secondary=MT?.defaults()||{clips:[]};stopMultiPreview();multiRequest=null;multiRuntime?.clear();cinematic?.clear();cinematicRequest=null;selectedLayerId=null;
  selectedClipIndex=null;rangeSelected=false;byId('in').value='0';byId('out').value=duration.toFixed(2);
  globalThis.MangoClipTimeline?.loadMarkers?.([]);refreshed();label('Source, graphics and markers reset.');};
 byId('file').addEventListener('change',event=>{if(event.target.files?.[0])load(event.target.files[0]).catch(e=>label('Open failed: '+e.message));});
@@ -534,6 +534,7 @@ globalThis.MangoClipView={
    remember();zoomEvents=next;refreshed();
   },
   sourceFormat:()=>originalFormat,
+ clearProjectHistory(){history=[];redoHistory=[];setControls();},
  restoreLegacyProject(data,creative=null,nextSecondary=null){
   if(!original||exporting)throw new Error('Load the matching source video before restoring a project.');
   const validated=MangoProject.check(data,{size:original.size,format:originalFormat,duration});compositor?.requireProject(validated.layers,validated.sourceGrade||[],video.videoWidth,video.videoHeight);
@@ -699,15 +700,8 @@ video.addEventListener('ended',()=>sequencePreview?.stop());
 document.addEventListener('keydown',e=>{if(byId('automation-dialog-v075')?.open||globalThis.MangoShortcuts?.active)return;if(e.key!==' '||e.ctrlKey||e.altKey||e.metaKey||e.target?.matches?.('input,textarea,select,[contenteditable]'))return;
  e.preventDefault();byId('program-play').click();});
 
-byId('save-project').addEventListener('click',()=>{if(!original||exporting)return;
- if(hasMulti()||cursorTrace||cursorRegions.length||zoomEvents.length){label('Use Project Manager → Save v2 project to preserve secondary media, cursor data and camera effects.');return;}
- const project=MangoProject.pack({size:original.size,format:originalFormat,duration},segments,layers,globalThis.MangoClipTimeline?.markers?.()||[],transitions,sourceGrade);
- const blob=new Blob([JSON.stringify(project,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);
- const link=document.createElement('a');link.href=url;link.download='MangoShot-Project-'+Date.now()+'.json';
- document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
- label('Edit project saved (source video is separate).');
-});
-byId('open-project').addEventListener('change',async event=>{if(!original||exporting)return;if(hasMulti()){label('Remove secondary clips or use Project v2 restore.');event.target.value='';return;}
+byId('save-project').addEventListener('click',()=>{if(!original||exporting)return;byId('v06-save-project').click();});
+byId('open-project').addEventListener('change',async event=>{if(!original||exporting)return;if(hasMulti()||cursorRegions.length||zoomEvents.length||globalThis.MangoCreativeUI?.hasVoice?.()){label('Legacy import would replace active creative tracks. Open a fresh editor or use Open Project.');event.target.value='';return;}
  try{const file=event.target.files?.[0];if(!file||file.size>1000000)throw new Error('Select a project under 1 MB.');
   const data=JSON.parse(await file.text());const project=MangoProject.check(data,{size:original.size,format:originalFormat,duration});
   compositor?.requireProject(project.layers,project.sourceGrade||[],video.videoWidth,video.videoHeight);remember();segments=project.segments;layers=project.layers;sourceGrade=clone(project.sourceGrade||[]);transitions=reconcileTransitions(project.transitions||[],segments);cursorRegions=[];zoomEvents=[];selectedLayerId=null;selectedClipIndex=null;rangeSelected=false;

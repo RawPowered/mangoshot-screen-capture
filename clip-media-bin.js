@@ -94,17 +94,17 @@
   const legacy=root.MangoProject.pack(src,v.segments(),v.layers(),root.MangoClipTimeline?.markers?.()||[],v.transitions?.()||[],v.sourceGrade?.()||[]);
   return {legacy,source:src};
  }
- function save(){const current=activeLegacy();if(!current){label('Load a primary video before saving a v2 project.');return;}
-  try{const converted=root.MangoProjectV2.fromV1(current.legacy,current.source,root.MangoProject);
+ async function save(){const current=activeLegacy();if(!current){label('Load a primary video before saving a v2 project.');return;}
+  try{const v=view(),before=v.automationCapture();if(!before.ready)throw Error(before.reason);const voice=await root.MangoCreativeUI.voice.portable(v.outputDuration());const after=v.automationCapture();if(!after.ready||after.stamp!==before.stamp||after.identity!==before.identity||after.voice!==before.voice)throw Error('Project changed during save. Save again.');const converted=root.MangoProjectV2.fromV1(current.legacy,current.source,root.MangoProject);
    const assets=[...converted.assets,...registry.snapshot().filter(x=>x.id!=='source-primary')];
    const multi=view()?.multitrack?.()||root.MangoMultitrackV0716.defaults(),active=multi.clips.map(c=>({...c,staged:false}));
    const project=root.MangoProjectV2.create({assets,clips:[...converted.timeline.clips,...staged.filter(c=>!active.some(a=>a.id===c.id)),...active],legacyV1:current.legacy,multitrack:multi});
-   project.creative={zoomFrames:view()?.zoomFrames?.()||[],cursorDirector:view()?.cursorDirectorState?.()||undefined};
+   project.creative={zoomFrames:view()?.zoomFrames?.()||[],cursorDirector:view()?.cursorDirectorState?.()||undefined,voice};
    root.MangoProjectV2.check(project);
    const blob=new Blob([JSON.stringify(project)],{type:'application/json'});if(blob.size>16*1024*1024)throw Error('Project metadata exceeds 16 MiB. Export a shorter session or retain the original local recording.');const url=URL.createObjectURL(blob);
    const anchor=document.createElement('a');anchor.href=url;anchor.download='MangoShot-v2-Project-'+Date.now()+'.json';
    document.body.append(anchor);anchor.click();anchor.remove();setTimeout(()=>URL.revokeObjectURL(url),15000);
-   label('Project v2 saved. Media files remain separate and must be relinked when reopened.');
+   label('Project saved. Narration is included; other media files remain separate and must be relinked.');
   }catch(e){label('Could not save project v2: '+e.message);}
  }
  el('v06-save-project').onclick=save;
@@ -124,9 +124,10 @@
   try{if(typeof v.restoreLegacyProject!=='function')throw new Error('Legacy restore adapter unavailable.');
    const project=loadedProject,multi=project.multitrack||root.MangoMultitrackV0716.defaults(),span=project.legacyV1.segments.reduce((n,s)=>n+s.end-s.start,0),before=v.automationCapture();
    if(!before.ready)throw Error(before.reason);root.MangoProject.check(project.legacyV1,{size:v.original().size,format:v.sourceFormat(),duration:v.duration()});
-   await v.prepareSecondary(multi,span);if(project!==loadedProject||v.automationCapture().stamp!==before.stamp||v.original()!==before.identity)throw Error('Project or source changed during preparation.');
-   v.restoreLegacyProject(project.legacyV1,project.creative||null,multi);
-   label('Primary and active secondary timeline restored. Staged references remain inactive.');}
+   const voice=root.MangoCreativeUI.voice,preparedVoice=voice.preparePortable(project.creative?.voice??null,span);
+   await v.prepareSecondary(multi,span);const current=v.automationCapture();if(project!==loadedProject||!current.ready||current.stamp!==before.stamp||current.voice!==before.voice||v.original()!==before.identity)throw Error('Project or source changed during preparation.');
+   v.restoreLegacyProject(project.legacyV1,project.creative||null,multi);voice.restorePortable(preparedVoice);v.clearProjectHistory?.();
+   label('Project restored, including saved narration and active media. Staged references remain inactive.');}
   catch(e){label('Cannot restore primary timeline: '+e.message);}
  };
  root.MangoMediaBin={registry,addFiles,refresh:draw,staged:()=>staged.map(x=>({...x})),snapshot:()=>registry.snapshot(),consumeStaged(ids){staged=staged.filter(c=>!ids.includes(c.id));draw();}};
