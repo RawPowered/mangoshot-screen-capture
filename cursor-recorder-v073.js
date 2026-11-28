@@ -84,6 +84,7 @@
  renderSettings();
  function begin(){disconnect();session=true;retain=!!el('cursor-retain-v073').checked;trace=core.createTrace();capture=captureCore?.create(core.config,host.cleanMaster?.()?'clean':'composite')||null;traceWarning=false;lastFrame=now();lastCamera=null;el('cursor-consent-v073').checked=false;
   setStatus(retain?'Cursor path retention ON (local). PREVIEW ONLY until source tracking connects. For the real recorded pointer, connect the matching browser tab or the installed Windows companion.':'Cursor path retention OFF. Enable it to preserve tracked movement.');}
+ function snapshot(){if(!trace||!traceStarted)return null;let meta=null;try{meta=capture?.finish()||null;}catch{}try{return trace.finish(meta);}catch{return trace.finish();}}
  function end(){hot.cancel();let meta=null,result=null,notice='';try{if(traceStarted)meta=capture?.finish()||null;}catch(e){notice='Source metadata failed validation; recorded-frame path retained.';}try{result=trace?.finish(meta)||null;}catch(e){notice='Capture metadata rejected: '+e.message;try{result=trace?.finish()||null;}catch{notice+='; cursor path unavailable.';}}trace=null;capture=null;session=false;disconnect();lastCamera=null;el('cursor-consent-v073').checked=false;setStatus(notice|| (result&&(result.truncated||result.capture?.truncated)?'Cursor trace limit reached; recording retained but telemetry may be incomplete.':'Cursor tracking stopped.'));return result&&(result.samples.some(s=>s[1]!==null)||result.clicks?.length||result.capture?.cameraFrames.length)?result:null;}
  function frame(ctx,media,base,w,h,seconds){
   const n=now(),dt=n-lastFrame;lastFrame=n;
@@ -108,6 +109,6 @@
  function manualCamera(){if(settings.zoomMode!=='off'){settings={...settings,zoomMode:'off'};el('cursor-preset-v073').value='custom';renderSettings();}lastCamera=null;}
  function suspend(){hot.cancel();disconnect();el('cursor-consent-v073').checked=false;setStatus('Tracking paused; reconfirm and reconnect linked tab after resuming if needed.');}
  function sourceChanged(){const t=host.seconds?.();if(Number.isFinite(t))capture?.sourceChanged(t);hot.cancel();disconnect();lastCamera=null;el('cursor-consent-v073').checked=false;setStatus('Source changed · preview tracking; reconnect the linked tab if appropriate.');}
- root.MangoRecorderCursorV073=Object.freeze({begin:resetSession,end,suspend,frame,manualCamera,sourceChanged,claimNative,releaseNative,nativeSample,nativeToggleEffect,spotlightDown:hot.down,spotlightUp:hot.up,spotlightCancel:hot.cancel,focusTool:()=>focusTool&&enabled(),applyRecipe,
+ root.MangoRecorderCursorV073=Object.freeze({begin:resetSession,end,snapshot,suspend,frame,manualCamera,sourceChanged,claimNative,releaseNative,nativeSample,nativeToggleEffect,spotlightDown:hot.down,spotlightUp:hot.up,spotlightCancel:hot.cancel,focusTool:()=>focusTool&&enabled(),applyRecipe,
   state:()=>({settings:{...settings},effectiveSpotlight:hot.effective(),spotlightHeld:hot.held(),mode,session,retain,focusTool,automationRevision:automationRevisionV075})});
 })(typeof globalThis!=='undefined'?globalThis:this);

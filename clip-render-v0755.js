@@ -21,7 +21,14 @@
  function coverage(trace,regions,parts){const c=root.MangoCursorCaptureV0751;if(!c||!trace)return {seconds:0,regions:0};const enabled=(regions||[]).filter(r=>r.enabled&&(r.style.spotlight&&r.style.dim>0||r.style.ring||r.style.pulse||r.style.marker!=='none'));const path=c.pathIntervals(trace.samples,86400),intervals=c.projectIntervals(path,parts),fx=c.projectIntervals(enabled,parts);let seconds=0;for(const r of fx)for(const p of intervals){if(p.start>=r.end)break;seconds+=Math.max(0,Math.min(p.end,r.end)-Math.max(p.start,r.start));}return {seconds,regions:enabled.length};}
  function stats(){return {frames:0,cursor:0,zoom:0,transitions:0};}
  function count(s,r){if(!r.ready)return;s.frames++;if(r.cursor)s.cursor++;if(r.zoom)s.zoom++;if(r.transition)s.transitions++;}
- function clipTail(trace,duration){
+ function clipTail(trace,duration,partialThrough=null){
+  if(partialThrough!==null){const end=Math.max(0,Math.min(duration,partialThrough));const limit=Math.floor(end*1000)/1000;
+   const trim=a=>(a||[]).filter(s=>s[0]<limit);
+   const closePath=a=>{const p=trim(a);if(p.length&&p.at(-1)[1]!==null&&p.length<60000)p.push([limit,null,null]);return p;};
+   const meta=trace.capture?{...trace.capture,sourceSamples:closePath(trace.capture.sourceSamples),sourceClicks:trim(trace.capture.sourceClicks),cameraFrames:trim(trace.capture.cameraFrames),states:trim(trace.capture.states)}:null;
+   if(meta?.states.length&&meta.states.length<6000&&meta.states.at(-1)[1]!=='off')meta.states.push([limit,'off',meta.states.at(-1)[2],null]);
+   return {trace:{...trace,samples:closePath(trace.samples),clicks:trim(trace.clicks),...(meta?{capture:meta}:{})},trimmed:true};
+  }
   const lists=[trace.samples,trace.clicks||[],...(trace.capture?['sourceSamples','sourceClicks','cameraFrames','states'].map(k=>trace.capture[k]):[])];
   const max=Math.max(0,...lists.map(a=>a.at(-1)?.[0]||0));if(max<=duration+.5)return {trace,trimmed:false};const tolerance=Math.min(2,Math.max(.5,duration*.01));
   if(max-duration>tolerance)throw Error('Cursor timing exceeds verified source duration by '+(max-duration).toFixed(2)+'s');

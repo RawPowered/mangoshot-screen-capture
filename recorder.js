@@ -21,6 +21,8 @@ let strokes=[],activeStroke=null,history=[],renderPending=false;
 let activeSession=null,lastCursorTrace=null,lastCapture=null,frameDriver=null,cleanMaster=false,priorRetention=true;
 const cleanControl=get('clean-master-v0752'),retainControl=get('cursor-retain-v073');
 const label=text=>{status.textContent=text;};
+// One monotonic clock for recording, pause compensation and telemetry.
+const captureNow=()=>Math.max(1,globalThis.performance?.now?.()??Date.now());
 function recordState(value){const el=get('record-state');if(!el)return;el.dataset.state=value;el.textContent=({ready:'Ready',recording:'Recording',stopped:'Capture stopped',finalizing:'Finalizing video',recovery:'Recovery available',complete:'Ready to edit',error:'Capture error'})[value]||value;}
 recordState('ready');
 const clock=ms=>`${String(Math.floor(ms/60000)).padStart(2,'0')}:${String(Math.floor(ms/1000)%60).padStart(2,'0')}`;
@@ -165,7 +167,7 @@ function stopTracks(){cancelSwitch();stopRender();disposeVideo(sourceVideo);for(
  if(audio){audio.close().catch(()=>{});audio=null;}
 }
 function stopClock(){if(timer)clearInterval(timer);timer=0;
- const now=pausedAt||Date.now();if(startedAt)elapsed.textContent=clock(Math.max(0,now-startedAt-pausedTotal));
+ const now=pausedAt||captureNow();if(startedAt)elapsed.textContent=clock(Math.max(0,now-startedAt-pausedTotal));
  light.className='record-dot idle';}
 function resetControls(){start.disabled=false;stop.disabled=true;pause.disabled=true;pause.textContent='Pause';
  for(const id of ['zoomIn','zoomOut','zoomRegion'])get(id).disabled=true;
@@ -194,14 +196,15 @@ function showResult(blob,partial=false,sessionId=null,capture=null){if(!blob?.si
 }
 function createSession(token,mime,encoder){
  return {id:(globalThis.crypto?.randomUUID?.()||Date.now()+'-'+token),token,mime,encoder,chunks:[],chunkIndex:0,storage:null,queue:Promise.resolve(),storageError:false,
-  stopped:false,partial:false,complete:false,watchdog:0};
+  stopped:false,partial:false,complete:false,watchdog:0,checkpoint:null,lastCheckpointAt:-Infinity};
 }
 function queueChunkFor(session,blob){
  if(!blob?.size)return;
  session.chunks.push(blob);
  if(activeSession===session&&get('chunk-info'))get('chunk-info').textContent=session.chunks.length+' encoded fragment(s) available locally';
- if(session.storage&&!session.storageError){const index=session.chunkIndex++;
-  session.queue=session.queue.then(()=>MangoRecovery.append(session.storage,index,blob)).catch(error=>{
+ if(session.storage&&!session.storageError){const index=session.chunkIndex++;let checkpoint=null;
+  if(activeSession===session&&!session.stopped){const seconds=globalThis.MangoRecorderCursorHostV073?.seconds?.();if(Number.isFinite(seconds)&&seconds-session.lastCheckpointAt>=5){try{const trace=globalThis.MangoRecorderCursorV073?.snapshot?.();if(trace){checkpoint={seconds,trace};session.lastCheckpointAt=seconds;}}catch(error){warnings.push('Telemetry checkpoint unavailable: '+error.message);}}}
+  session.queue=session.queue.then(async()=>{if(session.storageError)return;await MangoRecovery.append(session.storage,index,blob,checkpoint);if(checkpoint)session.checkpoint=checkpoint;}).catch(error=>{
    session.storageError=true;warnings.push('Recovery storage failed: '+error.message);
    if(activeSession===session)label('Recording continues, but recovery storage failed. Save the video when complete.');
   });
@@ -210,7 +213,7 @@ function queueChunkFor(session,blob){
 async function markRecovered(session,partial){if(!session?.storage)return;
  try{await session.queue;const complete=!partial&&!session.storageError;await MangoRecovery.mark(session.storage,complete?'finished':'interrupted',complete?session.cursorTrace||null:null);}catch(error){warnings.push('Recovery state update failed: '+error.message);}
 }
-function captureSummary(session){if(!session?.startedAt||activeSession!==session)return session?.capture||null;const stats=frameDriver?.stats()||{frames:0,inputFrames:0,driver:'legacy preview clock'};const seconds=Math.max(0,((pausedAt||Date.now())-session.startedAt-pausedTotal)/1000);return {schema:'mangoshot.capture.v1',seconds,frames:stats.frames,inputFrames:stats.inputFrames,driver:stats.driver,master:session.cleanMaster?'clean':'composite'};}
+function captureSummary(session){if(!session?.startedAt||activeSession!==session)return session?.capture||null;const stats=frameDriver?.stats()||{frames:0,inputFrames:0,driver:'legacy preview clock'};const seconds=Math.max(0,((pausedAt||captureNow())-session.startedAt-pausedTotal)/1000);return {schema:'mangoshot.capture.v1',seconds,frames:stats.frames,inputFrames:stats.inputFrames,driver:stats.driver,master:session.cleanMaster?'clean':'composite'};}
 function finishSession(session,partial=false){
  if(!session||session.complete||partial&&session.partial)return;
  if(session.watchdog)clearTimeout(session.watchdog);session.watchdog=0;
@@ -219,8 +222,11 @@ function finishSession(session,partial=false){
  const isCurrent=activeSession===session;session.capture=session.capture||captureSummary(session);if(isCurrent&&!session.stopped&&!session.cursorTrace){try{session.cursorTrace=globalThis.MangoRecorderCursorV073?.end?.()||null;}catch(e){warnings.push('Cursor finalization failed: '+e.message);}}if(session.storage&&session.capture)session.storage.capture=session.capture;
  if(isCurrent){
   finalized=true;partialShown=partial;cleanup();recordState(partial?'recovery':'complete');
-  lastCursorTrace=partial?null:session.cursorTrace||null;
-  showResult(blob,partial,session.id,session.capture);
+  lastCursorTrace=partial?session.checkpoint?.trace||null:session.cursorTrace||session.checkpoint?.trace||null;
+  const limited=partial||!session.cursorTrace&&!!session.checkpoint;
+  const resultCapture=session.capture?{...session.capture,...(partial?{partial:true}:{}),...(limited?{telemetryPartial:true,telemetryThrough:session.checkpoint?.seconds||0}:{})}:null;
+  // A partial result and a later completed result must never share a mutable handoff ID.
+  showResult(blob,partial,partial?session.id+'-partial-'+Date.now():session.id,resultCapture);
  }else if(!partial&&blob.size){
   // This belongs to a former session. Do not replace the current recording's UI.
   // Recovery storage also retains this result even if the automatic download is blocked.
@@ -418,7 +424,8 @@ get('source-choose-v0710').addEventListener('click',switchSource);
 globalThis.MangoRecorderSessionV0710=Object.freeze({inspect:()=>({active:active(),state:recorder?.state||'inactive',sessionId:activeSession?.id||null,sourceChanges,source:captureSource,outputWidth:composite.width,outputHeight:composite.height,interaction,switching:!!pendingSwitch,sharedAudioNodes:screenAudioNodes.length,audioOutput:!!audioDest,frameDriver:frameDriver?.stats()||null})});
 async function checkRecovery(){
  try{
-  const sessions=typeof MangoRecovery.list==='function'?await MangoRecovery.list():[await MangoRecovery.latest()].filter(Boolean);
+  const all=typeof MangoRecovery.list==='function'?await MangoRecovery.list():[await MangoRecovery.latest()].filter(Boolean);
+  const sessions=all.filter(item=>item.id!==activeSession?.storage?.id||!recording&&!stopping);
   const banner=get('recovery-banner'),select=get('recovery-select');
   if(!sessions.length){banner.hidden=true;return;}
   const previous=select?.value;
@@ -435,20 +442,26 @@ async function checkRecovery(){
 }
 async function refreshRecovery(){try{await checkRecovery();}catch{}}
 get('recover').addEventListener('click',async()=>{
- const button=get('recover');button.disabled=true;label('Loading local recording fragments…');
+ if(recording||stopping||start.disabled){label('Stop the active recording before recovering another session.');return;}
+ const button=get('recover');button.disabled=true;start.disabled=true;label('Loading local recording fragments…');
  try{const sessions=typeof MangoRecovery.list==='function'?await MangoRecovery.list():[await MangoRecovery.latest()].filter(Boolean);
-  const target=sessions.find(item=>item.id===get('recovery-select')?.value)||sessions[0];
-  if(!target)throw new Error('No recording selected.');
-  const blob=await MangoRecovery.restore(target);lastBlob=blob;lastSessionId=target.id;lastCursorTrace=null;lastCapture=target.status==='finished'?target.capture||null:null;get('result').hidden=false;
-  try{if(target.status==='finished'){const raw=await MangoRecovery.restoreCursor(target);if(raw)lastCursorTrace=globalThis.MangoCursorCoreV073.trace(raw);}}catch(e){warnings.push('Recovered cursor data unavailable: '+e.message);}get('save-cursor-v0751').disabled=!lastCursorTrace;
-  get('result-meta').textContent=(blob.size/1048576).toFixed(1)+' MiB · '+(target.status==='finished'?'finalized':'INCOMPLETE')+' · '+(blob.type.includes('mp4')?'MP4':'WebM')+(lastCursorTrace?' · cursor data restored':'');
-  label('Recovered local fragments. Save original to download; interrupted MP4 may lack final playback metadata.');
- }catch(error){label('Cannot recover: '+error.message);}finally{button.disabled=false;}
+  const selected=get('recovery-select')?.value,target=sessions.find(item=>item.id===selected);
+  if(!target)throw new Error('Select a stored recording session.');
+  const blob=await MangoRecovery.restore(target);let checkpoint=null;
+  try{checkpoint=typeof MangoRecovery.restoreCheckpoint==='function'?await MangoRecovery.restoreCheckpoint(target):null;if(checkpoint?.trace)checkpoint.trace=globalThis.MangoCursorCoreV073.trace(checkpoint.trace);}catch(e){checkpoint=null;warnings.push('Recovered cursor data unavailable: '+e.message);}
+  const partial=target.status!=='finished',limited=partial||checkpoint?.complete===false;
+  lastBlob=blob;lastSessionId=target.id+'-recovered-'+Date.now();lastCursorTrace=checkpoint?.trace||null;
+  lastCapture={schema:'mangoshot.capture.v1',seconds:0,frames:0,inputFrames:0,driver:'recovery',...(target.capture||{}),...(partial?{partial:true}:{}),...(limited?{telemetryPartial:true,telemetryThrough:checkpoint?.seconds||0}:{}),...(checkpoint?.trace?.capture?.master?{master:checkpoint.trace.capture.master}:{})};
+  get('result').hidden=false;get('save-cursor-v0751').disabled=!lastCursorTrace;
+  get('result-meta').textContent=(blob.size/1048576).toFixed(1)+' MiB · '+(partial?'INCOMPLETE':'finalized')+' · '+(blob.type.includes('mp4')?'MP4':'WebM')+(lastCursorTrace?(limited?' · checkpointed cursor data (partial)':' · cursor data restored'):' · no cursor data');
+  label('Recovered local fragments. Clip Studio must verify decoded duration; interrupted MP4 may lack final playback metadata.');
+ }catch(error){label('Cannot recover: '+error.message);}finally{button.disabled=false;start.disabled=false;}
 });
 get('dismiss-recovery').addEventListener('click',async()=>{
- const button=get('dismiss-recovery');button.disabled=true;
+ if(recording||stopping||start.disabled){label('Stop the active recording before clearing recovery.');return;}
+ const button=get('dismiss-recovery');button.disabled=true;start.disabled=true;
  try{await MangoRecovery.clearAll();get('recovery-banner').hidden=true;
- label('All locally stored recovery fragments deleted.');}catch(error){label('Could not clear recovery: '+error.message);}finally{button.disabled=false;}
+ label('All locally stored recovery fragments deleted.');}catch(error){label('Could not clear recovery: '+error.message);}finally{button.disabled=false;start.disabled=false;}
 });
 start.addEventListener('click',async()=>{
  if(start.disabled)return;start.disabled=true;lastBlob=null;lastSessionId=null;lastCursorTrace=null;lastCapture=null;startedAt=0;pausedAt=0;pausedTotal=0;
@@ -490,7 +503,7 @@ start.addEventListener('click',async()=>{
     if(rawCtx){rawCtx.fillStyle='#000';rawCtx.fillRect(0,0,w,h);control.drawSource(rawCtx,media,MangoCamera.camera(),w,h);}
     const cursor=globalThis.MangoRecorderCursorV073;
     if(cursor&&recording){
-      const seconds=recorder?.state==='recording'?Math.max(0,(Date.now()-startedAt-pausedTotal)/1000):null;
+      const seconds=recorder?.state==='recording'?Math.max(0,(captureNow()-startedAt-pausedTotal)/1000):null;
       const effective=cursor.frame(ctx,media,zoomState,w,h,seconds);
       get('zoomReadout').textContent=Math.round(effective.zoom*100)+'%';
     }else control.drawSource(ctx,media,zoomState,w,h);
@@ -511,7 +524,7 @@ start.addEventListener('click',async()=>{
    }catch(error){warnings.push('Audio mixing unavailable ('+error.name+').');disconnectNodes(screenAudioNodes);screenAudioNodes=[];stopStream(audioDest?.stream);audioDest=null;audio?.close().catch(()=>{});audio=null;}}
   recorder=supportedRecorder(output);recordingMime=recorder.mimeType||'video/webm';
   const session=createSession(token,recordingMime,recorder);session.cleanMaster=cleanMaster;activeSession=session;
-  try{session.storage=await MangoRecovery.begin(recordingMime);}
+  try{session.storage=await MangoRecovery.begin(recordingMime,session.id);}
   catch(error){warnings.push('Storage unavailable: download original immediately when finished.');}
   recorder.ondataavailable=event=>queueChunkFor(session,event.data);
   recorder.onerror=event=>{
@@ -529,8 +542,8 @@ start.addEventListener('click',async()=>{
   for(const id of ['resetZoom','zoomIn','zoomOut','zoomRegion'])get(id).disabled=false;
   get('switch-source-v0710').disabled=false;updateMode();
   get('enable-scroll').title='Enable Interaction first. Native forwarding is available only for a captured browser tab.';
-  startedAt=Date.now();session.startedAt=startedAt;pausedAt=0;pausedTotal=0;globalThis.MangoRecorderCursorV073?.begin?.();frameDriver?.start();light.className='record-dot active';
-  timer=setInterval(()=>{const now=pausedAt||Date.now();elapsed.textContent=clock(now-startedAt-pausedTotal);const stats=frameDriver?.stats();if(stats&&get('chunk-info'))get('chunk-info').textContent=session.chunks.length+' fragments · '+stats.frames+' submitted frames · '+stats.driver+(stats.lagMs>2000&&recorder?.state==='recording'?' · VIDEO STALLED — preserve recovery':'');if(stats?.lagMs>5000&&recorder?.state==='recording'&&!session.stopped){warnings.push('Capture stopped because the encoder input stalled. Preserve recovery.');stopCapture('Encoder input stalled');}},200);
+  startedAt=captureNow();session.startedAt=startedAt;pausedAt=0;pausedTotal=0;globalThis.MangoRecorderCursorV073?.begin?.();frameDriver?.start();light.className='record-dot active';
+  timer=setInterval(()=>{const now=pausedAt||captureNow();elapsed.textContent=clock(now-startedAt-pausedTotal);const stats=frameDriver?.stats();if(stats&&get('chunk-info'))get('chunk-info').textContent=session.chunks.length+' fragments · '+stats.frames+' submitted frames · '+stats.driver+(stats.lagMs>2000&&recorder?.state==='recording'?' · VIDEO STALLED — preserve recovery':'');if(stats?.lagMs>5000&&recorder?.state==='recording'&&!session.stopped){warnings.push('Capture stopped because the encoder input stalled. Preserve recovery.');stopCapture('Encoder input stalled');}},200);
   label('Recording '+w+'×'+h+' · '+(cleanMaster?'CLEAN MASTER / LIVE PREVIEW':'COMPOSITE')+' · '+(captureSource||'display')+' · '+(audio?(inputs.length?'audio':'audio track reserved · no granted source audio yet'):'NO AUDIO TRACK — waveform unavailable')+
     (warnings.length?' · '+warnings.join(' '):''));
   if(controller?.setFocusBehavior)try{controller.setFocusBehavior('focus-capturing-application');}catch{}
@@ -539,8 +552,8 @@ start.addEventListener('click',async()=>{
 stop.addEventListener('click',()=>stopCapture());
 pause.addEventListener('click',()=>{
  if(!recorder||stopping)return;
- if(recorder.state==='recording'){pausedAt=Date.now();recorder.pause();globalThis.MangoRecorderCursorV073?.suspend?.();pause.textContent='Resume';light.className='record-dot idle';label('Recording paused');}
- else if(recorder.state==='paused'){recorder.resume();pausedTotal+=Date.now()-pausedAt;pausedAt=0;
+ if(recorder.state==='recording'){pausedAt=captureNow();recorder.pause();globalThis.MangoRecorderCursorV073?.suspend?.();pause.textContent='Resume';light.className='record-dot idle';label('Recording paused');}
+ else if(recorder.state==='paused'){recorder.resume();pausedTotal+=captureNow()-pausedAt;pausedAt=0;
    pause.textContent='Pause';light.className='record-dot active';label('Recording resumed. Reconnect authorized source tracking if it was active before pause; preview tracking is available.');}
 });
 get('save-raw').addEventListener('click',()=>saveBlob(lastBlob,'Saved original recording.'));
@@ -561,5 +574,5 @@ window.addEventListener('pagehide',()=>{globalThis.MangoRecorderCursorV073?.end?
 if(!navigator.mediaDevices?.getDisplayMedia||typeof MediaRecorder==='undefined'){
  label('Screen capture APIs unavailable here.');start.disabled=true;
 }
-globalThis.MangoRecorderCursorHostV073=Object.freeze({active:()=>active()&&recorder?.state==='recording',cleanMaster:()=>cleanMaster,seconds:()=>startedAt&&!stopping?Math.max(0,((pausedAt||Date.now())-startedAt-pausedTotal)/1000):null,camera:()=>({...zoomState}),frame:()=>control.fitFrame(sourceVideo.videoWidth||composite.width,sourceVideo.videoHeight||composite.height,composite.width,composite.height),surface:()=>captureSource,captureSize:()=>({width:sourceVideo.videoWidth||0,height:sourceVideo.videoHeight||0}),linked:()=>linkedAvailable,source:()=>source,automationCapture:()=>({ready:!stopping&&(!start.disabled||recording)&&(!recording||recorder?.state==='recording'||recorder?.state==='paused'),reason:'Capture is starting or finalizing.',identity:recordingToken,phase:recorder?.state||get('record-state').dataset.state||'ready'})});
+globalThis.MangoRecorderCursorHostV073=Object.freeze({active:()=>active()&&recorder?.state==='recording',cleanMaster:()=>cleanMaster,seconds:()=>startedAt&&!stopping?Math.max(0,((pausedAt||captureNow())-startedAt-pausedTotal)/1000):null,camera:()=>({...zoomState}),frame:()=>control.fitFrame(sourceVideo.videoWidth||composite.width,sourceVideo.videoHeight||composite.height,composite.width,composite.height),surface:()=>captureSource,captureSize:()=>({width:sourceVideo.videoWidth||0,height:sourceVideo.videoHeight||0}),linked:()=>linkedAvailable,source:()=>source,automationCapture:()=>({ready:!stopping&&(!start.disabled||recording)&&(!recording||recorder?.state==='recording'||recorder?.state==='paused'),reason:'Capture is starting or finalizing.',identity:recordingToken,phase:recorder?.state||get('record-state').dataset.state||'ready'})});
 void checkRecovery();

@@ -18,7 +18,7 @@
  async function save(blob,id=makeId(),cursorTrace=null,capture=null){
   if(!(blob instanceof Blob)||!blob.size)throw new Error('No recording to save');
   if(!validId(id))throw new Error('Invalid recording ID');
-  const item={id,blob,created:Date.now(),bytes:blob.size};if(capture?.schema==='mangoshot.capture.v1'&&Number.isFinite(capture.seconds)&&capture.seconds>=0&&capture.seconds<=86400)item.capture={schema:capture.schema,seconds:capture.seconds,frames:Number.isSafeInteger(capture.frames)?capture.frames:0,inputFrames:Number.isSafeInteger(capture.inputFrames)?capture.inputFrames:0,driver:String(capture.driver||'unknown').slice(0,90),...(['clean','composite'].includes(capture.master)?{master:capture.master}:{})};
+  const item={id,blob,created:Date.now(),bytes:blob.size};if(capture?.schema==='mangoshot.capture.v1'&&Number.isFinite(capture.seconds)&&capture.seconds>=0&&capture.seconds<=86400)item.capture={schema:capture.schema,seconds:capture.seconds,frames:Number.isSafeInteger(capture.frames)?capture.frames:0,inputFrames:Number.isSafeInteger(capture.inputFrames)?capture.inputFrames:0,driver:String(capture.driver||'unknown').slice(0,90),...(['clean','composite'].includes(capture.master)?{master:capture.master}:{}),...(capture.partial===true?{partial:true}:{}),...(capture.telemetryPartial===true?{telemetryPartial:true,telemetryThrough:Number.isFinite(capture.telemetryThrough)?Math.max(0,Math.min(86400,capture.telemetryThrough)):0}:{})};
   if(cursorTrace&&globalThis.MangoCursorCoreV073)item.cursorTrace=globalThis.MangoCursorCoreV073.trace(cursorTrace);
   await run('readwrite',(store)=>{store.put(item,'recording:'+id);store.put({id,created:item.created},'latest');});
   return id;
