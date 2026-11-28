@@ -1,0 +1,36 @@
+name: Recording lifecycle v0.7.57
+on:
+  push:
+    branches: [feature/v0.7.57-recording-lifecycle]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  javascript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Lifecycle and render regressions
+        run: |
+          set -euo pipefail
+          for f in recorder.js recording-safety.js linked-tab.js cursor-recorder-v073.js cursor-effects-v073.js native-cursor-ui-v0753.js native-cursor-protocol-v0753.js clip-store.js clip-studio.js clip-render-v0755.js clean-master-v0752.js; do node --check "$f"; done
+          for t in recording-lifecycle-v0757 native-cursor-v0753 native-overlay-v0754 cursor-capture-v0751 cursor-effects-v073 clean-master-v0752 stop-safety repeat-recording clip-store-handoff core-integrity-v0756 render-integrity-v0755; do node "tests/$t.cjs"; done
+  native-host:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test and build unsigned Windows companion
+        shell: pwsh
+        run: |
+          cargo test --manifest-path native/cursor-host/Cargo.toml
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo build --release --manifest-path native/cursor-host/Cargo.toml
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mangoshot-v0757-unsigned-windows-development-host
+          path: native/cursor-host/target/release/mangoshot-cursor-host.exe
+          if-no-files-found: error
