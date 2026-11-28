@@ -88,11 +88,13 @@
   if(n&&n[1]!==null&&n[0]-s[0]<=.55){const k=clamp((t-s[0])/(n[0]-s[0]),0,1);return {x:s[1]+(n[1]-s[1])*k,y:s[2]+(n[2]-s[2])*k};}
   return {x:s[1],y:s[2]};
  }
- function createTrace(){let data={schema:SCHEMA,space:'recorded-frame-normalized',samples:[],clicks:[],truncated:false,baked:false};
+ function createTrace(){let data={schema:SCHEMA,space:'recorded-frame-normalized',samples:[],clicks:[],truncated:false,baked:false},pendingGap=false;
   return {add(t,p,baked=false){
    if(!Number.isFinite(t)||t<0||t>86400)return;
    if(baked)data.baked=true;
-   const a=data.samples,last=a.at(-1),valid=point(p);
+   const a=data.samples,last=a.at(-1);let valid=point(p);const stamp=Math.round(t*1000)/1000;
+   if(last&&stamp<=last[0]){if(!valid&&last[1]!==null)pendingGap=true;return;}
+   if(pendingGap){valid=null;pendingGap=false;}
    if(last){const gap=(last[1]===null)!==!valid,moved=!!valid&&(last[1]!==Math.round(valid.x*10000)/10000||last[2]!==Math.round(valid.y*10000)/10000);if(t<=last[0]||!gap&&t-last[0]<(moved?.032:.195)-.000001)return;}
    if(a.length>=MAX){data.truncated=true;return;}
    a.push([Math.round(t*1000)/1000,valid?Math.round(valid.x*10000)/10000:null,valid?Math.round(valid.y*10000)/10000:null]);

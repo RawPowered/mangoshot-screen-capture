@@ -196,7 +196,7 @@ function showResult(blob,partial=false,sessionId=null,capture=null){if(!blob?.si
 }
 function createSession(token,mime,encoder){
  return {id:(globalThis.crypto?.randomUUID?.()||Date.now()+'-'+token),token,mime,encoder,chunks:[],chunkIndex:0,storage:null,queue:Promise.resolve(),storageError:false,
-  stopped:false,partial:false,complete:false,watchdog:0,checkpoint:null,lastCheckpointAt:-Infinity};
+  stopped:false,partial:false,complete:false,encoderError:false,watchdog:0,checkpoint:null,lastCheckpointAt:-Infinity};
 }
 function queueChunkFor(session,blob){
  if(!blob?.size)return;
@@ -450,7 +450,7 @@ get('recover').addEventListener('click',async()=>{
   const blob=await MangoRecovery.restore(target);let checkpoint=null;
   try{checkpoint=typeof MangoRecovery.restoreCheckpoint==='function'?await MangoRecovery.restoreCheckpoint(target):null;if(checkpoint?.trace)checkpoint.trace=globalThis.MangoCursorCoreV073.trace(checkpoint.trace);}catch(e){checkpoint=null;warnings.push('Recovered cursor data unavailable: '+e.message);}
   const partial=target.status!=='finished',limited=partial||checkpoint?.complete===false;
-  lastBlob=blob;lastSessionId=target.id+'-recovered-'+Date.now();lastCursorTrace=checkpoint?.trace||null;
+  lastBlob=blob;lastSessionId=target.id.slice(0,60)+'-recovered-'+Date.now();lastCursorTrace=checkpoint?.trace||null;
   lastCapture={schema:'mangoshot.capture.v1',seconds:0,frames:0,inputFrames:0,driver:'recovery',...(target.capture||{}),...(partial?{partial:true}:{}),...(limited?{telemetryPartial:true,telemetryThrough:checkpoint?.seconds||0}:{}),...(checkpoint?.trace?.capture?.master?{master:checkpoint.trace.capture.master}:{})};
   get('result').hidden=false;get('save-cursor-v0751').disabled=!lastCursorTrace;
   get('result-meta').textContent=(blob.size/1048576).toFixed(1)+' MiB · '+(partial?'INCOMPLETE':'finalized')+' · '+(blob.type.includes('mp4')?'MP4':'WebM')+(lastCursorTrace?(limited?' · checkpointed cursor data (partial)':' · cursor data restored'):' · no cursor data');
@@ -528,13 +528,13 @@ start.addEventListener('click',async()=>{
   catch(error){warnings.push('Storage unavailable: download original immediately when finished.');}
   recorder.ondataavailable=event=>queueChunkFor(session,event.data);
   recorder.onerror=event=>{
-    warnings.push('Encoder error ('+(event.error?.message||'unknown')+').');
-    label('Encoder error. Preserving flushed chunks…');
+    session.encoderError=true;
+    if(activeSession===session){warnings.push('Encoder error ('+(event.error?.message||'unknown')+').');label('Encoder error. Preserving flushed chunks…');if(!session.stopped)stopCapture('Encoder error');}
   };
   recorder.onstop=()=>{
     // A late stop from session N still finalizes N, even if session N+1 has started.
     // It must not reset the controls or replace the preview of the newer session.
-    finishSession(session,false);
+    finishSession(session,session.encoderError);
   };
   watchSource(screen,session);
   recorder.start(1000);recording=true;recordState('recording');

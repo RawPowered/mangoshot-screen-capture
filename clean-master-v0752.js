@@ -39,7 +39,7 @@
  function rebuild(trace,duration){if(!Number.isFinite(duration)||duration<=0||duration>86400)throw Error('Invalid clean master duration');
   const meta=trace?.capture;if(trace?.baked||meta?.master!=='clean')throw Error('A clean master with compatible capture telemetry is required.');
   if(trace.truncated||meta.truncated)return {zoomFrames:[],regions:[],notices:['Capture telemetry is truncated; automatic reconstruction withheld.']};
-  const z=camera(meta.cameraFrames,duration),fx=effects(meta.states,duration);
+  const z=meta.states.at(-1)?.[1]==='off'?{items:[],notice:'Capture retention ended; camera history retained without extrapolating motion.'}:camera(meta.cameraFrames,duration),fx=effects(meta.states,duration);
   return {zoomFrames:z.items,regions:fx.items,notices:[z.notice,fx.notice].filter(Boolean)};
  }
  const api=Object.freeze({isLive,camera,effects,rebuild});root.MangoCleanMasterV0752=api;if(typeof module==='object'&&module.exports)module.exports=api;

@@ -24,9 +24,9 @@
  function clipTail(trace,duration,partialThrough=null){
   if(partialThrough!==null){const end=Math.max(0,Math.min(duration,partialThrough));const limit=Math.floor(end*1000)/1000;
    const trim=a=>(a||[]).filter(s=>s[0]<limit);
-   const closePath=a=>{const p=trim(a);if(p.length&&p.at(-1)[1]!==null&&p.length<60000)p.push([limit,null,null]);return p;};
+   const closePath=a=>{const p=trim(a);if(p.length&&p.at(-1)[1]!==null){if(p.length===60000)p.pop();p.push([limit,null,null]);}return p;};
    const meta=trace.capture?{...trace.capture,sourceSamples:closePath(trace.capture.sourceSamples),sourceClicks:trim(trace.capture.sourceClicks),cameraFrames:trim(trace.capture.cameraFrames),states:trim(trace.capture.states)}:null;
-   if(meta?.states.length&&meta.states.length<6000&&meta.states.at(-1)[1]!=='off')meta.states.push([limit,'off',meta.states.at(-1)[2],null]);
+   if(meta?.states.length&&meta.states.at(-1)[1]!=='off'){const epoch=meta.states.at(-1)[2];if(meta.states.length===6000)meta.states.pop();meta.states.push([limit,'off',epoch,null]);}
    return {trace:{...trace,samples:closePath(trace.samples),clicks:trim(trace.clicks),...(meta?{capture:meta}:{})},trimmed:true};
   }
   const lists=[trace.samples,trace.clicks||[],...(trace.capture?['sourceSamples','sourceClicks','cameraFrames','states'].map(k=>trace.capture[k]):[])];
