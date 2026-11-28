@@ -1,0 +1,41 @@
+name: Core integrity v0.7.56
+on:
+  push:
+    branches: [feature/v0.7.56-core-integrity-pass1]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify-overlay:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax and focused regression gates
+        run: |
+          set -euo pipefail
+          for f in clip-render-v0755.js motion-core-v067.js cinematic-core-v0713.js cursor-director-core-v074.js clip-studio.js voiceover.js project-v2.js clip-media-bin.js creative-studio-ui.js recorder.js; do node --check "$f"; done
+          for t in core-integrity-v0756 render-integrity-v0755 cinematic-v0713 cursor-director-v074 voiceover sequence-operations media-duration-v0739; do node "tests/$t.cjs"; done
+      - name: Build exact-baseline overlay
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import zipfile, pathlib, hashlib
+          paths = ['clip-render-v0755.js','motion-core-v067.js','cinematic-core-v0713.js','cursor-director-core-v074.js','clip-studio.js','voiceover.js','project-v2.js','clip-media-bin.js','creative-studio-ui.js','recorder.js','clip-studio.html','manifest.json','docs/core-integrity-v0756.md']
+          out=pathlib.Path('MangoShot-v0.7.56-Core-Integrity-Pass1-Overlay.zip')
+          with zipfile.ZipFile(out,'w',zipfile.ZIP_DEFLATED) as z:
+              for p in paths: z.write(p,p)
+          with zipfile.ZipFile(out) as z:
+              assert z.testzip() is None and sorted(z.namelist())==sorted(paths)
+          pathlib.Path('SHA256SUMS.txt').write_text(hashlib.sha256(out.read_bytes()).hexdigest()+'  '+out.name+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MangoShot-v0.7.56-Core-Integrity-Overlay
+          path: |
+            MangoShot-v0.7.56-Core-Integrity-Pass1-Overlay.zip
+            SHA256SUMS.txt
