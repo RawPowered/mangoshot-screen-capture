@@ -39,10 +39,10 @@
    controls[id]=tab;pages[id]=page;bar.append(tab);views.append(page);
   }
   bar.addEventListener('keydown',e=>{
-   if(!['ArrowRight','ArrowLeft','Home','End'].includes(e.key))return;
+   if(!['ArrowRight','ArrowLeft','ArrowUp','ArrowDown','Home','End'].includes(e.key))return;
    const keys=Object.keys(pages).filter(k=>!controls[k].hidden);let index=keys.indexOf(current);if(!keys.length)return;
    if(e.key==='Home')index=0;else if(e.key==='End')index=keys.length-1;
-   else index=(index+(e.key==='ArrowRight'?1:-1)+keys.length)%keys.length;
+   else index=(index+(['ArrowRight','ArrowDown'].includes(e.key)?1:-1)+keys.length)%keys.length;
    e.preventDefault();e.stopPropagation();activate(keys[index],true);
   });
   host.prepend(views);host.prepend(bar);activate(current);
@@ -143,7 +143,7 @@
   ['flip','Flip','Turn in','viral'],['slideLeft','Slide Left','Side motion','viral'],
   ['slideRight','Slide Right','Other direction','viral']
  ];
- const motionView=graphicTabs.pages.motion,transformMotion=el('ms50-panel');if(transformMotion)motionView.append(transformMotion);const entryMotion=create('div','ms59-entry-motion');motionView.append(entryMotion);entryMotion.append(header('Entry & exit presets','Separate from transform keyframes · exact settings below'));
+ const motionView=graphicTabs.pages.motion,transformMotion=el('ms50-panel');if(transformMotion){motionView.append(transformMotion);transformMotion.open=true;}const entryMotion=create('div','ms59-entry-motion');motionView.append(entryMotion);entryMotion.append(header('Entry & exit presets','Separate from transform keyframes · exact settings below'));
  const phaseSwitch=sectionTabs([['enter','Entry'],['exit','Exit']],phase=>{currentPhase=phase;drawMotion();});
  entryMotion.append(phaseSwitch);
  const effectFilter=sectionTabs([['basic','Essentials'],['viral','Viral']],group=>{effectGroup=group;drawMotion();});
@@ -283,7 +283,7 @@
   const l=selectLayer();layerSummary.textContent='Layers · '+(view()?.layers?.()?.length||0)+(l?' · '+l.name:' · Select a layer');
   deleteSelected.disabled=!l||l.locked||!!view()?.exporting?.();
   deleteSelected.title=l?'Delete '+l.name+' (Ctrl+Z to undo)':'Select a layer to delete';
-  const shape=l?.kind==='shape';graphics.dataset.ux44Kind=l?.kind||'';selectedActions.hidden=!l;selectedName.textContent=l?.name||'';shapeEdit.hidden=!shape;for(const b of [shapeEdit,effectEdit,keysEdit])b.disabled=!l||l.locked||!!view()?.exporting?.();for(const key of ['premium','numbers']){const tab=graphicTabs.bar.querySelector('#v068-graphic-tab-'+key);tab.hidden=!!shape;}if(shape&&['premium','numbers'].includes(graphicTabs.current()))graphicTabs.activate('design');
+  const shape=l?.kind==='shape';graphics.dataset.ux44Kind=l?.kind||'';selectedActions.hidden=!l;selectedName.textContent=l?.name||'';shapeEdit.hidden=!shape;for(const b of [shapeEdit,effectEdit,keysEdit])b.disabled=!l||l.locked||!!view()?.exporting?.()||!!view()?.isPlaying?.()||!!view()?.multitrackBusy?.();for(const key of ['premium','numbers']){const tab=graphicTabs.bar.querySelector('#v068-graphic-tab-'+key);tab.hidden=!!shape;}if(shape&&['premium','numbers'].includes(graphicTabs.current()))graphicTabs.activate('design');
   drawers.hidden=!l;transformFields.hidden=!l;emptyTransform.hidden=!!l;
   transitionAdvanced.hidden=!selectedTransition();
   const current=el('v067-'+currentPhase+'-type')?.value||'none';

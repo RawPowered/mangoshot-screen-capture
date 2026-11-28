@@ -56,7 +56,7 @@
  }
  toolbar.addEventListener('keydown',e=>{const keys=Object.keys(panels);if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(e.key))return;e.preventDefault();e.stopPropagation();const i=keys.indexOf(current),next=e.key==='Home'?0:e.key==='End'?keys.length-1:(i+(['ArrowRight','ArrowDown'].includes(e.key)?1:-1)+keys.length)%keys.length;activate(keys[next],{focus:true});});
  // State-only selection changes may route the inspector, but never reopen a user-hidden panel.
- function syncSelection({layer=null,clip=null,range=false}={},show=false){const key=layer?'graphics':Number.isInteger(clip)||range?'clip':null,signature=JSON.stringify([layer,clip,!!range]);if(signature===lastSelection&&!show)return;lastSelection=signature;if(key)activate(key,{show});}
+ function syncSelection({layer=null,clip=null,range=false}={},show=false,force=false){const key=layer?'graphics':Number.isInteger(clip)||range?'clip':null,signature=JSON.stringify([layer,clip,!!range]);if(signature===lastSelection&&!show&&!force)return;lastSelection=signature;if(key)activate(key,{show});else if(force)activate('clip',{show});}
  function showContext(key,sub=null){if(!activate(key))return false;const tabs=root.MangoVisualInspectorV068;if(sub){const group=key==='graphics'?tabs?.graphicTabs:key==='clip'?tabs?.clipTabs:null;group?.activate?.(sub);}return true;}
  for(const id of ['add-text','add-callout','quick-text','quick-callout']){
   el(id)?.addEventListener('click',()=>activate('graphics'));

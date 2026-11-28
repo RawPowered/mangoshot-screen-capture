@@ -57,7 +57,7 @@
   const note=el('v061-voice-status');if(note)note.textContent=s.recording?'● Recording microphone…':c?('A2 voiceover · '+c.start.toFixed(2)+'s–'+(c.start+c.duration).toFixed(2)+'s · Save Project to preserve'):'No narration yet.';
   view()?.updateControls?.();
   const track=el('v061-voice-track');track?.replaceChildren();
-  if(track&&c){const chip=document.createElement('span'),length=view()?.outputDuration?.()||1;
+  if(track&&c){const chip=document.createElement('button'),length=view()?.outputDuration?.()||1;chip.type='button';chip.title='Open narration properties';chip.setAttribute('aria-label','Open narration properties at '+c.start.toFixed(2)+' seconds');chip.addEventListener('click',()=>{if(view()?.exporting?.())return;view()?.seekOutput?.(c.start);root.MangoWorkspaceV062?.showContext?.('voice');});
    chip.className='v061-voice-chip';chip.style.left=100*c.start/length+'%';chip.style.width=100*Math.min(c.duration,Math.max(0,length-c.start))/length+'%';chip.textContent='♫ A2 Voiceover';track.append(chip);}
  }
  function onPosition(t){controller.sync(t,!!view()?.isPlaying?.());}

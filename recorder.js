@@ -23,7 +23,7 @@ const cleanControl=get('clean-master-v0752'),retainControl=get('cursor-retain-v0
 const label=text=>{status.textContent=text;};
 // One monotonic clock for recording, pause compensation and telemetry.
 const captureNow=()=>Math.max(1,globalThis.performance?.now?.()??Date.now());
-function recordState(value){const el=get('record-state');if(!el)return;el.dataset.state=value;el.textContent=({ready:'Ready',recording:'Recording',stopped:'Capture stopped',finalizing:'Finalizing video',recovery:'Recovery available',complete:'Ready to edit',error:'Capture error'})[value]||value;}
+function recordState(value){const el=get('record-state');if(!el)return;el.dataset.state=value;el.textContent=({ready:'Ready',selecting:'Choose source',recording:'Recording',paused:'Paused',stopped:'Capture stopped',finalizing:'Finalizing video',recovery:'Recovery available',complete:'Ready to edit',error:'Capture error'})[value]||value;}
 recordState('ready');
 const clock=ms=>`${String(Math.floor(ms/60000)).padStart(2,'0')}:${String(Math.floor(ms/1000)%60).padStart(2,'0')}`;
 const call=(fn,...args)=>new Promise((resolve,reject)=>{
@@ -171,12 +171,12 @@ function stopClock(){if(timer)clearInterval(timer);timer=0;
  light.className='record-dot idle';}
 function resetControls(){start.disabled=false;stop.disabled=true;pause.disabled=true;pause.textContent='Pause';
  for(const id of ['zoomIn','zoomOut','zoomRegion'])get(id).disabled=true;
- get('resetZoom').disabled=false;regionEnabled(false);ctrlHeld=false;altHeld=false;interaction=false;forwardBusy=false;get('switch-source-v0710').disabled=true;updateMode();}
+ get('resetZoom').disabled=true;regionEnabled(false);ctrlHeld=false;altHeld=false;interaction=false;forwardBusy=false;get('switch-source-v0710').disabled=true;updateMode();}
 function cleanup(){globalThis.MangoRecorderCursorV073?.end?.();stopTracks();stopClock();screen=null;mic=null;
  preview.srcObject=null;sourceVideo=preview;wrap.dataset.recording='false';wrap.style.aspectRatio='';wrap.style.removeProperty?.('--record-aspect');recorder=null;controller=null;captureSource='';scrollPermission=false;forwardingActive=false;sharedAudio=false;
  get('video-placeholder').hidden=false;composite.style.display='none';ink.style.opacity='1';
  get('enable-scroll').disabled=true;get('enable-scroll').textContent='Enable captured-tab wheel control';
- recording=false;stopping=false;if(cleanMaster){retainControl.checked=priorRetention;retainControl.disabled=false;retainControl.dispatchEvent(new Event('change'));}cleanMaster=false;cleanControl.disabled=false;get('clear').disabled=false;get('color').disabled=false;get('size').disabled=false;resetControls();}
+ recording=false;stopping=false;if(cleanMaster){retainControl.checked=priorRetention;retainControl.disabled=false;retainControl.dispatchEvent(new Event('change'));}cleanMaster=false;cleanControl.disabled=false;get('mic').disabled=false;get('audio').disabled=false;const sourceTag=get('source-surface');sourceTag.textContent='SOURCE · NOT SELECTED';sourceTag.dataset.kind='';get('source-guidance').textContent='Choose a recording source to enable its supported interaction and tracking controls.';get('clear').disabled=false;get('color').disabled=false;get('size').disabled=false;resetControls();}
 function saveBlob(blob,labelType){if(!blob?.size){label('No encoded video available.');return false;}
  const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;
  link.download='MangoShot-'+new Date().toISOString().replace(/[:.]/g,'-')+(blob.type.includes('mp4')?'.mp4':'.webm');
@@ -188,7 +188,7 @@ function supportedRecorder(output){for(const mimeType of mimeCandidates){if(!Med
  try{return new MediaRecorder(output,{mimeType,videoBitsPerSecond:4500000});}catch{}}
  throw new Error('No supported video encoder for this browser.');}
 function showResult(blob,partial=false,sessionId=null,capture=null){if(!blob?.size){label('No encoded data received. Check Recover recording before closing.');return;}
- lastBlob=blob;lastSessionId=sessionId;lastCapture=capture;get('result').hidden=false;get('save-cursor-v0751').disabled=!lastCursorTrace;
+ lastBlob=blob;lastSessionId=sessionId;lastCapture=capture;get('result').hidden=false;const heading=get('result-title-v0759');if(heading)heading.textContent=partial?'Incomplete recording · recovery':'Capture finalized';get('save-cursor-v0751').disabled=!lastCursorTrace;
  get('result-meta').textContent=(blob.size/1048576).toFixed(1)+' MiB · '+(blob.type.includes('mp4')?'MP4':'WebM')+
  (partial?' · INCOMPLETE, attempt recovery':capture?.master==='clean'?' · CLEAN MASTER (effects separate)':' · composite capture stopped')+(capture?' · '+capture.seconds.toFixed(1)+'s elapsed · '+capture.frames+' submitted frames · '+capture.driver:'')+(lastCursorTrace?' · '+lastCursorTrace.samples.filter(s=>s[1]!==null).length+' frame cursor samples · '+(lastCursorTrace.capture?.sourceSamples?.filter(s=>s[1]!==null).length||0)+' authorized source samples'+(lastCursorTrace.truncated||lastCursorTrace.capture?.truncated?' (truncated)':'')+(!lastCursorTrace.capture?.sourceSamples?.some(s=>s[1]!==null)?' · preview-only / legacy tracking':''):' · no cursor data');
  if(!partial)saveBlob(blob,capture?.master==='clean'?'Clean master finalized. Open in Clip Studio to reconstruct editable effects; the downloaded video excludes MangoShot effects.':'Video finalized. Original download requested; confirm it in your Downloads folder.');
@@ -453,7 +453,8 @@ get('recover').addEventListener('click',async()=>{
   lastBlob=blob;lastSessionId=target.id.slice(0,60)+'-recovered-'+Date.now();lastCursorTrace=checkpoint?.trace||null;
   lastCapture={schema:'mangoshot.capture.v1',seconds:0,frames:0,inputFrames:0,driver:'recovery',...(target.capture||{}),...(partial?{partial:true}:{}),...(limited?{telemetryPartial:true,telemetryThrough:checkpoint?.seconds||0}:{}),...(checkpoint?.trace?.capture?.master?{master:checkpoint.trace.capture.master}:{})};
   get('result').hidden=false;get('save-cursor-v0751').disabled=!lastCursorTrace;
-  get('result-meta').textContent=(blob.size/1048576).toFixed(1)+' MiB · '+(partial?'INCOMPLETE':'finalized')+' · '+(blob.type.includes('mp4')?'MP4':'WebM')+(lastCursorTrace?(limited?' · checkpointed cursor data (partial)':' · cursor data restored'):' · no cursor data');
+  const heading=get('result-title-v0759');if(heading)heading.textContent=partial?'Recovered incomplete recording':'Recovered recording';
+   get('result-meta').textContent=(blob.size/1048576).toFixed(1)+' MiB · '+(partial?'INCOMPLETE':'finalized')+' · '+(blob.type.includes('mp4')?'MP4':'WebM')+(lastCursorTrace?(limited?' · checkpointed cursor data (partial)':' · cursor data restored'):' · no cursor data');
   label('Recovered local fragments. Clip Studio must verify decoded duration; interrupted MP4 may lack final playback metadata.');
  }catch(error){label('Cannot recover: '+error.message);}finally{button.disabled=false;start.disabled=false;}
 });
@@ -467,7 +468,7 @@ start.addEventListener('click',async()=>{
  if(start.disabled)return;start.disabled=true;lastBlob=null;lastSessionId=null;lastCursorTrace=null;lastCapture=null;startedAt=0;pausedAt=0;pausedTotal=0;
  recording=false;stopping=false;finalized=false;partialShown=false;recordingToken++;const token=recordingToken;
  // Never overwrite a previous encoder's chunks or callbacks.
- activeSession=null;sourceChanges=0;interaction=false;sharedAudio=get('audio').checked;cleanMaster=cleanControl.checked;cleanControl.disabled=true;priorRetention=retainControl.checked;if(cleanMaster){retainControl.checked=true;retainControl.disabled=true;get('clear').disabled=true;get('color').disabled=true;get('size').disabled=true;}recordState('ready');
+ activeSession=null;sourceChanges=0;interaction=false;sharedAudio=get('audio').checked;cleanMaster=cleanControl.checked;cleanControl.disabled=true;get('mic').disabled=true;get('audio').disabled=true;priorRetention=retainControl.checked;if(cleanMaster){retainControl.checked=true;retainControl.disabled=true;get('clear').disabled=true;get('color').disabled=true;get('size').disabled=true;}recordState('selecting');
  get('result').hidden=true;
  elapsed.textContent='00:00';warnings=[];resetZoom();history=[];strokes=[];activeStroke=null;redrawInk();get('undo').disabled=true;
  try{
@@ -552,9 +553,9 @@ start.addEventListener('click',async()=>{
 stop.addEventListener('click',()=>stopCapture());
 pause.addEventListener('click',()=>{
  if(!recorder||stopping)return;
- if(recorder.state==='recording'){cancelSwitch();pausedAt=captureNow();recorder.pause();globalThis.MangoRecorderCursorV073?.suspend?.();get('switch-source-v0710').disabled=true;pause.textContent='Resume';light.className='record-dot idle';label('Recording paused · source telemetry suspended');}
+ if(recorder.state==='recording'){cancelSwitch();pausedAt=captureNow();recorder.pause();globalThis.MangoRecorderCursorV073?.suspend?.();get('switch-source-v0710').disabled=true;pause.textContent='Resume';recordState('paused');light.className='record-dot idle';label('Recording paused · source telemetry suspended');}
  else if(recorder.state==='paused'){recorder.resume();pausedTotal+=captureNow()-pausedAt;pausedAt=0;
-   get('switch-source-v0710').disabled=false;const tracking=globalThis.MangoRecorderCursorV073?.resume?.();pause.textContent='Pause';light.className='record-dot active';label('Recording resumed. '+(tracking||'Preview tracking available; reconnect source if needed.'));}
+   get('switch-source-v0710').disabled=false;const tracking=globalThis.MangoRecorderCursorV073?.resume?.();pause.textContent='Pause';recordState('recording');light.className='record-dot active';label('Recording resumed. '+(tracking||'Preview tracking available; reconnect source if needed.'));}
 });
 get('save-raw').addEventListener('click',()=>saveBlob(lastBlob,'Saved original recording.'));
 get('save-cursor-v0751').addEventListener('click',()=>{if(!lastCursorTrace)return;const url=URL.createObjectURL(new Blob([JSON.stringify(lastCursorTrace)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='MangoShot-'+(lastSessionId||'recording')+'-cursor.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);});

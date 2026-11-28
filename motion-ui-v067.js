@@ -77,7 +77,7 @@
    }
    for(const key of ['type','from','to','duration','decimals','prefix','suffix'])
     el('v067-number-'+key).value=value.numeric[key];
-   for(const id of ids)el(id).disabled=layer.locked||view()?.exporting?.();
+   for(const id of ids)el(id).disabled=layer.locked||view()?.exporting?.()||view()?.isPlaying?.()||view()?.multitrackBusy?.()||!!root.MangoCreativeUI?.voice?.state?.().recording;
   }
   const index=view()?.selectedClip?.(),parts=view()?.segments?.()||[];
   clipPanel.hidden=!(Number.isInteger(index)&&index>0&&index<parts.length);

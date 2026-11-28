@@ -110,7 +110,7 @@
   return chip;
  }
  function render(){const st=current();if(!st)return;
-  const loaded=st.outputDuration()>0,disabled=!loaded||st.exporting();
+  const loaded=st.outputDuration()>0,disabled=!loaded||st.exporting()||st.multitrackBusy?.()||st.isPlaying?.()||!!globalThis.MangoCreativeUI?.voice?.state?.().recording;
   el('add-text').disabled=disabled;el('add-callout').disabled=disabled;el('ripple-delete').disabled=disabled;
   const rows=el('layer-list');rows.replaceChildren();
   const items=st.layers();const ordered=items.slice().sort((a,b)=>b.track-a.track||items.indexOf(b)-items.indexOf(a));
@@ -140,12 +140,12 @@
    for(const [id,[field]] of Object.entries(fields)){
     const input=el(id);if(!input)continue;const value=layer[field];
     input.value=['x','y','width','opacity','tailX'].includes(field)?Math.round(value*100):value;
-    input.disabled=layer.locked||st.exporting()||(layer.kind==='shape'&&['text','font','weight','fontSize','align','tailX','tailLength','color'].includes(field));
+    input.disabled=layer.locked||disabled||(layer.kind==='shape'&&['text','font','weight','fontSize','align','tailX','tailLength','color'].includes(field));
    }
-   for(const [id,value] of [['graphic-shape-height',layer.shape?.height*100],['graphic-shape-rotation',layer.shape?.rotation],['graphic-shape-fill-opacity',layer.kind==='shape'?rootShape().fillOpacity(layer.background):0]]){const n=el(id);if(n){n.disabled=layer.kind!=='shape'||layer.locked||st.exporting();n.value=Number.isFinite(value)?String(Math.round(value*100)/100):'0';}}
+   for(const [id,value] of [['graphic-shape-height',layer.shape?.height*100],['graphic-shape-rotation',layer.shape?.rotation],['graphic-shape-fill-opacity',layer.kind==='shape'?rootShape().fillOpacity(layer.background):0]]){const n=el(id);if(n){n.disabled=layer.kind!=='shape'||layer.locked||disabled;n.value=Number.isFinite(value)?String(Math.round(value*100)/100):'0';}}
    const weightField=el('graphic-weight'),font=globalThis.MangoCreativeV079?.font(layer.font);for(const option of Array.from(weightField.options||[]))option.disabled=font?Number(option.value)<font.min||Number(option.value)>font.max:!['400','500','600','700','800'].includes(option.value);
-   el('graphic-preset').value=layer.preset;el('graphic-preset').disabled=layer.locked||st.exporting()||layer.kind==='shape';
-   el('graphic-duplicate').disabled=st.exporting();el('graphic-delete').disabled=st.exporting()||layer.locked;
+   el('graphic-preset').value=layer.preset;el('graphic-preset').disabled=layer.locked||disabled||layer.kind==='shape';
+   el('graphic-duplicate').disabled=disabled;el('graphic-delete').disabled=disabled||layer.locked;
    el('graphic-duration').textContent=`G${layer.track} · In ${fmt(layer.start)} · Out ${fmt(layer.end)} · Duration ${fmt(layer.end-layer.start)}`;
   }
   for(const track of [2,3])el('graphic-track-'+track).replaceChildren();
@@ -157,7 +157,7 @@
   const r=MangoGraphics.animatedBounds?.(selected,w,h,ctx,seconds)||MangoGraphics.bounds(selected,w,h,ctx);ctx.save();ctx.globalAlpha=1;ctx.setLineDash([9,5]);
   ctx.lineWidth=Math.max(1.5,h/450);ctx.strokeStyle='#aee3fa';if(selected.kind==='shape'&&!selected.keyframes?.length){const g=rootShape().geometry(selected,w,h),size=Math.max(5,h/120);ctx.beginPath();for(const [i,p] of g.corners.entries())i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);ctx.closePath();ctx.stroke();ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(g.top.x,g.top.y);ctx.lineTo(g.rotate.x,g.rotate.y);ctx.stroke();ctx.fillStyle='#aee3fa';ctx.beginPath();ctx.arc(g.rotate.x,g.rotate.y,size,0,Math.PI*2);ctx.fill();ctx.fillRect(g.resize.x-size,g.resize.y-size,size*2,size*2);}else{ctx.strokeRect(r.x,r.y,r.w,r.h);ctx.setLineDash([]);if(!selected.keyframes?.length){ctx.fillStyle='#aee3fa';ctx.fillRect(r.x+r.w-9,r.y+r.h-9,16,16);}}ctx.restore();
  }
- function propertyChange(e){const layer=activeLayer(),st=current();if(!layer||!st||layer.locked)return;
+ function propertyChange(e){const layer=activeLayer(),st=current();if(!layer||!st||layer.locked)return;if(st.isPlaying?.()||st.multitrackBusy?.()||st.exporting()||globalThis.MangoCreativeUI?.voice?.state?.().recording){st.message('Pause playback and finish busy operations before editing graphics.');render();return;}
   const [field,coerce]=fields[e.currentTarget.id],value=coerce(e.currentTarget.value);
   if(typeof value==='number'&&!Number.isFinite(value))return st.message('Invalid graphic property.');
   if(field==='background'&&!(/^transparent$/i.test(value)||/^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(value)))return st.message('Background must be transparent or #RRGGBB / #RRGGBBAA.');
