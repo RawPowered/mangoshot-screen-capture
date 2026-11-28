@@ -131,6 +131,7 @@ function commitSequence(next,message,newLayers=layers){
 }
 function applyTransaction(transaction,message,removedRanges=null){
  if(!transaction||!original||exporting||multiPreparing)return false;
+ if(sequencePreview?.isPlaying?.()||globalThis.MangoCreativeUI?.voice?.state?.().recording)throw Error('Pause playback and narration before changing timeline timing.');
  let nextSecondary=secondary;const oldLength=MangoEditOps.length(segments),newLength=MangoEditOps.length(transaction.segments);
  if(Math.abs(newLength-oldLength)>.00001&&globalThis.MangoCreativeUI?.hasVoice?.())throw Error('Narration is fixed to sequence time. Download or remove it before changing sequence duration.');
  if(hasMulti()&&Math.abs(newLength-oldLength)>.00001){
@@ -464,8 +465,8 @@ globalThis.MangoClipView={
  restoreCapturedLive(){const state=this.automationCapture(),M=globalThis.MangoCleanMasterV0752;if(!state.ready||!M||cursorTrace?.capture?.master!=='clean'||cursorTrace.baked)throw Error('Pause playback and load a clean master with telemetry.');const r=M.rebuild(cursorTrace,duration),full=segments.length===1&&segments[0].start===0&&Math.abs(segments[0].end-duration)<.001,fx=cursorRegions.some(x=>M.isLive(x.id))?[]:r.regions,cam=zoomEvents.length||!full?[]:r.zoomFrames;const notes=[...r.notices];if(r.zoomFrames.length&&!full)notes.push('Camera restore needs the full source.');if(zoomEvents.length)notes.push('Existing camera events preserved.');if(!fx.length&&!cam.length)return notes.join(' ')||'No missing live tracks to restore.';this.commitCursorDirector({regions:[...cursorRegions,...fx],zoomFrames:[...zoomEvents,...cam]});return 'Restored '+(fx.length+cam.length)+' captured events · Ctrl+Z to undo. '+notes.join(' ');},
  cursorTrace:()=>cursorTrace, cursorRegions:()=>clone(cursorRegions), cursorDirectorState:()=>({schema:'mangoshot.cursor.director.v1',regions:clone(cursorRegions),trace:cursorTrace}),
  commitCursorDirector({regions:nextRegions=cursorRegions,zoomFrames:nextZoom=zoomEvents,trace:nextTrace=cursorTrace}={}){
-  if(!original||exporting||!director())throw Error('Load the source and finish export first');
-  const checked=director().check({schema:director().SCHEMA,regions:nextRegions,trace:nextTrace},duration),z=MangoCreativeZoom.check(nextZoom);
+  if(!this.automationCapture().ready||!director())throw Error('Pause playback and finish recording or export before editing cursor effects');
+  const checked=director().check({schema:director().SCHEMA,regions:nextRegions,trace:nextTrace},duration),z=nextZoom===zoomEvents?MangoCreativeZoom.check(nextZoom):MangoCreativeZoom.nonOverlap(nextZoom);
   if(z.some(e=>e.start>=MangoEditOps.length(segments)))throw Error('Camera event outside edited sequence');
   remember();cursorRegions=checked.regions;cursorTrace=nextTrace===cursorTrace?cursorTrace:checked.trace;zoomEvents=z;refreshed();return true;
  }, duration:()=>duration,outputDuration:()=>MangoEditOps.length(segments),video:()=>video,
@@ -520,9 +521,9 @@ globalThis.MangoClipView={
   zoomFrames:()=>clone(zoomEvents),setZoomFrames(items){const state=this.automationCapture();if(!state.ready)throw Error(state.reason);return this.commitZoomStudio(items,state);},
   commitCameraTiming(id,start,expected){const state=this.automationCapture(),e=zoomEvents.find(k=>k.id===id);if(!state.ready||state.stamp!==expected||!e)throw Error('Camera timing gesture is stale.');const len=MangoEditOps.length(segments);if(!Number.isFinite(start)||start<0||start>=len||start+e.duration>len+1e-6)throw Error('Camera event must fit inside the sequence.');return this.commitZoomStudio(zoomEvents.map(k=>k.id===id?{...k,start}:k),state);},
   commitCursorTiming(id,start,end,expected){const state=this.automationCapture(),r=cursorRegions.find(x=>x.id===id);if(!state.ready||state.stamp!==expected||!r)throw Error('Cursor timing gesture is stale.');const next=director().regions(cursorRegions.map(x=>x.id===id?{...x,start,end}:x),duration);if(JSON.stringify(next)===JSON.stringify(cursorRegions))return false;return this.commitCursorDirector({regions:next});},
-  addZoomKeyframe(at,scale,x,y,ease){if(!this.automationCapture().ready)throw Error('Pause playback and load a video before editing camera');const next=MangoCreativeZoom.add(zoomEvents,at,scale,x,y,ease);if(next.some(e=>e.start>=MangoEditOps.length(segments)))throw Error('Camera keyframe must start inside the edited sequence');remember();zoomEvents=next;refreshed();},
-  commitZoomStudio(items,expected){const actual=this.automationCapture();if(!actual.ready||actual.identity!==expected?.identity||actual.stamp!==expected?.stamp)throw Error('Camera draft is stale. Close and reopen Zoom Studio.');const checked=MangoCreativeZoom.nonOverlap(items);if(checked.some(e=>e.start>=MangoEditOps.length(segments)))throw Error('Camera keyframe must start inside the edited sequence');if(new Set(checked.map(e=>e.id)).size!==checked.length)throw Error('Duplicate camera keyframe ID');if(JSON.stringify(checked)===JSON.stringify(zoomEvents))return false;remember();zoomEvents=checked;refreshed();label('Camera animation applied. Ctrl+Z restores the previous camera edit.');return true;},
-  removeZoomKeyframe(id){const state=this.automationCapture();if(!state.ready||!zoomEvents.some(e=>e.id===id))return false;return this.commitZoomStudio(MangoCreativeZoom.remove(zoomEvents,id),state);},
+  addZoomKeyframe(at,scale,x,y,ease){if(!this.automationCapture().ready)throw Error('Pause playback and load a video before editing camera');const next=MangoCreativeZoom.add(zoomEvents,at,scale,x,y,ease);if(next.some(e=>e.start>=MangoEditOps.length(segments)||e.start+e.duration>MangoEditOps.length(segments)+.00001))throw Error('Camera movement must fit inside the edited sequence');remember();zoomEvents=next;refreshed();},
+  commitZoomStudio(items,expected){const actual=this.automationCapture();if(!actual.ready||actual.identity!==expected?.identity||actual.stamp!==expected?.stamp)throw Error('Camera draft is stale. Close and reopen Zoom Studio.');const checked=MangoCreativeZoom.nonOverlap(items);if(checked.some(e=>e.start>=MangoEditOps.length(segments)||e.start+e.duration>MangoEditOps.length(segments)+.00001))throw Error('Camera movement must fit inside the edited sequence');if(new Set(checked.map(e=>e.id)).size!==checked.length)throw Error('Duplicate camera keyframe ID');if(JSON.stringify(checked)===JSON.stringify(zoomEvents))return false;remember();zoomEvents=checked;refreshed();label('Camera animation applied. Ctrl+Z restores the previous camera edit.');return true;},
+  removeZoomKeyframe(id){const state=this.automationCapture();if(!state.ready||!zoomEvents.some(e=>e.id===id))return false;const next=MangoCreativeZoom.remove(zoomEvents,id);remember();zoomEvents=next;refreshed();label('Camera event removed. Ctrl+Z to undo.');return true;},
   updateZoomKeyframe(id,patch){
    if(!this.automationCapture().ready)throw Error('Pause playback and finish export to edit camera');
    if(!zoomEvents.some(e=>e.id===id))throw Error('Camera keyframe no longer exists');
@@ -532,9 +533,9 @@ globalThis.MangoClipView={
    remember();zoomEvents=checked;refreshed();
   },
   addZoomRange(start,end,scale,x,y,duration=.4){
-   if(!original||exporting)throw Error('Load a video first');
+   if(!this.automationCapture().ready)throw Error('Pause playback and load a video before editing camera');
    const length=MangoEditOps.length(segments);
-   if(!Number.isFinite(start)||!Number.isFinite(end)||start<0||end>=length-.005||end<=start+duration)
+   if(!Number.isFinite(start)||!Number.isFinite(end)||start<0||end>=length-.005||end+duration>length+.00001||end<=start+duration)
     throw Error('Zoom In/Out must be within the edited sequence and separated by the transition time');
    let next=MangoCreativeZoom.add(zoomEvents,start,scale,x,y,duration);
    next=MangoCreativeZoom.add(next,end,1,.5,.5,duration);

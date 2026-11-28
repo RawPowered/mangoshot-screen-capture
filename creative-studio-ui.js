@@ -19,7 +19,7 @@
    label.title='Edit selected camera event';label.addEventListener('click',()=>select(e));
    const remove=document.createElement('button');remove.type='button';remove.textContent='Remove';remove.disabled=!!v?.exporting?.();remove.addEventListener('click',()=>v.removeZoomKeyframe(e.id));
    row.append(label,remove);list?.append(row);
-   if(track){const pin=document.createElement('button');pin.type='button';pin.className='v061-zoom-marker ms58-camera-marker';pin.dataset.cameraId=e.id;pin.dataset.boundary=String(!!e.boundary);pin.style.left=Math.min(100,100*e.start/total)+'%';pin.style.width=Math.max(.001,100*e.duration/total)+'%';pin.title=label.textContent+' · Click to edit, drag to retime, arrows nudge';pin.setAttribute('aria-label',pin.title);pin.disabled=!!v?.exporting?.();track.append(pin);
+   if(track){const pin=document.createElement('button');pin.type='button';pin.className='v061-zoom-marker ms58-camera-marker';pin.dataset.cameraId=e.id;pin.dataset.motionId='camera-'+e.id;pin.dataset.boundary=String(!!e.boundary);pin.style.left=Math.min(100,100*e.start/total)+'%';pin.style.width=Math.max(.001,100*e.duration/total)+'%';pin.title=label.textContent+' · Click to edit, drag to retime, arrows nudge';pin.setAttribute('aria-label',pin.title);pin.disabled=!!v?.exporting?.();track.append(pin);
     const G=root.MangoTimelineMotionGestureV0758;if(G)G.bind(pin,{view:v,lane:track,initial:e.start,total,limits:()=>[0,Math.max(0,total-Math.max(.001,e.duration))],commit:(t,stamp)=>v.commitCameraTiming(e.id,t,stamp),activate:()=>select(e)});else pin.addEventListener('click',()=>select(e));
    }
   }

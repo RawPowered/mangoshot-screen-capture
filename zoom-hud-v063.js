@@ -84,8 +84,8 @@
  const range=document.createElement('button');range.type='button';range.id='v063-add-range';range.textContent='Apply In → Out';range.title='Add zoom-in and return-to-fit as one undoable camera edit';
  timing.append(inLabel,outLabel,range);
  const selected=document.createElement('div');selected.className='v063-hud-selection';
- const selectedLabel=document.createElement('span');selectedLabel.id='v063-edit-label';selectedLabel.textContent='Select an existing camera keyframe to edit';
- const save=document.createElement('button');save.type='button';save.id='v063-save-keyframe';save.textContent='Update selected';save.disabled=true;
+ const selectedLabel=document.createElement('span');selectedLabel.id='v063-edit-label';selectedLabel.textContent='Click a CAM event to edit it in Zoom Studio.';
+ const save=document.createElement('button');save.type='button';save.id='v063-save-keyframe';save.textContent='Edit in Zoom Studio';save.disabled=true;save.hidden=true;
  selected.append(selectedLabel,save);
  box.append(heading,frame,legend,timing,selected);
  const first=controlPanel.querySelector('.v061-creative-row');if(first)controlPanel.insertBefore(box,first);else controlPanel.append(box);
@@ -117,8 +117,7 @@
   if(!initialized&&view()?.original?.()){start.value=pos().toFixed(2);end.value=Math.max(0,Math.min(view().outputDuration()-.01,pos()+3)).toFixed(2);initialized=true;}
   const key=view()?.zoomFrames?.()?.find(z=>z.id===selectedId);
   if(selectedId&&!key)selectedId=null;
-  save.disabled=!selectedId||!!view()?.exporting?.();
-  selectedLabel.textContent=selectedId?'Editing keyframe '+(key?.start.toFixed(2)||'')+'s':'Select a keyframe below to edit its framing';
+  save.disabled=true;selectedLabel.textContent='Click a CAM event to edit it in Zoom Studio.';
   const ratio=video.videoWidth&&video.videoHeight?video.videoWidth/video.videoHeight:16/9;
   frame.style.aspectRatio=String(ratio);
   // IMPORTANT: don't assign canvas.width/height here — it erases the image.
@@ -190,27 +189,7 @@
   try{view().addZoomRange(at,until,m.scale,m.x,m.y,ease);refresh();}
   catch(e){const status=el('status');if(status)status.textContent=e.message;}
  });
- const list=el('v061-zoom-events');
- list?.addEventListener('click',e=>{
-  if(e.target.closest('button'))return;
-  const row=e.target.closest('[data-zoom-id]');if(!row)return;
-  const z=view()?.zoomFrames?.()?.find(k=>k.id===row.dataset.zoomId);if(!z)return;
-  selectedId=z.id;start.value=z.start.toFixed(2);
-  el('v061-zoom-scale').value=String(z.scale);
-  if(el('v061-zoom-scale').value!==String(z.scale)){
-   const select=el('v061-zoom-scale');const o=document.createElement('option');
-   o.value=String(z.scale);o.textContent=Math.round(z.scale*100)+'%';select.append(o);select.value=o.value;
-  }
-  el('v061-zoom-duration').value=String(z.duration);
-  el('v061-zoom-x').value=Math.round(z.x*100);el('v061-zoom-y').value=Math.round(z.y*100);
-  refresh();list.querySelectorAll('[data-zoom-id]').forEach(n=>n.classList.toggle('v063-zoom-selected',n.dataset.zoomId===selectedId));
- });
- save.addEventListener('click',()=>{
-  if(!selectedId||!view()?.original?.())return;
-  const m=mode(),at=Number(start.value),duration=Number(el('v061-zoom-duration').value);
-  try{view().updateZoomKeyframe(selectedId,{start:at,duration,scale:m.scale,x:m.x,y:m.y});refresh();}
-  catch(e){const s=el('status');if(s)s.textContent=e.message;}
- });
+ // Camera event selection is owned by the shared timeline and Zoom Studio; this HUD remains a quick-add framing tool.
  root.MangoZoomHUD={refresh,frameDraw,setScale,math:root.MangoZoomHUDMath};
  refresh();
 })(typeof globalThis!=='undefined'?globalThis:this);

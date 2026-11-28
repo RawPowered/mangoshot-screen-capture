@@ -11,7 +11,7 @@ const cut={command:'clip.timeline.rippleDelete',args:{start:2,end:3}},add={comma
 const p3=sq.plan(R([cut,add]),before);assert.equal(p3.afterDuration,19);assert.equal(p3.draft.segments.length,2);assert.equal(p3.draft.layers.length,1);
 assert.throws(()=>sq.plan(R([add,{command:'clip.timeline.rippleDelete',args:{start:0,end:20}}]),before),/Step 2/);assert.equal(before.layers.length,0);
 assert.throws(()=>sq.plan(R([cut]),make({hasVoice:true})),/voiceover/);
-assert.throws(()=>sq.plan(R([cut]),p.draft),/camera animation/);
+const withCamera=sq.plan(R([cut]),p.draft);assert.equal(withCamera.afterDuration,19);const Z=globalThis.MangoCreativeZoom;for(let t=0;t<19;t+=.05){const a=Z.at(withCamera.draft.zoomFrames,t),b=Z.at(p.draft.zoomFrames,t<2?t:t+1);assert.ok(Math.abs(a.scale-b.scale)<1e-7); }
 assert.throws(()=>sq.syntax({schema:sq.SCHEMA,functions:{again:[{call:'again'}]},steps:[{call:'again'}]}),/Recursive/);
 assert.throws(()=>sq.plan(R([{command:'clip.graphics.opacity',args:{id:{ref:'missing.id'},value:.5}}]),before),/Unavailable/);
 assert.throws(()=>sq.plan(R([{command:'clip.graphics.add',args:{...add.args,text:{var:'missing'}}}]),before),/Unknown variable/);
