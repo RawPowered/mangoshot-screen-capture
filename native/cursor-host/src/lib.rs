@@ -35,6 +35,8 @@ pub enum Command {
     Start { protocol: u32, session: String, monitor_id: String, #[serde(default)] desktop_overlay: bool, #[serde(default)] shortcuts: bool, #[serde(default)] master: Option<String> },
     Effects { session: String, style: overlay_model::OverlayStyle },
     Heartbeat { session: String },
+    Pause { session: String },
+    Resume { session: String },
     Stop { session: String },
 }
 pub fn valid_session(s: &str) -> bool {

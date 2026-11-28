@@ -18,11 +18,11 @@
   // No document text, clicks on other tabs, keystrokes, history, or network.
   api.runtime.onConnect?.addListener(port=>{
     if(port.name!=='mangoshot-cursor-v073'||port.sender?.id!==api.runtime.id)return;
-    let alive=true,last=null,at=0;
-    const send=m=>{if(alive)try{port.postMessage(m);}catch{dispose();}};
-    function leave(){last=null;send({type:'leave'});}
+    let alive=true,last=null,at=0,paused=false,generation=0;
+    const send=m=>{if(alive)try{port.postMessage({...m,generation});}catch{dispose();}};
+    function leave(){last=null;if(!paused)send({type:'leave'});}
     function move(e,click=false){
-      if(!e.isTrusted||e.isPrimary===false||document.visibilityState!=='visible'||!document.hasFocus())return;
+      if(paused||!e.isTrusted||e.isPrimary===false||document.visibilityState!=='visible'||!document.hasFocus())return;
       const x=e.clientX/Math.max(1,innerWidth),y=e.clientY/Math.max(1,innerHeight);
       if(x<0||x>1||y<0||y>1){leave();return;}
       last={type:'point',x,y,click:false};
@@ -31,7 +31,7 @@
     }
     const pointer=e=>move(e),down=e=>{if(e.button===0)move(e,true);};
     const visibility=()=>{if(document.visibilityState!=='visible')leave();};
-    const timer=setInterval(()=>{if(last&&document.visibilityState==='visible'&&document.hasFocus())send(last);else if(last)leave();},250);
+    const timer=setInterval(()=>{if(!paused&&last&&document.visibilityState==='visible'&&document.hasFocus())send(last);else if(last)leave();},250);
     function dispose(){
       if(!alive)return;alive=false;clearInterval(timer);last=null;
       window.removeEventListener('pointermove',pointer,true);window.removeEventListener('pointerdown',down,true);
@@ -41,7 +41,8 @@
     window.addEventListener('pointermove',pointer,true);window.addEventListener('pointerdown',down,true);
     document.documentElement.addEventListener('pointerleave',leave);window.addEventListener('blur',leave);
     document.addEventListener('visibilitychange',visibility);window.addEventListener('pagehide',dispose,{once:true});
-    port.onDisconnect.addListener(dispose);send({type:'ready'});
+    port.onMessage.addListener(m=>{if(!alive||!Number.isSafeInteger(m?.generation)||m.generation!==generation+1||!['pause','resume'].includes(m.type))return;generation=m.generation;last=null;at=0;paused=m.type==='pause';send({type:paused?'paused':'resumed'});});
+    port.onDisconnect.addListener(dispose);send({type:'ready',pauseResume:true});
   });
   api.runtime.onMessage.addListener((message,_sender,respond)=>{
     if(message?.type!=='MANGO_LINKED_SCROLL')return;

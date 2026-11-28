@@ -374,12 +374,11 @@ function waitFrame(video,request){
  });
 }
 async function switchSource(){
- if(!active()||pendingSwitch||forwardBusy||!get('source-dialog-v0710').open)return;
- globalThis.MangoNativeCursorV0753?.stop?.('Native tracking disconnected before source selection. Reconnect after switching.');
+ if(!active()||recorder?.state!=='recording'||pendingSwitch||forwardBusy||!get('source-dialog-v0710').open)return;
  const old=screen,session=activeSession,kind=captureSource,request={stream:null,video:null,nodes:[],cancel:null};
  pendingSwitch=request;get('source-choose-v0710').disabled=true;get('switch-source-v0710').disabled=true;
  const message=t=>{get('source-switch-status-v0710').textContent=t;};
- const current=()=>pendingSwitch===request&&screen===old&&activeSession===session&&active();
+ const current=()=>pendingSwitch===request&&screen===old&&activeSession===session&&active()&&recorder?.state==='recording';
  let nextController=null;
  try{
   const options={video:{frameRate:30,displaySurface:kind||'monitor'},audio:sharedAudio};
@@ -404,13 +403,14 @@ async function switchSource(){
   const formerVideo=sourceVideo,formerTracks=old.getTracks(),formerNodes=screenAudioNodes;
   // Atomic synchronous commit: render loop reads the new decoder, old ended events
   // cannot stop the new capture, and the original encoder/recovery session stays live.
+  globalThis.MangoRecorderCursorV073?.sourceChanged?.();
   screen=candidate;sourceVideo=video;screenAudioNodes=request.nodes;controller=nextController;captureSource=settings.displaySurface||kind;
   tracks=tracks.filter(t=>!formerTracks.includes(t));tracks.push(...candidate.getTracks());
   pendingSwitch=null;sourceChanges++;frameDriver?.setSource(track);watchSource(candidate,session);
   disconnectNodes(formerNodes);disposeVideo(formerVideo);stopStream(old);
   interaction=false;forwardingActive=false;scrollPermission=false;forwardBusy=false;queuedScroll=0;
   get('linked-consent').checked=false;get('enable-scroll').textContent='Enable captured-tab wheel control';
-  resetZoom();regionEnabled(false);globalThis.MangoRecorderCursorV073?.sourceChanged?.();explainCaptureSurface(captureSource);updateMode();
+  resetZoom();regionEnabled(false);explainCaptureSurface(captureSource);updateMode();
   get('switch-source-v0710').disabled=false;get('source-choose-v0710').disabled=false;get('source-dialog-v0710').close();
   label('Switched to '+sourceName(captureSource)+' · same recording, '+composite.width+'×'+composite.height+(sharedAudio&&(!audioDest||!candidate.getAudioTracks().length)?' · no replacement shared audio; microphone unchanged':''));
   if(nextController?.setFocusBehavior)try{nextController.setFocusBehavior('focus-capturing-application');}catch{}
@@ -552,9 +552,9 @@ start.addEventListener('click',async()=>{
 stop.addEventListener('click',()=>stopCapture());
 pause.addEventListener('click',()=>{
  if(!recorder||stopping)return;
- if(recorder.state==='recording'){pausedAt=captureNow();recorder.pause();globalThis.MangoRecorderCursorV073?.suspend?.();pause.textContent='Resume';light.className='record-dot idle';label('Recording paused');}
+ if(recorder.state==='recording'){cancelSwitch();pausedAt=captureNow();recorder.pause();globalThis.MangoRecorderCursorV073?.suspend?.();get('switch-source-v0710').disabled=true;pause.textContent='Resume';light.className='record-dot idle';label('Recording paused · source telemetry suspended');}
  else if(recorder.state==='paused'){recorder.resume();pausedTotal+=captureNow()-pausedAt;pausedAt=0;
-   pause.textContent='Pause';light.className='record-dot active';label('Recording resumed. Reconnect authorized source tracking if it was active before pause; preview tracking is available.');}
+   get('switch-source-v0710').disabled=false;const tracking=globalThis.MangoRecorderCursorV073?.resume?.();pause.textContent='Pause';light.className='record-dot active';label('Recording resumed. '+(tracking||'Preview tracking available; reconnect source if needed.'));}
 });
 get('save-raw').addEventListener('click',()=>saveBlob(lastBlob,'Saved original recording.'));
 get('save-cursor-v0751').addEventListener('click',()=>{if(!lastCursorTrace)return;const url=URL.createObjectURL(new Blob([JSON.stringify(lastCursorTrace)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='MangoShot-'+(lastSessionId||'recording')+'-cursor.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);});
@@ -574,5 +574,5 @@ window.addEventListener('pagehide',()=>{globalThis.MangoRecorderCursorV073?.end?
 if(!navigator.mediaDevices?.getDisplayMedia||typeof MediaRecorder==='undefined'){
  label('Screen capture APIs unavailable here.');start.disabled=true;
 }
-globalThis.MangoRecorderCursorHostV073=Object.freeze({active:()=>active()&&recorder?.state==='recording',cleanMaster:()=>cleanMaster,seconds:()=>startedAt&&!stopping?Math.max(0,((pausedAt||captureNow())-startedAt-pausedTotal)/1000):null,camera:()=>({...zoomState}),frame:()=>control.fitFrame(sourceVideo.videoWidth||composite.width,sourceVideo.videoHeight||composite.height,composite.width,composite.height),surface:()=>captureSource,captureSize:()=>({width:sourceVideo.videoWidth||0,height:sourceVideo.videoHeight||0}),linked:()=>linkedAvailable,source:()=>source,automationCapture:()=>({ready:!stopping&&(!start.disabled||recording)&&(!recording||recorder?.state==='recording'||recorder?.state==='paused'),reason:'Capture is starting or finalizing.',identity:recordingToken,phase:recorder?.state||get('record-state').dataset.state||'ready'})});
+globalThis.MangoRecorderCursorHostV073=Object.freeze({active:()=>active()&&recorder?.state==='recording',cleanMaster:()=>cleanMaster,seconds:()=>startedAt&&!stopping?Math.max(0,((pausedAt||captureNow())-startedAt-pausedTotal)/1000):null,camera:()=>({...zoomState}),frame:()=>control.fitFrame(sourceVideo.videoWidth||composite.width,sourceVideo.videoHeight||composite.height,composite.width,composite.height),surface:()=>captureSource,captureSize:()=>({width:sourceVideo.videoWidth||0,height:sourceVideo.videoHeight||0}),linked:()=>linkedAvailable,source:()=>source,automationCapture:()=>({ready:!stopping&&(!start.disabled||recording)&&(!recording||recorder?.state==='recording'||recorder?.state==='paused'),reason:'Capture is starting or finalizing.',identity:recordingToken,sourceEpoch:sourceChanges,phase:recorder?.state||get('record-state').dataset.state||'ready'})});
 void checkRecovery();

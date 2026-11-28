@@ -1,6 +1,6 @@
 [package]
 name = "mangoshot-cursor-host"
-version = "0.7.54"
+version = "0.7.57"
 edition = "2021"
 rust-version = "1.75"
 publish = false

@@ -54,7 +54,7 @@ fn displays() -> io::Result<Vec<Display>> {
     Ok(result)
 }
 fn confirm(m: &Monitor,desktop_overlay:bool,shortcuts:bool) -> bool {
-    let mut text=format!("Allow MangoShot to sample cursor position and primary mouse-button presses ONLY on {} ({} x {}, origin {}, {}) for this screen recording?\n\nChoose No to cancel. Tracking stops when the recording session closes, pauses, switches source or loses its lease.",m.id,m.width,m.height,m.left,m.top);
+    let mut text=format!("Allow MangoShot to sample cursor position and primary mouse-button presses ONLY on {} ({} x {}, origin {}, {}) for this screen recording?\n\nChoose No to cancel. Pointer sampling and desktop effects stop during pause. Resuming the same authorized monitor restores them. Tracking ends when the recording closes, switches source or loses its lease.",m.id,m.width,m.height,m.left,m.top);
     if desktop_overlay {text.push_str("\n\nEXPERIMENTAL: visible mouse effects on this monitor may be permanently captured in the composite recording. Not for clean-master recordings.");}
     if shortcuts {text.push_str("\n\nRegister Ctrl+Alt+1 (spotlight), Ctrl+Alt+2 (ring), Ctrl+Alt+F8 (disconnect native tracking) until this session ends.");}
     let wide:Vec<u16>=text.encode_utf16().chain(Some(0)).collect();
@@ -63,7 +63,7 @@ fn confirm(m: &Monitor,desktop_overlay:bool,shortcuts:bool) -> bool {
     unsafe { MessageBoxW(std::ptr::null_mut(),wide.as_ptr(),title.as_ptr(),0x0000_0004|0x20|0x100|0x10000) == 6 }
 }
 fn ms(t: Instant) -> u64 { t.elapsed().as_millis().min(u64::MAX as u128) as u64 }
-struct Session { id:String, display:Display, start:Instant, heartbeat:Instant, next:Instant, sequence:u64, click:ClickEdge, overlay:Option<overlay::Overlay>, hotkeys:Option<overlay::Hotkeys>, style:OverlayStyle }
+struct Session { id:String, display:Display, start:Instant, heartbeat:Instant, next:Instant, sequence:u64, click:ClickEdge, overlay:Option<overlay::Overlay>, hotkeys:Option<overlay::Hotkeys>, style:OverlayStyle, paused:bool, overlay_requested:bool, shortcuts_requested:bool }
 // Bounded asynchronous stdout: a blocked browser reader must not hold the UI
 // thread or keep a visible overlay alive after the session lease expires.
 struct Out { tx:mpsc::SyncSender<Vec<u8>>, pending:Vec<u8> }
@@ -77,6 +77,7 @@ fn sample(s:&mut Session,out:&mut impl Write)->io::Result<bool>{
     if monitor(s.display.handle).as_ref()!=Some(&s.display.monitor) {
         write_message(out,&json!({"type":"ended","session":s.id,"reason":"monitor_changed"}))?;return Ok(false);
     }
+    if s.paused {let _=overlay::pump();s.next=Instant::now()+Duration::from_millis(100);return Ok(true);}
     let mut p=Point::default();
     let pos=if unsafe {GetPhysicalCursorPos(&mut p)}!=0 {s.display.monitor.normalized(p.x,p.y)} else {None};
     let click=s.click.sample(pos.map(|_|unsafe {let button=if GetSystemMetrics(23)!=0 {0x02}else{0x01};GetAsyncKeyState(button)<0}));
@@ -110,7 +111,7 @@ pub fn run()->io::Result<()> {
             Ok(Some(Command::Hello{protocol})) if !hello && session.is_none() => {
                 if protocol!=PROTOCOL {error(&mut out,"protocol_mismatch")?;break;}
                 let monitors:Vec<_>=displays()?.into_iter().map(|d|d.monitor).collect();
-                write_message(&mut out,&json!({"type":"hello","protocol":PROTOCOL,"platform":"windows","monitors":monitors,"sample_hz_target":60,"overlays":true,"overlay_mode":"composite-only","global_shortcuts":true,"shortcut_mode":"registered-toggle"}))?;hello=true;
+                write_message(&mut out,&json!({"type":"hello","protocol":PROTOCOL,"platform":"windows","monitors":monitors,"sample_hz_target":60,"overlays":true,"overlay_mode":"composite-only","global_shortcuts":true,"shortcut_mode":"registered-toggle","pause_resume":true}))?;hello=true;
             }
             Ok(Some(Command::Start{protocol,session:id,monitor_id,desktop_overlay,shortcuts,master})) if hello && session.is_none() => {
                 if protocol!=PROTOCOL || !valid_session(&id) || desktop_overlay&&master.as_deref()!=Some("composite") {error(&mut out,"invalid_start")?;break;}
@@ -123,13 +124,28 @@ pub fn run()->io::Result<()> {
                 let hotkeys=if shortcuts {match overlay::Hotkeys::register(){Ok(v)=>Some(v),Err(_)=>{error(&mut out,"hotkey_conflict")?;break;}}}else{None};
                 write_message(&mut out,&json!({"type":"started","session":id,"monitor":display.monitor,"desktop_overlay":desktop_overlay,"shortcuts":shortcuts}))?;
                 let now=Instant::now();
-                session=Some(Session{id,display,start:now,heartbeat:now,next:now,sequence:0,click:ClickEdge::default(),overlay,hotkeys,style:OverlayStyle::default()});
+                session=Some(Session{id,display,start:now,heartbeat:now,next:now,sequence:0,click:ClickEdge::default(),overlay,hotkeys,style:OverlayStyle::default(),paused:false,overlay_requested:desktop_overlay,shortcuts_requested:shortcuts});
             }
             Ok(Some(Command::Heartbeat{session:id})) => {
                 if let Some(s)=session.as_mut().filter(|s|s.id==id){if expired(ms(s.start),ms(s.heartbeat)){write_message(&mut out,&json!({"type":"ended","session":s.id,"reason":"lease_expired"}))?;break;}s.heartbeat=Instant::now();}else{error(&mut out,"invalid_session")?;break;}
             }
+            Ok(Some(Command::Pause{session:id})) => {
+                let Some(s)=session.as_mut().filter(|s|s.id==id&&!s.paused) else {error(&mut out,"invalid_pause")?;break;};
+                if expired(ms(s.start),ms(s.heartbeat))||monitor(s.display.handle).as_ref()!=Some(&s.display.monitor){error(&mut out,"pause_source_invalid")?;break;}
+                s.paused=true;s.overlay.take();s.hotkeys.take();s.click=ClickEdge::default();let _=overlay::pump();
+                write_message(&mut out,&json!({"type":"paused","session":s.id,"monitor":s.display.monitor}))?;
+            }
+            Ok(Some(Command::Resume{session:id})) => {
+                let Some(s)=session.as_mut().filter(|s|s.id==id&&s.paused) else {error(&mut out,"invalid_resume")?;break;};
+                if expired(ms(s.start),ms(s.heartbeat))||monitor(s.display.handle).as_ref()!=Some(&s.display.monitor){error(&mut out,"resume_source_invalid")?;break;}
+                let _=overlay::pump();
+                if s.overlay_requested {match overlay::Overlay::new(&s.display.monitor){Ok(v)=>s.overlay=Some(v),Err(_)=>{error(&mut out,"overlay_unavailable")?;break;}}}
+                if s.shortcuts_requested {match overlay::Hotkeys::register(){Ok(v)=>s.hotkeys=Some(v),Err(_)=>{error(&mut out,"hotkey_conflict")?;break;}}}
+                s.click=ClickEdge::default();s.paused=false;s.next=Instant::now();
+                write_message(&mut out,&json!({"type":"resumed","session":s.id,"monitor":s.display.monitor}))?;
+            }
             Ok(Some(Command::Effects{session:id,style})) => {
-                if let Some(s)=session.as_mut().filter(|s|s.id==id&&s.overlay.is_some()) {if !style.valid()||expired(ms(s.start),ms(s.heartbeat)){error(&mut out,"invalid_effects")?;break;}s.style=style;}else{error(&mut out,"overlay_not_authorized")?;break;}
+                if let Some(s)=session.as_mut().filter(|s|s.id==id&&!s.paused&&s.overlay.is_some()) {if !style.valid()||expired(ms(s.start),ms(s.heartbeat)){error(&mut out,"invalid_effects")?;break;}s.style=style;}else{error(&mut out,"overlay_not_authorized")?;break;}
             }
             Ok(Some(Command::Stop{session:id})) => {
                 if session.as_ref().is_some_and(|s|s.id==id){write_message(&mut out,&json!({"type":"ended","session":id,"reason":"stopped"}))?;}break;
