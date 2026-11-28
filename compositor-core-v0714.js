@@ -37,21 +37,53 @@
  function filter(stack,scale=1){return checkStack(stack).filter(x=>x.enabled&&x.value!==specs[x.kind].initial).map(x=>specs[x.kind].fn(x.value,scale)).join(' ')||'none';}
  const easing=['linear','easeIn','easeOut','easeInOut','hold'];
  const neutral=()=>({t:0,x:0,y:0,scale:1,rotation:0,opacity:1,ease:'linear'});
+ const poseFields=['x','y','scale','rotation','opacity'],EPS=1e-8;
+ const poseValues=p=>Object.fromEntries(poseFields.map(k=>[k,p[k]]));
+ const samePose=(a,b)=>poseFields.every(k=>Math.abs(a[k]-b[k])<EPS);
+ function checkCurve(v){if(!Array.isArray(v)||v.length!==2||!finite(v[0],0,1)||!finite(v[1],0,1)||v[1]-v[0]<=EPS)throw Error('Invalid sliced easing interval');return [...v];}
+ function checkPose(p){if(!p||!finite(p.x,-1,1)||!finite(p.y,-1,1)||!finite(p.scale,.1,4)||!finite(p.rotation,-720,720)||!finite(p.opacity,0,1))throw Error('Invalid boundary pose');return poseValues(p);}
  function checkKeys(keys){
   if(!Array.isArray(keys)||keys.length>MAX_KEYS)throw Error('Use at most '+MAX_KEYS+' keyframes.');
   const sorted=keys.map(k=>{
    if(!k||!finite(k.t,0,1)||!finite(k.x,-1,1)||!finite(k.y,-1,1)||!finite(k.scale,.1,4)||!finite(k.rotation,-720,720)||!finite(k.opacity,0,1)||!easing.includes(k.ease))throw Error('Invalid keyframe: check time, position, scale, rotation and opacity.');
-   return {t:k.t,x:k.x,y:k.y,scale:k.scale,rotation:k.rotation,opacity:k.opacity,ease:k.ease};
+   return {t:k.t,...poseValues(k),ease:k.ease,...(k.curve!=null?{curve:checkCurve(k.curve)}:{}),...(k.out!=null?{out:checkPose(k.out)}:{})};
   }).sort((a,b)=>a.t-b.t);
   if(sorted.some((k,i)=>i&&k.t-sorted[i-1].t<.000001))throw Error('Keyframe positions must be unique.');
   return sorted;
  }
  function ease(p,name){p=Math.max(0,Math.min(1,p));if(name==='hold')return p===1?1:0;if(name==='easeIn')return p*p;if(name==='easeOut')return 1-(1-p)**2;if(name==='easeInOut')return p*p*(3-2*p);return p;}
+ function progress(u,name,curve){u=Math.max(0,Math.min(1,u));if(!curve||name==='hold'||name==='linear')return ease(u,name);const [a,b]=curve,lo=ease(a,name),hi=ease(b,name);return hi-lo>1e-14?(ease(a+(b-a)*u,name)-lo)/(hi-lo):u;}
+ function sampleSegment(a,b,t){const p=progress((t-a.t)/(b.t-a.t),a.ease,a.curve),target=a.out||b,out={t,ease:a.ease};for(const k of poseFields)out[k]=a[k]+(target[k]-a[k])*p;return out;}
  function pose(keys,t){
   if(!keys?.length)return neutral();
   const a=keys[0],z=keys.at(-1);if(t<=a.t)return {...a};if(t>=z.t)return {...z};
-  for(let i=1;i<keys.length;i++){const b=keys[i],a=keys[i-1];if(t<=b.t){const p=ease((t-a.t)/(b.t-a.t),a.ease),out={t,ease:a.ease};for(const k of ['x','y','scale','rotation','opacity'])out[k]=a[k]+(b[k]-a[k])*p;return out;}}
+  for(let i=1;i<keys.length;i++){const b=keys[i],a=keys[i-1];if(t===b.t)return {...b};if(t<b.t)return sampleSegment(a,b,t);}
   return {...z};
+ }
+ function restrict(a,b,u,v){if(a.ease==='linear'||a.ease==='hold')return undefined;const [lo,hi]=a.curve||[0,1],from=Math.max(0,lo+(hi-lo)*u),to=Math.min(1,lo+(hi-lo)*v);return from<=EPS&&to>=1-EPS?undefined:checkCurve([from,to]);}
+ // Map only retained sequence-time intervals. Preserve the left-limit pose at cuts.
+ function retimeKeys(layer,spans,start,end){
+  const keys=checkKeys(layer.keyframes||[]);if(!keys.length)return keys;const span=layer.end-layer.start,len=end-start;
+  if(!(span>0&&len>0)||!Array.isArray(spans)||!spans.length)throw Error('Invalid graphic motion timing map');
+  const rows=[],rel=t=>(t-layer.start)/span,nt=t=>Math.max(0,Math.min(1,(t-start)/len));
+  for(const s of spans){if(!Number.isFinite(s.start)||!Number.isFinite(s.end)||!Number.isFinite(s.output)||s.end<=s.start)throw Error('Invalid retained graphic span');
+   const bounds=[s.start,...keys.map(k=>layer.start+k.t*span).filter(t=>t>s.start+EPS&&t<s.end-EPS),s.end];
+   for(let i=1;i<bounds.length;i++){const a=bounds[i-1],b=bounds[i],u=rel(a),v=rel(b),mid=(u+v)/2;let left=poseValues(pose(keys,u)),right=poseValues(pose(keys,v)),kind='linear',curve;
+    const j=keys.findIndex((k,n)=>n>0&&mid>keys[n-1].t&&mid<k.t);
+    if(j>0){const x=keys[j-1],y=keys[j];left=poseValues(sampleSegment(x,y,u));right=poseValues(sampleSegment(x,y,v));kind=x.ease;curve=restrict(x,y,Math.max(0,(u-x.t)/(y.t-x.t)),Math.min(1,(v-x.t)/(y.t-x.t)));}
+    const row={a:nt(s.output+a-s.start),b:nt(s.output+b-s.start),left,right,ease:kind,...(curve?{curve}:{})};
+    const prev=rows.at(-1);if(prev&&Math.abs(prev.b-row.a)>1e-6)throw Error('Graphic motion map has a gap');
+    if(prev&&samePose(prev.left,prev.right)&&samePose(row.left,row.right)&&samePose(prev.left,row.left)){prev.b=row.b;continue;}rows.push(row);
+   }
+  }
+  if(!rows.length)return keys;
+  const out=rows.map((r,i)=>({t:r.a,...r.left,ease:r.ease,...(r.curve?{curve:r.curve}:{}),...(!samePose(r.right,rows[i+1]?.left||r.right)?{out:r.right}:{})}));
+  const last=rows.at(-1);out.push({t:last.b,...last.right,ease:'linear'});return checkKeys(out);
+ }
+ function insertKey(raw,t){const keys=checkKeys(raw);if(keys.some(k=>Math.abs(k.t-t)<1e-6))return keys;
+  const value=poseValues(pose(keys,t)),next=keys.findIndex(k=>k.t>t),k={t,...value,ease:'linear'};
+  if(next>0){const a=keys[next-1],b=keys[next],u=(t-a.t)/(b.t-a.t),left=restrict(a,b,0,u),right=restrict(a,b,u,1),out=a.out;k.ease=a.ease;if(right)k.curve=right;if(out)k.out=out;delete a.out;delete a.curve;if(left)a.curve=left;}
+  keys.push(k);return checkKeys(keys);
  }
  function at(layer,seconds){return pose(layer.keyframes||[],Math.max(0,Math.min(1,(seconds-layer.start)/Math.max(.001,layer.end-layer.start))));}
  function transform(ctx,p,box,w,h){
@@ -94,6 +126,6 @@
   ctx.save();try{ctx.setTransform(1,0,0,1,0,0);ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';ctx.filter='none';ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);ctx.filter=filter(stack,h/1080);ctx.drawImage(c,0,0);}finally{ctx.restore();}
  }
  function requireProject(layers,grade=[],width=0,height=0){root.MangoCreativeEffectsV0726?.requireBudget(layers,width,height);root.MangoTransformMaterialV0715?.requireBudget(layers,width,height);requireSupport(grade);for(const l of layers||[]){if(l.effectStack!=null)requireSupport(l.effectStack);if(l.keyframes!=null)checkKeys(l.keyframes);}if(width*height>MAX_PIXELS&&(active(grade)||(layers||[]).some(l=>active(l.effectStack))))throw Error('Compositor canvas exceeds the raster budget. Reduce source dimensions or remove active filters.');}
- const api=Object.freeze({MAX_STACK,MAX_KEYS,specs,effects,presets,copy,checkStack,active,filter,easing,neutral,checkKeys,pose,at,transform,box,supports,requireSupport,paintStack,gradeFrame,requireProject});
+ const api=Object.freeze({MAX_STACK,MAX_KEYS,specs,effects,presets,copy,checkStack,active,filter,easing,neutral,checkKeys,pose,at,retimeKeys,insertKey,poseValues,transform,box,supports,requireSupport,paintStack,gradeFrame,requireProject});
  root.MangoCompositorV0714=api;if(typeof module==='object'&&module.exports)module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

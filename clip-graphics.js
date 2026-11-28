@@ -157,20 +157,22 @@
    else paint(ctx);
   }
  }
+ function retimeLayer(l,start,end,spans){const next={...cp(l),start,end};if(l.keyframes?.length){const C=root.MangoCompositorV0714;if(!C?.retimeKeys)throw Error('Motion timing engine unavailable');next.keyframes=C.retimeKeys(l,spans,start,end);}return next;}
+ function retimeTiming(l,start,end,track=l.track){if(Math.abs((end-start)-(l.end-l.start))<1e-6)return {...cp(l),start,end,track};return {...retimeLayer(l,start,end,[{start,end,output:start}]),track};}
  function ripple(layers,start,end){const d=end-start;if(d<=0)return cp(layers);
   const result=[];
   for(const l of layers){const a=l.start,b=l.end;
    if(b<=start){result.push(cp(l));continue;}
    if(a>=end){result.push({...cp(l),start:a-d,end:b-d});continue;}
    const a2=a<start?a:start,b2=b>end?b-d:start;
-   if(b2-a2>=.04)result.push({...cp(l),start:a2,end:b2});
+   if(b2-a2>=.04){const spans=[];if(a<start)spans.push({start:a,end:Math.min(b,start),output:a});if(b>end)spans.push({start:Math.max(a,end),end:b,output:Math.max(a,end)-d});result.push(retimeLayer(l,a2,b2,spans));}
   }return result;
  }
  function trim(layers,start,end){const result=[];for(const l of layers){const a=Math.max(start,l.start),b=Math.min(end,l.end);
-   if(b-a>=.04)result.push({...cp(l),start:a-start,end:b-start});
+   if(b-a>=.04)result.push(a===l.start&&b===l.end?{...cp(l),start:a-start,end:b-start}:retimeLayer(l,a-start,b-start,[{start:a,end:b,output:a-start}]));
   }return result;
  }
  function bounds(layer,w,h,ctx){if(layer.kind==='shape')return root.MangoClipShapesV0742.bounds(layer,w,h);const fh=clamp(layer.fontSize*h/1080,9,200),x=clamp(layer.x*w,0,w-40),y=clamp(layer.y*h,0,h-24),width=clamp(layer.width*w,40,Math.max(40,w-x));if(ctx){ctx.save();ctx.font=`${resolveWeight(layer.font,layer.weight)} ${fh}px ${resolveFont(layer.font)}`;const rows=lines(ctx,layer.text,width-2*Math.max(5,fh*.32),7);ctx.restore();return {x,y,w:width,h:Math.min(h-y,rows.length*fh*1.22+fh*.64)};}return {x,y,w:width,h:Math.min(h-y,fh*2.5)};}
  function animatedBounds(layer,w,h,ctx,seconds){const r=bounds(layer,w,h,ctx);return Number.isFinite(seconds)&&layer.keyframes?.length&&root.MangoCompositorV0714?root.MangoCompositorV0714.box(r,root.MangoCompositorV0714.at(layer,seconds),w,h):r;}
- root.MangoGraphics={styles,create,style,render,ripple,trim,bounds,animatedBounds,at,clone:cp};
+ root.MangoGraphics={styles,create,style,render,ripple,trim,retimeTiming,bounds,animatedBounds,at,clone:cp};
 })(typeof globalThis!=='undefined'?globalThis:this);

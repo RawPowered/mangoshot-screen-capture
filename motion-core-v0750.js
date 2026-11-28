@@ -7,14 +7,12 @@
  function nearest(keys,t,tolerance=EPS){let index=-1,distance=Infinity;keys.forEach((k,i)=>{const d=Math.abs(k.t-t);if(d<=tolerance&&d<distance){index=i;distance=d;}});return index;}
  function snap(layer,seconds){const t=at(layer,seconds);if(t===null)return null;const keys=layer.keyframes||[],i=nearest(keys,t,Math.max(EPS,Math.min(.008/(layer.end-layer.start),.01)));return i<0?t:keys[i].t;}
  function upsert(raw,t,patch={}){
-  const keys=C.checkKeys(raw||[]);if(!finite(t)||t<0||t>1)throw Error('Keyframe must be inside the selected layer.');
+  let keys=C.checkKeys(raw||[]);if(!finite(t)||t<0||t>1)throw Error('Keyframe must be inside the selected layer.');
   if(!patch||typeof patch!=='object'||Array.isArray(patch))throw Error('Invalid motion properties.');
   for(const [name,value] of Object.entries(patch)){if(name==='ease'){if(!C.easing.includes(value))throw Error('Unsupported easing.');continue;}const f=fields[name];if(!Object.hasOwn(fields,name)||!finite(value)||value<f.min||value>f.max)throw Error('Invalid '+name+' value.');}
-  const i=nearest(keys,t),previous=i>=0?keys[i]:C.pose(keys,t),key={...previous,...patch,t:i>=0?previous.t:t};
-  if(i>=0)keys[i]=key;else{if(keys.length>=C.MAX_KEYS)throw Error('Maximum '+C.MAX_KEYS+' transform keyframes.');keys.push(key);}
-  return C.checkKeys(keys);
+  let i=nearest(keys,t);if(i<0){if(keys.length>=C.MAX_KEYS)throw Error('Maximum '+C.MAX_KEYS+' transform keyframes.');keys=C.insertKey(keys,t);i=nearest(keys,t);}const previous=keys[i],key={...previous,...patch};if(Object.hasOwn(patch,'ease')&&patch.ease!==previous.ease)delete key.curve;keys[i]=key;return C.checkKeys(keys);
  }
- function remove(raw,t){const keys=C.checkKeys(raw||[]),i=nearest(keys,t);if(i<0)throw Error('Move the playhead to a keyframe first.');keys.splice(i,1);return keys;}
+ function remove(raw,t){const keys=C.checkKeys(raw||[]),i=nearest(keys,t);if(i<0)throw Error('Move the playhead to a keyframe first.');keys.splice(i,1);if(i>0){delete keys[i-1].curve;delete keys[i-1].out;}return C.checkKeys(keys);}
  function adjacent(raw,t,direction){const keys=C.checkKeys(raw||[]);if(direction===-1)return [...keys].reverse().find(k=>k.t<t-EPS)||null;if(direction===1)return keys.find(k=>k.t>t+EPS)||null;throw Error('Invalid key direction.');}
  function posePatch(p){return Object.fromEntries([...Object.keys(fields),'ease'].map(k=>[k,p[k]]));}
  function move(raw,t,dx,dy){if(!finite(dx)||!finite(dy))throw Error('Invalid movement.');const p=C.pose(C.checkKeys(raw||[]),t);return upsert(raw,t,{x:clamp(p.x+dx,-1,1),y:clamp(p.y+dy,-1,1)});}
