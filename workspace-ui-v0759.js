@@ -2,11 +2,11 @@
 (function(root){'use strict';
  const labels={capture:'Capture',cursor:'Cursor FX',tracking:'Tracking',ink:'Ink'};
  function nextTab(keys,current,key){if(!Array.isArray(keys)||!keys.length)return null;const i=Math.max(0,keys.indexOf(current));if(key==='Home')return keys[0];if(key==='End')return keys.at(-1);const delta=['ArrowRight','ArrowDown'].includes(key)?1:['ArrowLeft','ArrowUp'].includes(key)?-1:0;return delta?keys[(i+delta+keys.length)%keys.length]:null;}
- function captureSummary({phase='',surface='',mode='preview',native='idle',clean=false,retain=false}={}){
+ function captureSummary({phase='',surface='',mode='preview',native='idle',linkedReady=false,linkedAvailable=false,clean=false,retain=false}={}){
   const active=['recording','paused'].includes(phase),source=({browser:'Browser tab',window:'Application window',monitor:'Entire screen'})[surface]||'No source';
   let tracking='Not recording';
-  if(active){if(phase==='paused')tracking='Tracking paused';else if(mode==='native'&&native==='active')tracking='Authorized monitor';else if(mode==='native'&&['pausing','paused','resuming'].includes(native))tracking='Native transition';else if(mode==='linked')tracking='Authorized linked tab';else if(native==='ready'||native==='connecting'||native==='starting')tracking='Native setup · awaiting approval';else tracking='Preview pointer only';}
-  return {source:active?source:'No source',tracking,master:clean?'Clean master':'Composite',retention:clean||retain?'Retain path':'Path retention off',canConnect:phase==='recording'&&(surface==='browser'||surface==='monitor')&&mode==='preview'};
+  if(active){if(phase==='paused')tracking='Tracking paused';else if(mode==='native'&&native==='active')tracking='Authorized monitor';else if(mode==='native'&&['pausing','paused','resuming'].includes(native))tracking='Native transition';else if(mode==='linked')tracking=linkedReady?'Authorized linked tab':'Linked tab · awaiting acknowledgement';else if(native==='ready'||native==='connecting'||native==='starting')tracking='Native setup · awaiting approval';else tracking='Preview pointer only';}
+  return {source:active?source:'No source',tracking,master:clean?'Clean master':'Composite',retention:clean||retain?'Retain path':'Path retention off',canConnect:phase==='recording'&&(surface==='monitor'||surface==='browser'&&linkedAvailable)&&mode==='preview'};
  }
  const api={nextTab,captureSummary};
  if(typeof module==='object'&&module.exports)module.exports=api;
@@ -40,7 +40,7 @@
   let lastSession=null;
   function refresh(){
    const s=H.automationCapture(),cs=C.state(),phase=s.phase,clean=H.active()||phase==='paused'?H.cleanMaster():!!by('clean-master-v0752')?.checked;
-   const v=captureSummary({phase,surface:H.surface(),mode:cs.mode,native:root.MangoNativeCursorV0753?.phase?.(),clean,retain:cs.retain});
+   const v=captureSummary({phase,surface:H.surface(),mode:cs.mode,linkedReady:cs.linkedReady,linkedAvailable:H.linked?.(),native:root.MangoNativeCursorV0753?.phase?.(),clean,retain:cs.retain});
    text(sourceLine,v.source);text(trackLine,v.tracking);text(masterLine,v.master+' · '+v.retention);
    attr(state,'data-tracking',v.tracking==='Authorized monitor'||v.tracking==='Authorized linked tab'?'authorized':phase==='paused'?'paused':'other');
    text(inkNote,clean?'Clean master: ink is unavailable during this recording. Add editable graphics in Clip Studio instead.':'Composite capture: ink is rendered into the recording. Ctrl+E clears temporary ink only.');
@@ -74,6 +74,7 @@
  for(const id of ['quick-text','quick-callout','autocut-toggle','range-tool'])by(id)?.classList.add('ms59-alias-hidden');
  const layerMenu=by('compositor-key-menu-v0714');if(layerMenu)layerMenu.title='Open selected graphic motion properties';
  const graphicAction=by('ux44-edit-selected-keys');if(graphicAction)graphicAction.title='Open selected graphic transform keyframes';
+ let lastAvailability='';
  function refresh(){
   const loaded=V.outputDuration()>0,l=V.layers().find(x=>x.id===V.selectedLayer()),range=V.range?.(),index=V.selectedClip?.(),voice=!!root.MangoCreativeUI?.voice?.state?.().recording;
   const busy=V.exporting()||V.multitrackBusy?.()||V.isPlaying()||voice,mode=W.current?.()||'clip';
@@ -87,6 +88,7 @@
   if(busy)note=(V.exporting()?'Exporting':V.multitrackBusy?.()?'Preparing media':voice?'Recording narration':'Playback active')+' · '+note;
   text(selectedTitle,title);text(selectedNote,note);attr(selected,'data-busy',busy);
   project.disabled=!!V.exporting()||!!V.multitrackBusy?.();exp.disabled=!loaded||!!V.multitrackBusy?.()||voice;showProps.disabled=!P;attr(showProps,'aria-pressed',P?.layout?.().properties!==false);attr(showProps,'aria-expanded',P?.layout?.().properties!==false);close.disabled=!P;
+  const availability=JSON.stringify([loaded,!!busy,l?.id,l?.locked]);if(availability!==lastAvailability){lastAvailability=availability;root.MangoLayerUI?.syncProperties?.(false);root.MangoProfessionalUIV070?.refresh?.();root.MangoCreativeWorkspaceV0740?.refresh?.();}
   // These controls share their existing handler/model; their presentation follows the actual busy state.
   const lock=!!l?.locked||busy||!loaded;for(const id of ['graphic-front','graphic-back','graphic-delete','graphic-duplicate']){const b=by(id);if(b)b.disabled=!l||busy||(id!=='graphic-duplicate'&&lock);}
   for(const id of ['add-text','add-callout']){const b=by(id);if(b)b.disabled=!loaded||busy;}

@@ -604,7 +604,7 @@ globalThis.MangoClipView={
  },
  selectLayer(id,quiet=false){if(id!==null&&!layers.some(l=>l.id===id))return false;selectedLayerId=id;
    if(id){selectedClipIndex=null;rangeSelected=false;}
-   globalThis.MangoWorkspaceV062?.syncSelection?.({layer:selectedLayerId,clip:selectedClipIndex,range:rangeSelected},false,true);if(!quiet){render();globalThis.MangoLayerUI?.render?.();}
+   globalThis.MangoWorkspaceV062?.syncSelection?.({layer:selectedLayerId,clip:selectedClipIndex,range:rangeSelected},false,true);if(!quiet){render();globalThis.MangoLayerUI?.render?.();}else globalThis.MangoLayerUI?.syncProperties?.();
    paintPreview();
  },
  updateLayer(id,changes){const index=layers.findIndex(l=>l.id===id);
@@ -633,8 +633,8 @@ globalThis.MangoClipView={
   l.width=Math.max(.1,Math.min(1-l.x,width));if(l.kind==='shape'&&Number.isFinite(height))l.shape={...l.shape,height:Math.max(.03,Math.min(1-l.y,height))};else l.fontSize=Math.max(12,Math.min(220,fontSize));paintPreview();},
  moveShapeGeometry(id,patch){const l=layers.find(x=>x.id===id);if(!l||l.locked||l.kind!=='shape'||exporting)return;const S=globalThis.MangoClipShapesV0742,shape=S.check(patch.shape);for(const k of ['x','y','width'])if(Object.hasOwn(patch,k)&&(!Number.isFinite(patch[k])||patch[k]<0||patch[k]>1))return;Object.assign(l,patch,{shape});paintPreview();},
  endLayerMove(){refreshed();},
- setLayerHidden(id,value){const l=layers.find(x=>x.id===id);if(!l)return;remember();l.visible=!value;refreshed();},
- setLayerLocked(id,value){const l=layers.find(x=>x.id===id);if(!l)return;remember();l.locked=!!value;refreshed();},
+ setLayerHidden(id,value){const l=layers.find(x=>x.id===id);if(!l||exporting||multiPreparing||sequencePreview?.isPlaying?.()||globalThis.MangoCreativeUI?.voice?.state?.().recording)return;remember();l.visible=!value;refreshed();},
+ setLayerLocked(id,value){const l=layers.find(x=>x.id===id);if(!l||exporting||multiPreparing||sequencePreview?.isPlaying?.()||globalThis.MangoCreativeUI?.voice?.state?.().recording)return;remember();l.locked=!!value;refreshed();},
  styleLayer(id,preset){const index=layers.findIndex(l=>l.id===id);if(index<0||layers[index].locked||exporting)return;
    remember();layers[index]=MangoGraphics.style(layers[index],preset);refreshed();},
  reorderLayer(id,direction){const source=layers.find(l=>l.id===id);

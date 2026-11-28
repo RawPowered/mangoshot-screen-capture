@@ -109,6 +109,24 @@
   });
   return chip;
  }
+ function syncProperties(values=true){const st=current();if(!st)return;
+  const disabled=!st.outputDuration()||st.exporting()||st.multitrackBusy?.()||st.isPlaying?.()||!!globalThis.MangoCreativeUI?.voice?.state?.().recording;
+  const layer=activeLayer(),properties=el('graphic-inspector');properties.hidden=!layer;properties.dataset.kind=layer?.kind||'';
+  if(layer){
+   for(const [id,[field]] of Object.entries(fields)){
+    const input=el(id);if(!input)continue;const value=layer[field];
+    if(values)input.value=['x','y','width','opacity','tailX'].includes(field)?Math.round(value*100):value;
+    input.disabled=layer.locked||disabled||(layer.kind==='shape'&&['text','font','weight','fontSize','align','tailX','tailLength','color'].includes(field));
+   }
+   for(const [id,value] of [['graphic-shape-height',layer.shape?.height*100],['graphic-shape-rotation',layer.shape?.rotation],['graphic-shape-fill-opacity',layer.kind==='shape'?rootShape().fillOpacity(layer.background):0]]){const n=el(id);if(n){n.disabled=layer.kind!=='shape'||layer.locked||disabled;if(values)n.value=Number.isFinite(value)?String(Math.round(value*100)/100):'0';}}
+   const weightField=el('graphic-weight'),font=globalThis.MangoCreativeV079?.font(layer.font);for(const option of Array.from(weightField.options||[]))option.disabled=font?Number(option.value)<font.min||Number(option.value)>font.max:!['400','500','600','700','800'].includes(option.value);
+   if(values)el('graphic-preset').value=layer.preset;el('graphic-preset').disabled=layer.locked||disabled||layer.kind==='shape';
+   el('graphic-duplicate').disabled=disabled;el('graphic-delete').disabled=disabled||layer.locked;
+   el('graphic-duration').textContent=`G${layer.track} · In ${fmt(layer.start)} · Out ${fmt(layer.end)} · Duration ${fmt(layer.end-layer.start)}`;
+  }
+  if(values)for(const row of el('layer-list').children)row.classList.toggle('selected',row.dataset.id===st.selectedLayer());
+  globalThis.MangoTypeHUD?.sync?.();globalThis.MangoMotionUI?.sync?.();
+ }
  function render(){const st=current();if(!st)return;
   const loaded=st.outputDuration()>0,disabled=!loaded||st.exporting()||st.multitrackBusy?.()||st.isPlaying?.()||!!globalThis.MangoCreativeUI?.voice?.state?.().recording;
   el('add-text').disabled=disabled;el('add-callout').disabled=disabled;el('ripple-delete').disabled=disabled;
@@ -135,19 +153,7 @@
    rows.appendChild(row);
   }
   if(!items.length)rows.textContent='No graphics yet. Add a title, callout or shape overlay.';
-  const layer=activeLayer(),properties=el('graphic-inspector');properties.hidden=!layer;properties.dataset.kind=layer?.kind||'';
-  if(layer){
-   for(const [id,[field]] of Object.entries(fields)){
-    const input=el(id);if(!input)continue;const value=layer[field];
-    input.value=['x','y','width','opacity','tailX'].includes(field)?Math.round(value*100):value;
-    input.disabled=layer.locked||disabled||(layer.kind==='shape'&&['text','font','weight','fontSize','align','tailX','tailLength','color'].includes(field));
-   }
-   for(const [id,value] of [['graphic-shape-height',layer.shape?.height*100],['graphic-shape-rotation',layer.shape?.rotation],['graphic-shape-fill-opacity',layer.kind==='shape'?rootShape().fillOpacity(layer.background):0]]){const n=el(id);if(n){n.disabled=layer.kind!=='shape'||layer.locked||disabled;n.value=Number.isFinite(value)?String(Math.round(value*100)/100):'0';}}
-   const weightField=el('graphic-weight'),font=globalThis.MangoCreativeV079?.font(layer.font);for(const option of Array.from(weightField.options||[]))option.disabled=font?Number(option.value)<font.min||Number(option.value)>font.max:!['400','500','600','700','800'].includes(option.value);
-   el('graphic-preset').value=layer.preset;el('graphic-preset').disabled=layer.locked||disabled||layer.kind==='shape';
-   el('graphic-duplicate').disabled=disabled;el('graphic-delete').disabled=disabled||layer.locked;
-   el('graphic-duration').textContent=`G${layer.track} · In ${fmt(layer.start)} · Out ${fmt(layer.end)} · Duration ${fmt(layer.end-layer.start)}`;
-  }
+  syncProperties();
   for(const track of [2,3])el('graphic-track-'+track).replaceChildren();
   const total=st.outputDuration();if(total){for(const item of items)el('graphic-track-'+item.track).appendChild(graphicChip(item,total));}
   globalThis.MangoTypeHUD?.sync?.();globalThis.MangoMotionUI?.sync?.();
@@ -241,5 +247,5 @@
  for(const ev of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(ev,endCanvas);
  globalThis.addEventListener('keydown',e=>{if(e.key==='Escape'&&(movingCanvas||dragTimeline)){e.preventDefault();e.stopImmediatePropagation();if(movingCanvas)endCanvas({type:'cancel'});if(dragTimeline)finishTimelineGesture({type:'cancel'});}},true);
  globalThis.addEventListener('blur',()=>{if(movingCanvas)endCanvas({type:'cancel'});if(dragTimeline)finishTimelineGesture({type:'cancel'});});
- globalThis.MangoLayerUI={render,selectionOutline};render();
+ globalThis.MangoLayerUI={render,selectionOutline,syncProperties};render();
 })();

@@ -6,7 +6,7 @@
  if(!panel||!wrap||!ink)return;
  const api=root.chrome??root.browser,now=()=>performance.now();
  let settings=core.preset('off'),mode='preview',port=null,pointer=null,clicked=null,clickAt=-Infinity,lastAt=-Infinity,lastFrame=0,lastCamera=null;
- let linkPauseCap=false,linkGeneration=0,linkPaused=false,linkAwait=false,linkPausePending=false;
+ let linkReady=false,linkPauseCap=false,linkGeneration=0,linkPaused=false,linkAwait=false,linkPausePending=false;
  let trace=null,capture=null,retain=!!el('cursor-retain-v073').checked,focusTool=false,session=false,automationRevisionV075=0,traceWarning=false;
  const setStatus=t=>{el('cursor-status-v073').textContent=t;};
  const fields={spotlight:'cursor-spotlight-v073',ring:'cursor-ring-v073',zoomMode:'cursor-zoom-mode-v073',scale:'cursor-scale-v073',radius:'cursor-radius-v073',dim:'cursor-dim-v073',feather:'cursor-feather-v073',smooth:'cursor-smooth-v073',hold:'cursor-hold-v073',color:'cursor-color-v073'};
@@ -28,7 +28,7 @@
  function applyRecipe(raw){const checked=core.recipe(raw);if(checked.action!=='recorder.cursor.configure')throw Error('This recipe is for Clip Studio');
   hot.cancel();settings=checked.settings;clicked=null;clickAt=-Infinity;renderSettings();el('cursor-preset-v073').value='custom';return {...settings};}
  function clear(){const t=host.seconds?.();if(pointer&&session&&retain&&Number.isFinite(t)){trace?.add(t,null);capture?.gap(t);}pointer=null;clicked=null;clickAt=-Infinity;lastAt=-Infinity;}
- function disconnectLink(){const old=port;port=null;linkPauseCap=false;linkGeneration=0;linkPaused=false;linkAwait=false;linkPausePending=false;if(old)try{old.disconnect();}catch{}mode='preview';clear();
+ function disconnectLink(){const old=port;port=null;linkReady=false;linkPauseCap=false;linkGeneration=0;linkPaused=false;linkAwait=false;linkPausePending=false;if(old)try{old.disconnect();}catch{}mode='preview';clear();
   el('cursor-link-v073').textContent='Connect linked tab';el('cursor-link-v073').setAttribute('aria-pressed','false');}
  function disconnect(){root.MangoNativeCursorV0753?.stop?.('Native tracking disconnected. Reconnect for a new or resumed recording.');disconnectLink();}
  function claimNative(desktopOverlay=false){if(!session||!host.active()||host.surface()!=='monitor'||desktopOverlay&&host.cleanMaster?.())return false;if(desktopOverlay)trace?.markBaked();disconnectLink();el('cursor-consent-v073').checked=false;mode='native';setStatus(desktopOverlay?'Native monitor tracking active. Desktop FX may be baked into the composite.':'Native monitor tracking active. Cursor effects are rendered in the live preview.');return true;}
@@ -56,10 +56,10 @@
   if(!session||!host.active()||host.surface()!=='browser'||!host.linked()||!api?.tabs?.connect){setStatus('Start a browser-tab capture from the linked webpage first.');return;}
   if(!el('cursor-consent-v073').checked){setStatus('Confirm the linked webpage is the same tab selected in the screen picker.');return;}
   try{
-   const p=api.tabs.connect(host.source(),{name:'mangoshot-cursor-v073',frameId:0});port=p;mode='linked';linkPauseCap=false;linkGeneration=0;linkPaused=false;linkAwait=false;linkPausePending=false;clear();
+   const p=api.tabs.connect(host.source(),{name:'mangoshot-cursor-v073',frameId:0});port=p;mode='linked';linkReady=false;linkPauseCap=false;linkGeneration=0;linkPaused=false;linkAwait=false;linkPausePending=false;clear();
    p.onMessage.addListener(m=>{
     if(port!==p||!session||mode!=='linked')return;
-    if(m?.type==='ready'){linkPauseCap=m.pauseResume===true&&m.generation===0;setStatus('Linked tab connected. Move the mouse in the selected webpage.');return;}
+    if(m?.type==='ready'){linkReady=true;linkPauseCap=m.pauseResume===true&&m.generation===0;setStatus('Linked tab connected. Move the mouse in the selected webpage.');return;}
     if(linkPauseCap&&m?.generation!==linkGeneration)return;
     if(m?.type==='paused'&&linkPaused){linkPausePending=false;return;}
     if(m?.type==='resumed'&&linkAwait&&!linkPaused){linkAwait=false;setStatus('Linked tab tracking resumed.');return;}
@@ -121,5 +121,5 @@
   return 'Preview tracking only; reconnect the authorized source if needed';}
  function sourceChanged(){const t=host.seconds?.();if(Number.isFinite(t))capture?.sourceChanged(t);hot.cancel();disconnect();lastCamera=null;el('cursor-consent-v073').checked=false;setStatus('Source changed · preview tracking; reconnect the linked tab if appropriate.');}
  root.MangoRecorderCursorV073=Object.freeze({begin:resetSession,end,snapshot,suspend,resume,frame,manualCamera,sourceChanged,claimNative,releaseNative,nativeSample,nativeToggleEffect,spotlightDown:hot.down,spotlightUp:hot.up,spotlightCancel:hot.cancel,focusTool:()=>focusTool&&enabled(),applyRecipe,
-  state:()=>({settings:{...settings},effectiveSpotlight:hot.effective(),spotlightHeld:hot.held(),mode,session,retain,focusTool,automationRevision:automationRevisionV075})});
+  state:()=>({settings:{...settings},effectiveSpotlight:hot.effective(),spotlightHeld:hot.held(),mode,linkedReady:mode==='linked'&&linkReady&&!linkPaused&&!linkAwait,session,retain,focusTool,automationRevision:automationRevisionV075})});
 })(typeof globalThis!=='undefined'?globalThis:this);

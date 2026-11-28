@@ -81,7 +81,7 @@
   d.append(mk('summary','','Manual default-style selector'));if(label)d.append(label);box.append(d);
  }
  function sync(){
-  const active=layer(),locked=!!active?.locked||!!view()?.exporting?.();
+  const active=layer(),locked=!!active?.locked||!!view()?.exporting?.()||!!view()?.isPlaying?.()||!!view()?.multitrackBusy?.()||!!globalThis.MangoCreativeUI?.voice?.state?.().recording;
   for(const card of gallery.children){
    card.setAttribute('aria-pressed',String((active?active.preset:defaultPreset?.value)===card.dataset.style));
    card.disabled=!!active&&locked;

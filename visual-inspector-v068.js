@@ -106,7 +106,7 @@
   box.append(create('strong','',title),create('span','',desc));return box;};
  const hint=(txt)=>create('p','v068-note',txt);
  const selectLayer=()=>view()?.layers?.()?.find(l=>l.id===view()?.selectedLayer?.())||null;
- const validGraphic=()=>{const l=selectLayer();return !!l&&!l.locked&&!view()?.exporting?.();};
+ const validGraphic=()=>{const l=selectLayer();return !!l&&!l.locked&&!view()?.exporting?.()&&!view()?.isPlaying?.()&&!view()?.multitrackBusy?.()&&!root.MangoCreativeUI?.voice?.state?.().recording;};
  const selectedTransition=()=>{const index=view()?.selectedClip?.();const parts=view()?.segments?.()||[];
   return Number.isInteger(index)&&index>0&&index<parts.length?{index,parts}:null;};
  const preview=(mode)=>{
