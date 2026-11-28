@@ -133,18 +133,19 @@ function applyTransaction(transaction,message,removedRanges=null){
  if(Math.abs(newLength-oldLength)>.00001&&globalThis.MangoCreativeUI?.hasVoice?.())throw Error('Narration is fixed to sequence time. Download or remove it before changing sequence duration.');
  if(hasMulti()&&Math.abs(newLength-oldLength)>.00001){
   if(globalThis.MangoCreativeUI?.hasVoice?.())throw Error('Remove recorded voiceover before duration-changing multitrack edits.');
-  const ranges=removedRanges||transaction.removedRanges;if(!PT||!ranges)throw Error('Primary edit does not provide a secondary timing mapping.');
+  const ranges=transaction.removedRanges||removedRanges;if(!PT||!ranges)throw Error('Primary edit does not provide a secondary timing mapping.');
   nextSecondary=MT.check(PT.ripple(secondary,ranges,oldLength,newLength),mediaAsset,newLength);
  }
  const same=JSON.stringify(segments)===JSON.stringify(transaction.segments)&&JSON.stringify(layers)===JSON.stringify(transaction.layers)
   &&JSON.stringify(globalThis.MangoClipTimeline?.markers?.()||[])===JSON.stringify(transaction.markers);
  if(same){label('Nothing changed. Choose a different range or clip.');return false;}
- remember();secondary=nextSecondary;multiRequest=null;stopMultiPreview();
- const cameraRanges=removedRanges||transaction.removedRanges;
- if(Array.isArray(cameraRanges)&&cameraRanges.length){
-  for(const range of [...cameraRanges].sort((a,b)=>b.start-a.start))zoomEvents=MangoCreativeZoom.ripple(zoomEvents,range.start,range.end);
- }
- segments=clone(transaction.segments);layers=clone(transaction.layers);transitions=reconcileTransitions(transitions,segments);
+ const cameraRanges=transaction.removedRanges||removedRanges||[];
+ if(Math.abs(newLength-oldLength)>1e-5&&!cameraRanges.length&&zoomEvents.length)throw Error('Camera edit has no retained-time mapping');
+ const nextZoom=MangoCreativeZoom.retime(zoomEvents,cameraRanges,oldLength);
+ const nextSegments=clone(transaction.segments),nextLayers=clone(transaction.layers),nextTransitions=reconcileTransitions(transitions,nextSegments);
+ for(const l of nextLayers)if(l.keyframes)compositor.checkKeys(l.keyframes);
+ remember();secondary=nextSecondary;multiRequest=null;stopMultiPreview();zoomEvents=nextZoom;
+ segments=nextSegments;layers=nextLayers;transitions=nextTransitions;
  selectedClipIndex=null;rangeSelected=false;
  const length=MangoEditOps.length(segments);
  byId('in').max=byId('out').max=length.toFixed(2);
@@ -272,8 +273,7 @@ function edit(kind){if(!original||exporting)return;
  try{const selection=readRange();
   if(kind==='cut'){rippleDelete(selection.start,selection.end);return;}
   const tx=MangoSequenceOps.trim(segments,layers,globalThis.MangoClipTimeline?.markers?.()||[],selection.start,selection.end);
-  const zoomTrim=zoomEvents.filter(e=>e.start>=selection.start&&e.start<selection.end).map(e=>({...e,start:e.start-selection.start}));
-   if(applyTransaction(tx,'Trimmed sequence to the selected range.')){zoomEvents=MangoCreativeZoom.check(zoomTrim);refreshed();}
+  applyTransaction(tx,'Trimmed sequence to the selected range. Camera and transform timing preserved.');
  }catch(error){label('Edit not applied: '+error.message);}}
 
 byId('mark-in').onclick=()=>setRange(MangoEditOps.toOutput(segments,video.currentTime)??0,Number(byId('out').value));
@@ -515,13 +515,13 @@ globalThis.MangoClipView={
   },
   zoomFrames:()=>clone(zoomEvents),setZoomFrames(items){zoomEvents=MangoCreativeZoom.check(items);refreshed();},
   addZoomKeyframe(at,scale,x,y,ease){if(!original||exporting)throw Error('Load a video first');const next=MangoCreativeZoom.add(zoomEvents,at,scale,x,y,ease);if(next.some(e=>e.start>=MangoEditOps.length(segments)))throw Error('Camera keyframe must start inside the edited sequence');remember();zoomEvents=next;refreshed();},
-  commitZoomStudio(items,expected){const actual=this.automationCapture();if(!actual.ready||actual.identity!==expected?.identity||actual.stamp!==expected?.stamp)throw Error('Camera draft is stale. Close and reopen Zoom Studio.');const checked=MangoCreativeZoom.check(items);if(checked.some(e=>e.start>=MangoEditOps.length(segments)))throw Error('Camera keyframe must start inside the edited sequence');if(new Set(checked.map(e=>e.id)).size!==checked.length)throw Error('Duplicate camera keyframe ID');if(JSON.stringify(checked)===JSON.stringify(zoomEvents))return false;remember();zoomEvents=checked;refreshed();label('Camera animation applied. Ctrl+Z restores the previous camera edit.');return true;},
+  commitZoomStudio(items,expected){const actual=this.automationCapture();if(!actual.ready||actual.identity!==expected?.identity||actual.stamp!==expected?.stamp)throw Error('Camera draft is stale. Close and reopen Zoom Studio.');const checked=MangoCreativeZoom.nonOverlap(items);if(checked.some(e=>e.start>=MangoEditOps.length(segments)))throw Error('Camera keyframe must start inside the edited sequence');if(new Set(checked.map(e=>e.id)).size!==checked.length)throw Error('Duplicate camera keyframe ID');if(JSON.stringify(checked)===JSON.stringify(zoomEvents))return false;remember();zoomEvents=checked;refreshed();label('Camera animation applied. Ctrl+Z restores the previous camera edit.');return true;},
   removeZoomKeyframe(id){if(exporting)return;remember();zoomEvents=MangoCreativeZoom.remove(zoomEvents,id);refreshed();},
   updateZoomKeyframe(id,patch){
    if(!original||exporting)throw Error('Load video and stop export to edit camera');
    if(!zoomEvents.some(e=>e.id===id))throw Error('Camera keyframe no longer exists');
    const next=zoomEvents.map(e=>e.id===id?{...e,...patch,id:e.id}:e);
-   const checked=MangoCreativeZoom.check(next);
+   const checked=MangoCreativeZoom.nonOverlap(next);
    if(checked.some(e=>e.start>=MangoEditOps.length(segments)))throw Error('Camera keyframe must start inside the edited sequence');
    remember();zoomEvents=checked;refreshed();
   },
@@ -600,7 +600,10 @@ globalThis.MangoClipView={
  },
  updateLayer(id,changes){const index=layers.findIndex(l=>l.id===id);
    if(index<0||exporting||layers[index].locked)return;
-   remember();layers[index]={...layers[index],...changes};refreshed();
+   if(multiPreparing||sequencePreview?.isPlaying?.())return false;
+   if(['start','end','track'].some(k=>Object.hasOwn(changes,k))){if(Object.keys(changes).some(k=>!['start','end','track'].includes(k)))throw Error('Separate timing edits from appearance edits');return this.commitLayerTimeline(id,{...layers[index],...changes});}
+   const next={...layers[index],...changes};if(next.keyframes)next.keyframes=compositor.checkKeys(next.keyframes);if(PT.eq(next,layers[index]))return false;
+   remember();layers[index]=next;refreshed();return true;
  },
  deleteLayer(id){
    const index=layers.findIndex(l=>l.id===id);
@@ -637,14 +640,16 @@ globalThis.MangoClipView={
    if(next.every((l,i)=>l.id===layers[i].id&&l.track===layers[i].track))return false;
    remember();layers=next;selectedLayerId=id;refreshed();label('Layer moved above '+b.name+' on G'+b.track+'.');return true;
  },
- commitLayerTimeline(id,candidate){const index=layers.findIndex(l=>l.id===id);
-   if(index<0||layers[index].locked||exporting)return false;
+ commitLayerTimeline(id,candidate,expected=null){const index=layers.findIndex(l=>l.id===id);
+   if(index<0||layers[index].locked||exporting||multiPreparing||sequencePreview?.isPlaying?.())return false;
+   if(expected&&this.automationCapture().stamp!==expected){label('Graphic timing gesture became stale. Try again.');return false;}
    const original=layers[index],sequenceLength=MangoEditOps.length(segments);
    if(!Number.isFinite(candidate.start)||!Number.isFinite(candidate.end)||!Number.isFinite(candidate.track)||
       candidate.start<0||candidate.end>sequenceLength+.001||candidate.end-candidate.start<MangoLayerOps.MIN-.001||
       ![2,3].includes(candidate.track)){label('Invalid graphic time range or track.');return false;}
    if(!MangoLayerOps.changed(original,candidate))return false;
-   remember();layers[index]={...original,start:candidate.start,end:candidate.end,track:candidate.track};
+   let next;try{next=MangoGraphics.retimeTiming(original,candidate.start,candidate.end,candidate.track);}catch(e){label('Graphic timing not changed: '+e.message);return false;}
+   remember();layers[index]=next;
    selectedLayerId=id;refreshed();label('Graphic timing updated: '+candidate.start.toFixed(2)+'–'+candidate.end.toFixed(2)+' s on G'+candidate.track+'. Ctrl+Z to undo.');return true;
  },
 };

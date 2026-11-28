@@ -89,7 +89,7 @@
    const tx=root.MangoSequenceOps.range(current.segments,current.layers,current.markers,interval.start,interval.end);
    current={segments:tx.segments,layers:tx.layers,markers:tx.markers,playhead:interval.start};removed+=tx.removed;
   }
-  return {...current,playhead:Math.min(ordered[ordered.length-1].start,durationOf(current.segments)),removed,applied:ordered.length};
+  return {...current,playhead:Math.min(ordered[ordered.length-1].start,durationOf(current.segments)),removed,applied:ordered.length,removedRanges:ordered};
  }
  root.MangoAutoCut={silence,stillFrames,intervalsFromFlags,merge,toSequence,protectGraphics,proposals,apply};
 })(typeof globalThis!=='undefined'?globalThis:this);
