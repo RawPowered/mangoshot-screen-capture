@@ -7,10 +7,12 @@
   ctx.save();try{
    ctx.setTransform(1,0,0,1,0,0);ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';ctx.filter='none';
    ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);
-   const inTransition=transition?.(ctx,media,time,w,h)===true;
-   const z=inTransition?null:zoom(ctx,media,time,w,h);
+   let z=null,transitionPainted=false;
+   const overlay=pose=>{z=pose;transitionPainted=cursor?.(ctx,time,pose,w,h)===true||transitionPainted;};
+   const inTransition=transition?.(ctx,media,time,w,h,overlay)===true;
+   if(!inTransition)z=zoom(ctx,media,time,w,h);
    grade?.(ctx,time,w,h);
-   const painted=!inTransition&&cursor?.(ctx,time,z,w,h)===true;
+   const painted=inTransition?transitionPainted:cursor?.(ctx,time,z,w,h)===true;
    if(secondary&&secondary(ctx,time,w,h,strict,running)===false){if(strict)throw Error('Secondary composition unavailable');return {ready:false,cursor:false,zoom:false};}
    graphics?.(ctx,time,w,h);
    return {ready:true,cursor:painted,zoom:!!z&&Math.abs(z.scale-1)>.0001,transition:inTransition};

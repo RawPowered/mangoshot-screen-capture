@@ -119,6 +119,7 @@ function readRange(){const clip=selectedClipIndex!==null&&!rangeSelected?MangoSe
  return clip||MangoTimeline.range(Number(byId('in').value),Number(byId('out').value),MangoEditOps.length(segments));}
 function commitSequence(next,message,newLayers=layers){
  if(!original||exporting||multiPreparing||!next.length)return false;
+ if(globalThis.MangoCreativeUI?.hasVoice?.()&&Math.abs(MangoEditOps.length(next)-MangoEditOps.length(segments))>.00001){label('Download or remove narration before changing sequence duration.');return false;}
  if(hasMulti()&&Math.abs(MangoEditOps.length(next)-MangoEditOps.length(segments))>.00001){label('Remove secondary clips before changing primary sequence duration.');return false;}
  remember();segments=clone(next);layers=clone(newLayers);transitions=reconcileTransitions(transitions,segments);selectedClipIndex=null;rangeSelected=false;
  const out=MangoEditOps.length(segments);byId('out').max=out.toFixed(2);byId('in').max=out.toFixed(2);
@@ -128,6 +129,7 @@ function commitSequence(next,message,newLayers=layers){
 function applyTransaction(transaction,message,removedRanges=null){
  if(!transaction||!original||exporting||multiPreparing)return false;
  let nextSecondary=secondary;const oldLength=MangoEditOps.length(segments),newLength=MangoEditOps.length(transaction.segments);
+ if(Math.abs(newLength-oldLength)>.00001&&globalThis.MangoCreativeUI?.hasVoice?.())throw Error('Narration is fixed to sequence time. Download or remove it before changing sequence duration.');
  if(hasMulti()&&Math.abs(newLength-oldLength)>.00001){
   if(globalThis.MangoCreativeUI?.hasVoice?.())throw Error('Remove recorded voiceover before duration-changing multitrack edits.');
   const ranges=removedRanges||transaction.removedRanges;if(!PT||!ranges)throw Error('Primary edit does not provide a secondary timing mapping.');
@@ -137,8 +139,9 @@ function applyTransaction(transaction,message,removedRanges=null){
   &&JSON.stringify(globalThis.MangoClipTimeline?.markers?.()||[])===JSON.stringify(transaction.markers);
  if(same){label('Nothing changed. Choose a different range or clip.');return false;}
  remember();secondary=nextSecondary;multiRequest=null;stopMultiPreview();
- if(Array.isArray(removedRanges)&&removedRanges.length){
-  for(const range of [...removedRanges].sort((a,b)=>b.start-a.start))zoomEvents=MangoCreativeZoom.ripple(zoomEvents,range.start,range.end);
+ const cameraRanges=removedRanges||transaction.removedRanges;
+ if(Array.isArray(cameraRanges)&&cameraRanges.length){
+  for(const range of [...cameraRanges].sort((a,b)=>b.start-a.start))zoomEvents=MangoCreativeZoom.ripple(zoomEvents,range.start,range.end);
  }
  segments=clone(transaction.segments);layers=clone(transaction.layers);transitions=reconcileTransitions(transitions,segments);
  selectedClipIndex=null;rangeSelected=false;
@@ -180,8 +183,8 @@ function prepareCinematic(items=transitions,notify=()=>{}){
  if(!cinematicActive(items))return Promise.resolve(null);
  return cinematic.prepare(originalUrl,duration,segments,items,video.videoWidth,video.videoHeight,notify);
 }
-function paintCinematic(ctx,items,time,w,h){
- return cinematic?.paint(ctx,originalUrl,duration,segments,items,time,w,h,zoomEvents)===true;
+function paintCinematic(ctx,items,time,w,h,overlay=null){
+ return cinematic?.paint(ctx,originalUrl,duration,segments,items,time,w,h,zoomEvents,overlay)===true;
 }
 function queueCinematicPreview(){
  const key=JSON.stringify([originalUrl,segments,transitions]);
@@ -235,12 +238,12 @@ async function toggleSequence(){
   label('Timeline media ready.');void sequencePreview?.toggle();
  }catch(e){label('Playback not started: '+e.message);}finally{cinematicPlaybackPending=false;}
 }
-function composeCommitted(ctx,media,t,w,h,{strict=false,running=false,graphicLayers=layers}={}){
+function composeCommitted(ctx,media,t,w,h,{strict=false,running=false,graphicLayers=layers,onCursor=null}={}){
  return globalThis.MangoClipRenderV0755.compose({ctx,media,width:w,height:h,time:t,strict,running,
- transition:(ctx,media,t,w,h)=>{const active=MangoMotion.transitionAt(segments,transitions,t);if(active&&globalThis.MangoCinematicV0713?.isType(active.type)){if(paintCinematic(ctx,transitions,t,w,h))return true;if(strict)throw Error('Cinematic source frame unavailable.');queueCinematicPreview();return false;}return MangoMotion.paintTransition(ctx,media,zoomEvents,segments,transitions,t,w,h);},
+ transition:(ctx,media,t,w,h,overlay)=>{const active=MangoMotion.transitionAt(segments,transitions,t);if(active&&globalThis.MangoCinematicV0713?.isType(active.type)){if(paintCinematic(ctx,transitions,t,w,h,overlay))return true;if(strict)throw Error('Cinematic source frame unavailable.');queueCinematicPreview();return false;}return MangoMotion.paintTransition(ctx,media,zoomEvents,segments,transitions,t,w,h,overlay);},
  zoom:(ctx,media,t,w,h)=>MangoCreativeZoom.draw(ctx,media,zoomEvents,t,w,h),
  grade:ctx=>{if(compositor?.active(sourceGrade))compositor.gradeFrame(ctx,sourceGrade);},
- cursor:(ctx,t,z,w,h)=>director()?.paint(ctx,cursorTrace,cursorRegions,segments,t,z,w,h)===true,
+ cursor:(ctx,t,z,w,h)=>director()?.paint(ctx,cursorTrace,cursorRegions,segments,t,z,w,h,onCursor)===true,
  secondary:(ctx,t,w,h,strict,running)=>paintMulti(ctx,t,w,h,strict,running),
  graphics:(ctx,t,w,h)=>MangoGraphics.render(ctx,graphicLayers,t,w,h)});
 }
@@ -308,7 +311,8 @@ byId('play-edited').onclick=()=>{void toggleSequence();};
 function download(blob,extension,untouched=false){const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;
  link.download='MangoShot-'+(untouched?'original-':'edited-')+new Date().toISOString().replace(/[:.]/g,'-')+'.'+extension;
  document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);}
-async function exportClip(format){if(!original||!segments.length||exporting||multiPreparing)return;
+async function verifyEncoded(blob,width,height,expected,audioCount){const probe=document.createElement('video'),url=URL.createObjectURL(blob);probe.muted=true;probe.preload='auto';probe.playsInline=true;probe.style.cssText='position:fixed;left:-9999px;width:2px;height:2px;opacity:0;pointer-events:none';document.body.appendChild(probe);try{await waitDecoded(probe,()=>{probe.src=url;probe.load();});const length=await globalThis.MangoMediaDurationV0739.resolve(probe,expected,()=>!cancelExport);const tolerance=Math.min(.75,Math.max(.25,expected*.01));if(probe.videoWidth!==width||probe.videoHeight!==height||Math.abs(length-expected)>tolerance)throw Error('Encoded media dimensions or duration do not match the sequence (expected '+expected.toFixed(2)+'s; decoded '+length.toFixed(2)+'s).');if(audioCount&&(probe.audioTracks&&probe.audioTracks.length===0||probe.mozHasAudio===false))throw Error('Encoded audio track is missing.');}finally{probe.pause();probe.removeAttribute('src');probe.load();probe.remove();URL.revokeObjectURL(url);}}
+async function exportClip(format){if(!original||!segments.length||exporting||multiPreparing)return;if(globalThis.MangoCreativeUI?.voice?.state?.().recording){label('Stop narration recording before export.');return;}
  sequencePreview?.stop();stopMultiPreview();
  const types=format==='mp4'?mp4Types:webmTypes;
  if(!hasGraphics()&&!hasCreative()&&MangoFormat.fastCopy(originalFormat,format,segments,duration)){
@@ -335,7 +339,9 @@ async function exportClip(format){if(!original||!segments.length||exporting||mul
   let exportSequenceTime=0;
   const streaming=hasStreams();
   function renderAt(output,running=false){exportSequenceTime=output;
-   const result=composeCommitted(paint,exportVideo,output,width,height,{strict:true,running});
+   const painted=new Set();const result=composeCommitted(paint,exportVideo,output,width,height,{strict:true,running,onCursor:id=>painted.add(id)});
+    const expected=director()?.expectedAt(cursorTrace,cursorRegions,segments,output,MangoCreativeZoom.at(zoomEvents,output))||[];
+    if(!result.transition&&expected.some(id=>!painted.has(id)))throw Error('Cursor effect missing at '+output.toFixed(3)+'s: '+expected.filter(id=>!painted.has(id)).join(', '));
    globalThis.MangoClipRenderV0755.count(renderStats,result);
    exportStream?.getVideoTracks()?.[0]?.requestFrame?.();
   }
@@ -349,7 +355,7 @@ async function exportClip(format){if(!original||!segments.length||exporting||mul
     if(hasMulti()&&MT.hasAudio(secondary))multiExport=multiRuntime.mixer(ctx,destination,secondary);
     for(const track of destination.stream.getAudioTracks())exportStream.addTrack(track);
    tempTracks.push(...destination.stream.getAudioTracks());await ctx.resume();
-  }catch(error){if(globalThis.MangoCreativeUI?.hasVoice?.()||hasMulti()&&MT.hasAudio(secondary))throw Error('Audio mixing unavailable; export aborted rather than dropping audio: '+error.message);label('Audio track unavailable ('+error.name+'); exporting video only.');}
+  }catch(error){throw Error('Audio initialization failed. Export stopped rather than risk losing source audio: '+error.message);}
   for(const mime of types){if(!MediaRecorder.isTypeSupported(mime))continue;
    try{rec=new MediaRecorder(exportStream,{mimeType:mime,videoBitsPerSecond:bitrate});break;}catch{}}
   if(!rec)throw new Error('Failed to initialize '+format.toUpperCase()+' encoder.');
@@ -370,7 +376,8 @@ async function exportClip(format){if(!original||!segments.length||exporting||mul
   const mime=rec.mimeType||types[0];
   if(format==='mp4'&&!mime.includes('mp4'))throw new Error('Browser returned non-MP4 media. Export was rejected.');
   const blob=new Blob(recorded,{type:mime});if(!blob.size)throw new Error('No encoded data was produced.');
-  download(blob,format);label('Exported '+format.toUpperCase()+' · '+segments.length+' clip(s) · '+(blob.size/1048576).toFixed(1)+' MiB · composed '+renderStats.frames+' frames · cursor FX '+renderStats.cursor+' · camera zoom '+renderStats.zoom+(coverage.regions&&!renderStats.cursor?' · no visible tracked FX':'')+'.');
+  label('Verifying encoded video metadata and duration…');await verifyEncoded(blob,width,height,MangoEditOps.length(segments),exportStream.getAudioTracks().length);if(cancelExport)throw Error('Export canceled during verification.');
+   download(blob,format);label('Exported '+format.toUpperCase()+' · '+segments.length+' clip(s) · '+(blob.size/1048576).toFixed(1)+' MiB · composed '+renderStats.frames+' frames · cursor FX '+renderStats.cursor+' · camera zoom '+renderStats.zoom+(coverage.regions&&!renderStats.cursor?' · no visible tracked FX':'')+'.');
  }catch(error){label('Export failed: '+error.message);if(rec&&rec.state!=='inactive')rec.stop();}
  finally{document.removeEventListener('visibilitychange',hidden);multiRuntime?.pauseStreams?.();multiExport?.stop();voiceExport?.stop?.();for(const t of tempTracks)t.stop();exportVideo?.pause();exportVideo?.removeAttribute('src');exportVideo?.remove();
   if(ctx)ctx.close().catch(()=>{});exporting=false;multiFrameRequest=null;byId('progress').hidden=true;render();paintPreview();}

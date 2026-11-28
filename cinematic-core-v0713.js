@@ -48,10 +48,10 @@
  }
  function ease(t,name){t=clamp(t);if(name==='easeIn')return t*t*t;if(name==='easeOut')return 1-(1-t)**3;
   if(name==='easeInOut')return t<.5?4*t*t*t:1-(-2*t+2)**3/2;if(name==='back')return clamp(1+2.70158*(t-1)**3+1.70158*(t-1)**2);return t;}
- function composite(ctx,a,b,type,progress,w,h,zoom=[],seconds=0,easing='linear'){
+ function composite(ctx,a,b,type,progress,w,h,zoom=[],seconds=0,easing='linear',overlay=null,activeFrame=null){
   if(!isType(type)||!a||!b)throw Error('Two decoded frames are required.');
   const p=ease(progress,easing);
-  const draw=frame=>{if(root.MangoCreativeZoom)root.MangoCreativeZoom.draw(ctx,frame,zoom,seconds,w,h);else ctx.drawImage(frame,0,0,w,h);};
+  const draw=frame=>{let z={scale:1,x:.5,y:.5};if(root.MangoCreativeZoom)z=root.MangoCreativeZoom.draw(ctx,frame,zoom,seconds,w,h);else ctx.drawImage(frame,0,0,w,h);if(frame===activeFrame)overlay?.(z);};
   function move(frame,x,y,scale=1,alpha=1){ctx.save();try{ctx.globalAlpha=alpha;ctx.translate(x,y);ctx.translate(w/2,h/2);ctx.scale(scale,scale);ctx.translate(-w/2,-h/2);draw(frame);}finally{ctx.restore();}}
   ctx.save();
   try{
@@ -125,13 +125,13 @@
    return promise;
   }
   function ready(url,duration,parts,items){return key===signature(url,duration,parts,items)&&!promise&&!error&&!!quality;}
-  function paint(ctx,url,duration,parts,items,t,w,h,zoom=[]){
+  function paint(ctx,url,duration,parts,items,t,w,h,zoom=[],overlay=null){
    const active=root.MangoMotion.transitionAt(parts,items,t);
    if(!active||!isType(active.type))return false;
    if(!ready(url,duration,parts,items))return false;
    const samples=entries.get(active.index);if(!samples?.length)return false;
    const p=samples[Math.min(samples.length-1,Math.max(0,Math.round(active.progress*(samples.length-1))))];
-   composite(ctx,p.a,p.b,active.type,active.progress,w,h,zoom,t,active.ease);return true;
+   composite(ctx,p.a,p.b,active.type,active.progress,w,h,zoom,t,active.ease,overlay,t<active.boundary?p.a:p.b);return true;
   }
   return {prepare,ready,paint,clear};
  }

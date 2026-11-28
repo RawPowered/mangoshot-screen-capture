@@ -112,13 +112,13 @@
     return {...found,index:i,boundary:position,duration,progress:clamp((seconds-position+duration/2)/duration)};
   }return null;
  }
- function paintTransition(ctx,video,zoom,segments,items,seconds,w,h){
+ function paintTransition(ctx,video,zoom,segments,items,seconds,w,h,overlay=null){
   const a=transitionAt(segments,items,seconds);if(!a||!video||video.readyState<2)return false;
   if(root.MangoCinematicV0713?.isType(a.type))return false; // two-frame transitions require prepared source frames
   const p=clamp(ease(a.progress,a.ease)),after=seconds>=a.boundary;
   const amount=after?clamp((a.progress-.5)*2):0;
   ctx.save();ctx.fillStyle='#070a0c';ctx.fillRect(0,0,w,h);
-  function frame(){root.MangoCreativeZoom.draw(ctx,video,zoom,seconds,w,h);}
+  function frame(){const z=root.MangoCreativeZoom.draw(ctx,video,zoom,seconds,w,h);overlay?.(z);}
   switch(a.type){
    case 'dipBlack':case 'dipWhite':case 'flash':
     frame();ctx.fillStyle=a.type==='dipBlack'?'#000': '#fff';
